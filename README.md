@@ -1,1 +1,1 @@
-# perceptural_neural_physical
+# perceptual_neural_physical
