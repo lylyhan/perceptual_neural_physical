@@ -11,6 +11,7 @@ description = "Perceptual-Neural-Physical (PNP) modeling of musical timbre"
 
 [build-system]
 requires = [
+    "numpy",
     "setuptools >= 61.0",
     "wheel"
 ]
