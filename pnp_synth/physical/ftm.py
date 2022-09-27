@@ -5,11 +5,13 @@ drum model with normalized side length ratio/ side length, in impulse form
 import numpy as np
 import math
 import torch
+import constants
 
-n_samples = 2**16
-sr = 22050
+n_samples = constants.dur
+sr = constants.sr
 
-def getsounds_imp_linear_nonorm(m1,m2,x1,x2,h,tau11,w11,p,D,l0,alpha_side,sr):
+#numpy implementation
+def getsounds_imp_linear_nonorm(m1,m2,x1,x2,h,tau11,w11,p,D,l0,alpha_side):
     l2 = l0*alpha_side
     beta_side = alpha_side + 1/alpha_side
     S = l0/np.pi*((D*w11*alpha_side)**2 + (p*alpha_side/tau11)**2)**0.25
@@ -43,10 +45,10 @@ def getsounds_imp_linear_nonorm(m1,m2,x1,x2,h,tau11,w11,p,D,l0,alpha_side,sr):
     y = np.exp(-alpha[:mode_corr,None] * time_steps[None,:]) * np.sin(omega[:mode_corr,None] * time_steps[None,:]) 
     y = yi[:,None] * y #(m,) * (m,dur)
     y = np.sum(y * K[:mode_corr,None] / N,axis=0) #impulse response itself
-
+    y = y / np.max(np.abs(y))
     return y
 
-
+#torch implementation
 def getsounds_imp_linear_nonorm_torch(m1,m2,x1,x2,h,theta,l0):
     """
     This implements Rabenstein's drum model. The inverse SLT operation is done at the end of each second-

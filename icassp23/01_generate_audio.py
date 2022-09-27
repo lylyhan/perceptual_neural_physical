@@ -3,7 +3,8 @@ import pandas
 import random
 import sys
 
-from ..pnp.physical import ftm  #not sure if this will work
+from ..pnp_synth.physical import ftm  #not sure if this will work
+from ..pnp_synth.physical import constants 
 import soundfile as sf
 import os
 
@@ -25,13 +26,12 @@ n_samp_val,n_param_val = val_params.shape
 n_samp_test,n_param_val = test_params.shape
 n_samp_train,n_param_val = train_params.shape
 
-x1 = 0.4
-x2 = 0.4
-h = 0.03
-l0 = np.pi
+x1 = x2 = constants.x1
+h = constants.h
+l0 = constants.l0
 
-mode = 10
-sr = 22050
+m1 = m2 = constants.m1
+sr = constants.sr
 
 print("begin making dataset!")
 
@@ -41,8 +41,7 @@ if not os.path.exists(path_out):
     os.makedirs(path_out)       
 for i in range(n_samp_val):
     omega,tau,p,D,alpha = val_params[i,1:-1]
-    y = ftm.getsounds_imp_linear_nonorm(mode,mode,x1,x2,h,tau,omega,p,D,l0,alpha,sr)
-    y = y/ max(y)
+    y = ftm.getsounds_imp_linear_nonorm(m1,m2,x1,x2,h,tau,omega,p,D,l0,alpha)
     filename = os.path.join(path_out,str(val_params[i,0])+"_sound.wav")
     sf.write(filename, y, sr)
 
@@ -55,8 +54,7 @@ if not os.path.exists(path_out):
     os.makedirs(path_out)
 for i in range(n_samp_test):
     omega,tau,p,D,alpha = test_params[i,1:-1]
-    y = ftm.getsounds_imp_linear_nonorm(mode,mode,x1,x2,h,tau,omega,p,D,l0,alpha,sr)
-    y = y/ max(y)
+    y = ftm.getsounds_imp_linear_nonorm(m1,m2,x1,x2,h,tau,omega,p,D,l0,alpha)
     filename = os.path.join(path_out,str(test_params[i,0])+"_sound.wav")
     sf.write(filename, y, sr)
     
@@ -68,8 +66,7 @@ if not os.path.exists(path_out):
     os.makedirs(path_out)
 for i in range(n_samp_train):
     omega,tau,p,D,alpha = train_params[i,1:-1]
-    y = ftm.getsounds_imp_linear_nonorm(mode,mode,x1,x2,h,tau,omega,p,D,l0,alpha,sr)
-    y = y/ max(y)
+    y = ftm.getsounds_imp_linear_nonorm(m1,m2,x1,x2,h,tau,omega,p,D,l0,alpha)
     filename = os.path.join(path_out,str(train_params[i,0])+"_sound.wav")
     sf.write(filename, y, sr)
     

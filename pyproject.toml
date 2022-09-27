@@ -1,0 +1,17 @@
+[project]
+name = "pnp_synth"
+version = "0.1.0.dev0"
+description = "Perceptual-Neural-Physical (PNP) modeling of musical timbre"
+
+
+[project.urls]
+"Homepage" = "https://github.com/lylyhan/perceptual_neural_physical"
+"Bug Tracker" = "https://github.com/lylyhan/perceptual_neural_physical"
+
+
+[build-system]
+requires = [
+    "numpy",
+    "setuptools >= 61.0",
+    "wheel"
+]

@@ -5,7 +5,9 @@ There will be a vector of 5 associated to each sample.
 import numpy as np
 import os
 import soundfile as sf
-from ..pnp.physical import ftm
+from ..pnp_synth.physical import ftm
+from ..pnp_synth.perceptual import constants as perceptual_C
+from ..pnp_synth.physical import constants as physical_C
 import pandas as pd
 import librosa
 
@@ -66,44 +68,30 @@ if __name__ == "__main__":
     y_val = df_val.values[:,1:-1].astype(np.float64)
     y_train_norm, y_test_norm, y_val_norm, scaler = preprocess_gt(y_train, y_test, y_val)
     
-    
-    jtfs = TimeFrequencyScattering1D(
-            J = 14, #scale
-            shape = (2**16, ), 
-            Q = 1, #filters per octave, frequency resolution
-            T = 2**16, 
-            F = 2,
-            max_pad_factor=1,
-            max_pad_factor_fr=1,
-            average = True,
-            average_fr = True,
-        ).cuda()
-    
+    params = perceptual_C.jtfs_params
+    jtfs = TimeFrequencyScattering1D(**params).cuda()
+
     def cal_jtfs(param_n):
         param_o = inverse_scale(param_n, scaler) 
         wav1 = ftm.getsounds_imp_linear_nonorm_torch(m1,m2,x1,x2,h,param_o[None,:],l0)
         jwav = jtfs(wav1).squeeze()
         return jwav
 
-    m1 = m2 = 10
-    x1 = x2 = 0.4
-    h = 0.03
-    l0 = np.pi
-    batchsize = 10
+    m1 = m2 = physical_C.m1
+    x1 = x2 = physical_C.x1
+    h = physical_C.h
+    l0 = physical_C.l0
     sets = ["train", "test", "val"]
     for j, param_norm in enumerate([y_train_norm, y_test_norm, y_val_norm]):
         print("making gradients for set ", sets[j])
         set_grad = []
         set_jtfs = []
         for i in range(param_norm.shape[0]): #iterate over each sample in the dataset
-            if i%1000 == 0:
-                print(i)
             #scale normalized param back to original ranges
             torch.autograd.set_detect_anomaly(True)
             param_n = torch.tensor(param_norm[i,:], requires_grad=True) #where the gradient starts taping
             set_jtfs.append(cal_jtfs(param_n).cpu().detach().numpy())
             grads = functorch.jacfwd(cal_jtfs)(param_n) #(639,5)
-
             JTJ = torch.matmul(grads.T, grads)
             set_grad.append(JTJ.cpu().detach().numpy())
             torch.cuda.empty_cache()
