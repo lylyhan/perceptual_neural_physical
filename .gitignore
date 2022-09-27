@@ -1,4 +1,5 @@
 build/
 icassp23/.ipynb_checkpoints/
+src/pnp.egg-info/
 
 .DS_Store
