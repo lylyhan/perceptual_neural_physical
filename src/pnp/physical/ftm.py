@@ -13,23 +13,17 @@ mode = 10
 sr = 22050
 
 
-def rectangular_drum(
-    m1, m2, x1, x2, h, tau11, w11, p, D, l0, alpha, sr
-):
+def rectangular_drum(m1, m2, x1, x2, h, tau, omega, p, D, l0, alpha, sr):
     l2 = l0 * alpha
     beta_side = alpha + 1 / alpha
-    S = (
-        l0
-        / np.pi
-        * ((D * w11 * alpha) ** 2 + (p * alpha / tau11) ** 2) ** 0.25
-    )
+    S = l0 / np.pi * ((D * omega * alpha) ** 2 + (p * alpha / tau) ** 2) ** 0.25
     c_sq = (
-        alpha * (1 / beta_side - p**2 * beta_side) / tau11**2
-        + alpha * w11**2 * (1 / beta_side - D**2 * beta_side)
+        alpha * (1 / beta_side - p**2 * beta_side) / tau**2
+        + alpha * omega**2 * (1 / beta_side - D**2 * beta_side)
     ) * (l0 / np.pi) ** 2
     T = c_sq
-    d1 = 2 * (1 - p * beta_side) / tau11
-    d3 = -2 * p * alpha / tau11 * (l0 / np.pi) ** 2
+    d1 = 2 * (1 - p * beta_side) / tau
+    d3 = -2 * p * alpha / tau * (l0 / np.pi) ** 2
 
     EI = S**4
 
