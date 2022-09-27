@@ -1,5 +1,5 @@
 [project]
-name = "pnp"
+name = "pnp_synth"
 version = "0.1.0.dev0"
 description = "Perceptual-Neural-Physical (PNP) modeling of musical timbre"
 
