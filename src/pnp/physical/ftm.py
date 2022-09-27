@@ -5,6 +5,13 @@ drum model with normalized side length ratio/ side length, in impulse form
 import numpy as np
 import math
 
+x1 = 0.4
+x2 = 0.4
+h = 0.03
+l0 = np.pi
+mode = 10
+sr = 22050
+
 
 def rectangular_drum(
     m1, m2, x1, x2, h, tau11, w11, p, D, l0, alpha, sr
