@@ -11,9 +11,9 @@ import os
 out_path = "/home/han/data/drum_data/"
 
 
-df_train = pandas.read_csv("./annotations/train_param_v2.csv") 
-df_val = pandas.read_csv("./annotations/val_param_v2.csv") 
-df_test = pandas.read_csv("./annotations/test_param_v2.csv") 
+df_train = pandas.read_csv("../data/train_param_v2.csv") 
+df_val = pandas.read_csv("../data/val_param_v2.csv") 
+df_test = pandas.read_csv("../data/test_param_v2.csv") 
 
 print("finish loading annotations!")
 
