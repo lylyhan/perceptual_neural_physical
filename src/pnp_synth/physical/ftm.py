@@ -17,12 +17,12 @@ constants = {
 }
 
 
-def rectangular_drum_torch(theta, **constants):
+def rectangular_drum(theta, **constants):
     #theta
-    w11 = theta[0]
+    w11 = 10 ** theta[0]
     tau11 = theta[1]
-    p = theta[2]
-    D = theta[3]
+    p = 10 ** theta[2]
+    D = 10 ** theta[3]
     alpha_side = theta[4]
     l0 = torch.tensor(constants['l0'])
 

@@ -1,80 +1,46 @@
 import numpy as np
-import pandas
+import pandas as pd
 import random
 import sys
-
-from ..pnp_synth.physical import ftm  #not sure if this will work
-from ..pnp_synth.physical import constants 
+sys.path.append("../src/pnp_synth/physical")
+import ftm
+#from ..src.pnp_synth.physical import ftm  #not sure if this will work
 import soundfile as sf
 import os
 
-#define dataset path
-out_path = "/home/han/data/drum_data/"
+
+out_path = sys.argv[1]
+id_start = int(sys.argv[2])
+id_end = int(sys.argv[3])
+
+folds = ["test", "train", "val"]
+fold_dfs = {}
+
+for fold in folds:
+    csv_name = fold + "_param_log_v2.csv"
+    csv_path = os.path.join("..", "data", csv_name)
+    fold_df = pd.read_csv(csv_path)
+    fold_dfs[fold] = fold_df
+    #make outpath dirs
+    path_out = os.path.join(out_path, fold)
+    if not os.path.exists(path_out):
+        os.makedirs(path_out)       
 
 
-df_train = pandas.read_csv("../data/train_param_v2.csv") 
-df_val = pandas.read_csv("../data/val_param_v2.csv") 
-df_test = pandas.read_csv("../data/test_param_v2.csv") 
+full_df = pd.concat(fold_dfs.values()).sort_values(
+    by="ID", ignore_index=False
+)
+assert len(set(full_df["ID"])) == len(full_df)
 
-print("finish loading annotations!")
-
-val_params = df_val.values
-train_params = df_train.values
-test_params = df_test.values
-
-n_samp_val,n_param_val = val_params.shape
-n_samp_test,n_param_val = test_params.shape
-n_samp_train,n_param_val = train_params.shape
-
-x1 = x2 = constants.x1
-h = constants.h
-l0 = constants.l0
-
-m1 = m2 = constants.m1
-sr = constants.sr
-
-print("begin making dataset!")
-
-path_out = os.path.join(out_path,"val")
-
-if not os.path.exists(path_out):
-    os.makedirs(path_out)       
-for i in range(n_samp_val):
-    omega,tau,p,D,alpha = val_params[i,1:-1]
-    y = ftm.getsounds_imp_linear_nonorm(m1,m2,x1,x2,h,tau,omega,p,D,l0,alpha)
-    filename = os.path.join(path_out,str(val_params[i,0])+"_sound.wav")
-    sf.write(filename, y, sr)
+params = full_df.values
+n_samp = params.shape[0]
+assert n_samp > id_end > id_start + 1 > 0 #nsamp is from 0 to 100k-1?
 
 
-print("finished validation set!!")
-
-
-path_out = os.path.join(out_path,"test")
-if not os.path.exists(path_out):
-    os.makedirs(path_out)
-for i in range(n_samp_test):
-    omega,tau,p,D,alpha = test_params[i,1:-1]
-    y = ftm.getsounds_imp_linear_nonorm(m1,m2,x1,x2,h,tau,omega,p,D,l0,alpha)
-    filename = os.path.join(path_out,str(test_params[i,0])+"_sound.wav")
-    sf.write(filename, y, sr)
-    
-    
-print("finished test set!!")
-
-path_out = os.path.join(out_path,"train")
-if not os.path.exists(path_out):
-    os.makedirs(path_out)
-for i in range(n_samp_train):
-    omega,tau,p,D,alpha = train_params[i,1:-1]
-    y = ftm.getsounds_imp_linear_nonorm(m1,m2,x1,x2,h,tau,omega,p,D,l0,alpha)
-    filename = os.path.join(path_out,str(train_params[i,0])+"_sound.wav")
-    sf.write(filename, y, sr)
-    
-
-print("finished train set!!")
-
-
-
-
-
-
+for i in range(id_start, id_end):
+    theta = params[i,3:-1]
+    fold = params[i,-1]
+    id = params[i,2]
+    y = ftm.rectangular_drum(theta, **ftm.constants)
+    filename = os.path.join(out_path, fold, str(id)+"_sound.wav")
+    sf.write(filename, y, ftm.constants["sr"])
