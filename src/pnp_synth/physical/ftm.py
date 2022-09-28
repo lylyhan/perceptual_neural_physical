@@ -3,7 +3,7 @@ This script implements Rabenstein's linear drum model
 drum model with normalized side length ratio/ side length, in impulse form
 """
 import numpy as np
-import math
+import torch
 
 constants = {
     "x1": 0.4,
@@ -13,52 +13,67 @@ constants = {
     "m1": 10,
     "m2": 10,
     "sr": 22050,
+    "dur":2**16
 }
 
 
-def rectangular_drum(m1, m2, x1, x2, h, tau, omega, p, D, l0, alpha, sr):
-    l2 = l0 * alpha
-    beta_side = alpha + 1 / alpha
-    S = l0 / np.pi * ((D * omega * alpha) ** 2 + (p * alpha / tau) ** 2) ** 0.25
+def rectangular_drum_torch(theta, **constants):
+    #theta
+    w11 = theta[0]
+    tau11 = theta[1]
+    p = theta[2]
+    D = theta[3]
+    alpha_side = theta[4]
+    l0 = torch.tensor(constants['l0'])
+
+    l2 = l0 * alpha_side 
+    pi = torch.tensor(np.pi, dtype=torch.float64)
+
+    beta_side = alpha_side + 1 / alpha_side
+    S = l0 / pi * ((D * w11 * alpha_side)**2 + (p * alpha_side / tau11)**2)**0.25
     c_sq = (
-        alpha * (1 / beta_side - p**2 * beta_side) / tau**2
-        + alpha * omega**2 * (1 / beta_side - D**2 * beta_side)
-    ) * (l0 / np.pi) ** 2
-    T = c_sq
-    d1 = 2 * (1 - p * beta_side) / tau
-    d3 = -2 * p * alpha / tau * (l0 / np.pi) ** 2
+        alpha_side * (1 / beta_side - p**2 * beta_side) / tau11**2 
+        + alpha_side * w11**2 * (1 / beta_side - D**2 * beta_side)
+    ) * (l0 / np.pi)**2
+    T = c_sq # scalar
+    d1 = 2 * (1 - p * beta_side) / tau11
+    d3 = -2 * p * alpha_side / tau11 * (l0 / pi) **2 
 
-    EI = S**4
+    EI = S ** 4 
 
-    mu = np.arange(1, m1 + 1)
-    mu2 = np.arange(1, m2 + 1)
-    dur = 2**16
-    Ts = 1 / sr
-    tau = 1 / sr * np.arange(1, dur + 1)
+    mu = torch.arange(1, constants['m1'] + 1) #(m,)
+    mu2 = torch.arange(1, constants['m2'] + 1) #(m,)
+    dur = constants['dur']
+    n = (mu * pi / l0) ** 2 + (mu2 * pi / l2)**2 #(m,)
+    n2 = n ** 2 
+    K = torch.sin(mu * pi * constants['x1']) * torch.sin(mu2 * pi * constants['x2']) #(m,)
 
-    n = (mu * np.pi / l0) ** 2 + (mu2 * np.pi / l2) ** 2  # eta
-    n2 = n**2
-    K = np.sin(mu * math.pi * x1) * np.sin(mu2 * math.pi * x2)
 
-    beta = EI * n2 + T * n  # (m,1)
-    alpha = (d1 - d3 * n) / 2  # nonlinear
-    omega = np.sqrt(np.abs(beta - alpha**2))
-    # correct partials
-    mode_corr = np.sum((omega / 2 / np.pi) <= sr / 2)  # convert omega to hz
+    beta = EI * n2 + T * n #(m)
+    alpha = (d1 - d3 * n)/2 # nonlinear
+    omega = torch.sqrt(torch.abs(beta - alpha**2))
 
+    #adaptively change mode number according to nyquist frequency
+    temp = (omega / 2 / pi) <= constants['sr'] / 2
+    mode_corr = torch.sum(temp.to(torch.int32),) 
+    
     N = l0 * l2 / 4
     yi = (
-        h
-        * np.sin(mu[:mode_corr] * np.pi * x1)
-        * np.sin(mu2[:mode_corr] * np.pi * x2)
-        / omega[:mode_corr]
+        constants['h'] 
+        * torch.sin(mu[:mode_corr] * pi * constants['x1']) 
+        * torch.sin(mu2[:mode_corr] * pi * constants['x2']) 
+        / omega[:mode_corr] #(mode)
     )
 
-    time_steps = np.linspace(0, dur, dur) / sr
-    y = np.exp(-alpha[:mode_corr, None] * time_steps[None, :]) * np.sin(
-        omega[:mode_corr, None] * time_steps[None, :]
-    )
-    y = yi[:, None] * y  # (m,) * (m,dur)
-    y = np.sum(y * K[:mode_corr, None] / N, axis=0)  # impulse response itself
+    time_steps = torch.linspace(0, dur, dur) / constants['sr'] #(T,)
+    y = torch.exp(-alpha[:mode_corr,None] * time_steps[None,:]) * torch.sin(
+        omega[:mode_corr,None] * time_steps[None,:]
+    ) # (mode,T)
+
+    y = yi[:,None] * y #(mode,T)
+
+    y = torch.sum(y * K[:mode_corr,None] / N,axis=0) #(T,)
+
+    y = y / torch.max(torch.abs(y))
 
     return y
