@@ -2,9 +2,9 @@ import numpy as np
 import pandas as pd
 import random
 import sys
-sys.path.append("../src/pnp_synth/physical")
-import ftm
-#from ..src.pnp_synth.physical import ftm  #not sure if this will work
+#sys.path.append("../src/pnp_synth/physical")
+#import ftm
+from pnp_synth.physical import ftm
 import soundfile as sf
 import os
 
@@ -34,7 +34,7 @@ assert len(set(full_df["ID"])) == len(full_df)
 
 params = full_df.values
 n_samp = params.shape[0]
-assert n_samp > id_end > id_start + 1 > 0 #nsamp is from 0 to 100k-1?
+assert n_samp >= id_end > id_start >= 0 #nsamp is from 0 to 100k-1?
 
 
 for i in range(id_start, id_end):

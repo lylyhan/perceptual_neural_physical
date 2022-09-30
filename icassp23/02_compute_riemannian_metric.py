@@ -4,101 +4,90 @@ There will be a vector of 5 associated to each sample.
 """
 import numpy as np
 import os
-import soundfile as sf
-from ..pnp_synth.physical import ftm
-from ..pnp_synth.perceptual import constants as perceptual_C
-from ..pnp_synth.physical import constants as physical_C
+import sys
+#sys.path.append("/home/han/perceptual_neural_physical/src/pnp_synth")
+#from physical import ftm
+#from perceptual import jtfs
+from pnp_synth.physical import ftm
+from pnp_synth.perceptual import jtfs
 import pandas as pd
-import librosa
-
-from kymatio.torch import TimeFrequencyScattering1D,Scattering1D
+#from kymatio.scattering1d.frontend.torch_frontend import TimeFrequencyScatteringTorch
+from kymatio import TimeFrequencyScattering
 import torch
 from sklearn.preprocessing import MinMaxScaler
 import copy
-import math
-import functorch
 
-csv_path = "../data"
+
+csv_path = "/home/han/perceptual_neural_physical/data"
 save_dir = "/home/han/data/"
 
-def preprocess_gt(y_train, y_test, y_val):
-    
-    param_idx = [0,2,3]
-    y_train_cp = copy.deepcopy(y_train)
-    y_test_cp = copy.deepcopy(y_test)
-    y_val_cp = copy.deepcopy(y_val)
-    
-    #logscale
-    for idx in param_idx:
-        y_train_cp[:,idx] = [math.log10(i) for i in y_train_cp[:,idx]]
-        y_test_cp[:,idx] = [math.log10(i) for i in y_test_cp[:,idx]]
-        y_val_cp[:,idx] = [math.log10(i) for i in y_val_cp[:,idx]]
-        
+def preprocess_gt(full_df):
+    #takes dataframe, scale values in dataframe, output dataframe and scaler
+    train_df = full_df.loc[full_df['set'] == "train"]
     #normalize
     scaler = MinMaxScaler()
-    scaler.fit(y_train_cp)
-    y_train_normalized = scaler.transform(y_train_cp)
-    y_val_normalized = scaler.transform(y_val_cp)
-    y_test_normalized = scaler.transform(y_test_cp)
-
-    return y_train_normalized, y_test_normalized, y_val_normalized, scaler
+    scaler.fit(train_df.values[:, 3:-1])
+    full_df_norm = scaler.transform(full_df.values[:,3:-1]) #just a tensor, not dataframe
+    return full_df_norm, scaler
 
 def inverse_scale(y_norm,scaler):
     sc_max = torch.tensor(scaler.data_max_)
-    sc_min = torch.tensor(scaler.data_min_)
-    
-    param_idx = [0,2,3]
+    sc_min = torch.tensor(scaler.data_min_) 
     y_norm_o = y_norm * (sc_max - sc_min) + sc_min
-    helper = torch.ones(y_norm_o.shape)
-    #inverse logscale
-    for idx in param_idx:
-        helper[idx] = torch.pow(10,y_norm_o[idx]) / y_norm_o[idx]
-    y_norm_o = y_norm_o * helper
     return y_norm_o
 
 
 if __name__ == "__main__":
+    out_path_jtfs = sys.argv[1]
+    out_path_grad = sys.argv[2]
+    id_start = int(sys.argv[3])
+    id_end = int(sys.argv[4])
+
+    folds = ["train", "test", "val"]
+    fold_dfs = {}
+    for fold in folds:
+        csv_name = fold + "_param_log_v2.csv"
+        csv_path = os.path.join("..", "data", csv_name)
+        fold_df = pd.read_csv(csv_path)
+        fold_dfs[fold] = fold_df
+        #make outpath dirs
+        if not os.path.exists(os.path.join(out_path_jtfs,fold)):
+            os.makedirs(os.path.join(out_path_jtfs,fold))        
+        if not os.path.exists(os.path.join(out_path_grad,fold)):
+            os.makedirs(os.path.join(out_path_grad,fold))   
+
+
+    full_df = pd.concat(fold_dfs.values()).sort_values(
+                                                        by="ID", ignore_index=False
+    )
+    assert len(set(full_df["ID"])) == len(full_df)
+
+    params = full_df.values
+    n_samp = params.shape[0]
+    assert n_samp > id_end > id_start + 1 > 0 #nsamp is from 0 to 100k-1?
+
     
-    #load original parameters and normalize
-    df_train = pd.read_csv(os.path.join(csv_path, "train_param_v2.csv"))
-    df_test = pd.read_csv(os.path.join(csv_path, "test_param_v2.csv"))
-    df_val = pd.read_csv(os.path.join(csv_path, "val_param_v2.csv"))
-    y_train = df_train.values[:,1:-1].astype(np.float64)
-    y_test = df_test.values[:,1:-1].astype(np.float64)
-    y_val = df_val.values[:,1:-1].astype(np.float64)
-    y_train_norm, y_test_norm, y_val_norm, scaler = preprocess_gt(y_train, y_test, y_val)
+    full_df_norm, scaler = preprocess_gt(full_df)
     
-    params = perceptual_C.jtfs_params
-    jtfs = TimeFrequencyScattering1D(**params).cuda()
+    jtfs = TimeFrequencyScattering(**jtfs.jtfs_params).cuda()
 
     def cal_jtfs(param_n):
         param_o = inverse_scale(param_n, scaler) 
-        wav1 = ftm.getsounds_imp_linear_nonorm_torch(m1,m2,x1,x2,h,param_o[None,:],l0)
+        wav1 = ftm.rectangular_drum(param_o,**ftm.constants)
         jwav = jtfs(wav1).squeeze()
         return jwav
 
-    m1 = m2 = physical_C.m1
-    x1 = x2 = physical_C.x1
-    h = physical_C.h
-    l0 = physical_C.l0
-    sets = ["train", "test", "val"]
-    for j, param_norm in enumerate([y_train_norm, y_test_norm, y_val_norm]):
-        print("making gradients for set ", sets[j])
-        set_grad = []
-        set_jtfs = []
-        for i in range(param_norm.shape[0]): #iterate over each sample in the dataset
-            #scale normalized param back to original ranges
-            torch.autograd.set_detect_anomaly(True)
-            param_n = torch.tensor(param_norm[i,:], requires_grad=True) #where the gradient starts taping
-            set_jtfs.append(cal_jtfs(param_n).cpu().detach().numpy())
-            grads = functorch.jacfwd(cal_jtfs)(param_n) #(639,5)
-            JTJ = torch.matmul(grads.T, grads)
-            set_grad.append(JTJ.cpu().detach().numpy())
-            torch.cuda.empty_cache()
-        set_grad = np.stack(set_grad, axis=0)    
-        set_jtfs = np.stack(set_jtfs, axis=0)
-
-        np.save(os.path.join(save_dir,sets[j] + "_grad_jtfs.npy"),set_grad)
-        np.save(os.path.join(save_dir,sets[j] + "_jtfs.npy"),set_grad)
-
+  
+    torch.autograd.set_detect_anomaly(True)
+    for i in range(id_start, id_end):
+        param_n = torch.tensor(full_df_norm[i,:], requires_grad=True) #where the gradient starts taping
+        fold = full_df.values[i,-1]
+        id = full_df.values[i,2]
+        raw_jtfs = cal_jtfs(param_n)#.cpu().detach().numpy()
+        #cal grad
+        grads = functorch.jacfwd(cal_jtfs)(param_n) #(639,5)
+        JTJ = torch.matmul(grads.T, grads)
+        torch.cuda.empty_cache()
+        np.save(os.path.join(out_path_jtfs, fold, id + "_jtfs.npy"), raw_jtfs.cpu().detach().numpy()) 
+        np.save(os.path.join(out_path_grad, fold, id + "_grad_jtfs.npy"), JTJ.cpu().detach().numpy())
 
