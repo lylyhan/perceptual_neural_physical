@@ -19,12 +19,6 @@ dependencies = [
 
 [build-system]
 requires = [
-    "functorch",
-    "kymatio @ git+https://git@github.com/kymatio/kymatio.git@main",
-    "librosa",
-    "pandas",
     "setuptools >= 61.0",
-    "sklearn",
-    "soundfile",
     "wheel",
 ]
