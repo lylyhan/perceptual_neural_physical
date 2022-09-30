@@ -2,9 +2,7 @@ import numpy as np
 import pandas as pd
 import random
 import sys
-sys.path.append("../src/pnp_synth/physical")
-import ftm
-#from ..src.pnp_synth.physical import ftm  #not sure if this will work
+from pnp_synth.physical import ftm 
 import soundfile as sf
 import os
 
