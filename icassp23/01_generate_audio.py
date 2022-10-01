@@ -8,15 +8,16 @@ import os
 
 
 out_path = sys.argv[1]
-id_start = int(sys.argv[2])
-id_end = int(sys.argv[3])
+csv_folder = sys.argv[2]
+id_start = int(sys.argv[3])
+id_end = int(sys.argv[4])
 
 folds = ["test", "train", "val"]
 fold_dfs = {}
 
 for fold in folds:
     csv_name = fold + "_param_log_v2.csv"
-    csv_path = os.path.join("..", "data", csv_name)
+    csv_path = os.path.join(csv_folder, csv_name)
     fold_df = pd.read_csv(csv_path)
     fold_dfs[fold] = fold_df
     #make outpath dirs
