@@ -11,7 +11,7 @@ n_per_th = id_max // n_threads
 script_name = os.path.basename(__file__)
 script_path = os.path.abspath(os.path.join("..", "icassp23", script_name))
 csv_path = os.path.abspath(os.path.join("..", "data"))
-data_path = "/scratch/icassp23_data"
+data_path = "/scratch/vl1019/icassp23_data"
 
 # Create folder.
 sbatch_dir = os.path.join(".", os.path.basename(__file__)[:-3])
