@@ -37,8 +37,7 @@ for n_thread in range(n_threads):
         f.write("#SBATCH --time=10:00:00\n")
         f.write("#SBATCH --mem=8GB\n")
         f.write("#SBATCH --gres=gpu:1\n")
-        f.write("#SBATCH --output=" +\
-            sbatch_dir + job_name + "_%j.out\n")
+        f.write("#SBATCH --output=" + job_name + "_%j.out\n")
         f.write("\n")
         f.write("module purge\n")
         f.write("module load cuda/11.6.2\n")
