@@ -8,9 +8,9 @@ sys.path.append("../src")
 id_max = 100000
 n_threads = 10
 n_per_th = id_max // n_threads
-script_name = "01_generate_audio.py" #os.path.basename(__file__)
+script_name = os.path.basename(__file__)
 script_path = os.path.abspath(os.path.join("..", "icassp23", script_name))
-out_path = "/scratch/icassp23_data"
+data_path = "/scratch/icassp23_data"
 
 # Create folder.
 sbatch_dir = os.path.join(".", os.path.basename(__file__)[:-3])
@@ -48,8 +48,8 @@ for n_thread in range(n_threads):
         id_end = (n_thread + 1) * n_per_th
         if n_thread == n_threads-1:
             id_end = max(id_end, id_max)
-        f.write(" ".join(["python", script_path, out_path, str(id_start), str(id_end)+"\n"]))
-            
+        f.write(" ".join(["python", script_path, data_path, str(id_start), str(id_end)+"\n"]))
+
 
 # Open shell file.
 file_path = os.path.join(sbatch_dir, script_name[:2] + ".sh")
