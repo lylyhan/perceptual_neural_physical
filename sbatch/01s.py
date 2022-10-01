@@ -42,8 +42,7 @@ for n_thread in range(n_threads):
         f.write("\n")
         f.write("module purge\n")
         f.write("module load cuda/11.6.2\n")
-        f.write("module load cudnn/9.0v7.3.0.29\n")
-        f.write("module load ffmpeg/intel/3.2.2\n")
+        f.write("module load ffmpeg/4.2.4\n")
         f.write("\n")
 
         id_start = n_thread * n_per_th
