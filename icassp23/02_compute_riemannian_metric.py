@@ -12,7 +12,8 @@ from pnp_synth.physical import ftm
 from pnp_synth.perceptual import jtfs
 import pandas as pd
 #from kymatio.scattering1d.frontend.torch_frontend import TimeFrequencyScatteringTorch
-from kymatio import TimeFrequencyScattering
+#from kymatio import TimeFrequencyScattering
+from kymatio.torch import TimeFrequencyScattering1D
 import torch
 from sklearn.preprocessing import MinMaxScaler
 import copy
@@ -69,12 +70,12 @@ if __name__ == "__main__":
     
     full_df_norm, scaler = preprocess_gt(full_df)
     
-    jtfs = TimeFrequencyScattering(**jtfs.jtfs_params).cuda()
+    jtfs = TimeFrequencyScattering1D(**jtfs.jtfs_params).cuda()
 
     def cal_jtfs(param_n):
         param_o = inverse_scale(param_n, scaler) 
         wav1 = ftm.rectangular_drum(param_o,**ftm.constants)
-        jwav = jtfs(wav1).squeeze()
+        jwav = jtfs(wav1).flatten().squeeze()
         return jwav
 
   
