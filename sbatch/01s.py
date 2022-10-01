@@ -10,7 +10,7 @@ n_threads = 10
 n_per_th = id_max // n_threads
 script_name = "01_generate_audio.py" #os.path.basename(__file__)
 script_path = os.path.abspath(os.path.join("..", "icassp23", script_name))
-out_path = "/scratch/drum_data"
+out_path = "/scratch/icassp23_data"
 
 # Create folder.
 sbatch_dir = os.path.join(".", os.path.basename(__file__)[:-3])
@@ -35,13 +35,13 @@ for n_thread in range(n_threads):
         f.write("#SBATCH --tasks-per-node=1\n")
         f.write("#SBATCH --cpus-per-task=4\n")
         f.write("#SBATCH --time=10:00:00\n")
-        f.write("#SBATCH --mem=62GB\n")
+        f.write("#SBATCH --mem=8GB\n")
         f.write("#SBATCH --gres=gpu:1\n")
         f.write("#SBATCH --output=" +\
             sbatch_dir + job_name + "_%j.out\n")
         f.write("\n")
         f.write("module purge\n")
-        f.write("module load cuda/9.0.176\n")
+        f.write("module load cuda/11.6.2\n")
         f.write("module load cudnn/9.0v7.3.0.29\n")
         f.write("module load ffmpeg/intel/3.2.2\n")
         f.write("\n")
