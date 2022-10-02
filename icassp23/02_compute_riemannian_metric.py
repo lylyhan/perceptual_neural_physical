@@ -79,9 +79,9 @@ if __name__ == "__main__":
         )  # where the gradient starts taping
         fold = full_df.values[i, -1]
         id = full_df.values[i, 2]
-        raw_jtfs = cal_jtfs(param_n)  # .cpu().detach().numpy()
+        raw_jtfs = cal_jtfs(param_n)
         # cal grad
-        grads = functorch.jacfwd(cal_jtfs)(param_n)  # (639,5)
+        grads = functorch.jacfwd(cal_jtfs)(param_n)
         JTJ = torch.matmul(grads.T, grads)
         torch.cuda.empty_cache()
         np.save(
