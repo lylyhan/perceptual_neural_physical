@@ -2,6 +2,7 @@
 This script calculates the JTFS coefficients and the associated Riemannian metric with respect to each normalized parameter.
 There will be a vector of 5 associated to each sample.
 """
+import datetime
 import functorch
 from kymatio.torch import TimeFrequencyScattering1D
 import numpy as np
@@ -48,7 +49,7 @@ if __name__ == "__main__":
     start_time = int(time.time())
     print(str(datetime.datetime.now()) + " Start.")
     print(__doc__ + "\n")
-    print("Arguments:\n" + "\n".join(sys.argv) + "\n")
+    print("Command-line arguments:\n" + "\n".join(sys.argv[1:]) + "\n")
 
     for module in [kymatio, np, pandas, sklearn, torch]:
         print("{} version: {:s}".format(module.__name__, module.__version__))
@@ -104,3 +105,4 @@ if __name__ == "__main__":
             os.path.join(out_path_grad, fold, id + "_grad_jtfs.npy"),
             JTJ.cpu().detach().numpy(),
         )
+        print(datetime.datetime.now() + " Exported: {}/{}".format(fold, id))
