@@ -36,13 +36,6 @@ def inverse_scale(y_norm, scaler):
     return y_norm_o
 
 
-def cal_jtfs(param_n):
-    param_o = inverse_scale(param_n, scaler)
-    wav1 = ftm.rectangular_drum(param_o, **ftm.constants)
-    jwav = jtfs(wav1).flatten().squeeze()
-    return jwav
-
-
 if __name__ == "__main__":
     out_path_jtfs = sys.argv[1]
     out_path_grad = sys.argv[2]
@@ -71,7 +64,11 @@ if __name__ == "__main__":
 
     full_df_norm, scaler = preprocess_gt(full_df)
 
-    jtfs = TimeFrequencyScattering1D(**jtfs.jtfs_params).cuda()
+    jtfs_operator = TimeFrequencyScattering1D(**jtfs.jtfs_params).cuda()
+
+    def cal_jtfs(param_n):
+        param_o = inverse_scale(param_n, scaler)
+        wav1 = ftm.rectangular_drum(param_o, **ftm.constants)
 
     torch.autograd.set_detect_anomaly(True)
     for i in range(id_start, id_end):
