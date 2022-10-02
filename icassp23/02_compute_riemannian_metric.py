@@ -106,3 +106,15 @@ if __name__ == "__main__":
             JTJ.cpu().detach().numpy(),
         )
         print(datetime.datetime.now() + " Exported: {}/{}".format(fold, id))
+    print("")
+
+    # Print elapsed time.
+    print(str(datetime.datetime.now()) + " Success.")
+    elapsed_time = time.time() - int(start_time)
+    elapsed_hours = int(elapsed_time / (60 * 60))
+    elapsed_minutes = int((elapsed_time % (60 * 60)) / 60)
+    elapsed_seconds = elapsed_time % 60.
+    elapsed_str = "{:>02}:{:>02}:{:>05.2f}".format(elapsed_hours,
+                                                   elapsed_minutes,
+                                                   elapsed_seconds)
+    print("Total elapsed time: " + elapsed_str + ".")
