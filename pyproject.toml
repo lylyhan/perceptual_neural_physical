@@ -5,7 +5,6 @@ description = "Perceptual-Neural-Physical (PNP) modeling of musical timbre"
 
 dependencies = [
     "functorch",
-    "kymatio @ git+https://git@github.com/kymatio/kymatio.git@main",
     "librosa",
     "pandas",
     "sklearn",
