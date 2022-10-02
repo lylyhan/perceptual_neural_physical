@@ -69,6 +69,8 @@ if __name__ == "__main__":
     def cal_jtfs(param_n):
         param_o = inverse_scale(param_n, scaler)
         wav1 = ftm.rectangular_drum(param_o, **ftm.constants)
+        jwav = jtfs_operator(wav1).flatten().squeeze()
+        return jwav
 
     torch.autograd.set_detect_anomaly(True)
     for i in range(id_start, id_end):
