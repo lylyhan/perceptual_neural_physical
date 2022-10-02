@@ -11,6 +11,7 @@ from pnp_synth.physical import ftm
 from pnp_synth.perceptual import jtfs
 from sklearn.preprocessing import MinMaxScaler
 import sys
+import time
 import torch
 
 
@@ -42,6 +43,16 @@ if __name__ == "__main__":
     out_path_grad = sys.argv[2]
     id_start = int(sys.argv[3])
     id_end = int(sys.argv[4])
+
+    # Print header.
+    start_time = int(time.time())
+    print(str(datetime.datetime.now()) + " Start.")
+    print(__doc__ + "\n")
+    print("Arguments:\n" + "\n".join(sys.argv) + "\n")
+
+    for module in [kymatio, np, pandas, sklearn, torch]:
+        print("{} version: {:s}".format(module.__name__, module.__version__))
+    print("")
 
     folds = ["train", "test", "val"]
     fold_dfs = {}
