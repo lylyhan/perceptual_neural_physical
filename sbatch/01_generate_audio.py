@@ -57,7 +57,7 @@ file_path = os.path.join(sbatch_dir, script_name[:2] + ".sh")
 
 with open(file_path, "w") as f:
     # Print header.
-    f.write("# This shell script computes scattering features for various hyperparmeter settings.\n")
+    f.write("# This shell script generates audio from virtual drum shapes.\n")
     f.write("\n")
 
     # Loop over folds: training and validation.
