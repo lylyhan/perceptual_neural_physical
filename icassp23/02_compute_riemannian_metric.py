@@ -4,12 +4,15 @@ There will be a vector of 5 associated to each sample.
 """
 import datetime
 import functorch
+import kymatio
 from kymatio.torch import TimeFrequencyScattering1D
 import numpy as np
 import os
 import pandas as pd
 from pnp_synth.physical import ftm
 from pnp_synth.perceptual import jtfs
+from pnp_synth.neural import forward
+import sklearn
 from sklearn.preprocessing import MinMaxScaler
 import sys
 import time
@@ -52,7 +55,7 @@ if __name__ == "__main__":
     print(__doc__ + "\n")
     print("Command-line arguments:\n" + "\n".join(sys.argv[1:]) + "\n")
 
-    for module in [kymatio, np, pandas, sklearn, torch]:
+    for module in [kymatio, np, pd, sklearn, torch]:
         print("{} version: {:s}".format(module.__name__, module.__version__))
     print("")
 
@@ -80,11 +83,19 @@ if __name__ == "__main__":
 
     jtfs_operator = TimeFrequencyScattering1D(**jtfs.jtfs_params).cuda()
 
-    def cal_jtfs(param_n):
-        param_o = inverse_scale(param_n, scaler)
-        wav1 = ftm.rectangular_drum(param_o, **ftm.constants)
-        jwav = jtfs_operator(wav1).flatten().squeeze()
-        return jwav
+
+    def icassp23_synth(rescaled_param):
+        return ftm.rectangular_drum(rescaled_param, **ftm.constants)
+
+    def icassp23_pnp_forward(rescaled_param):
+        return forward.pnp_forward(
+                                Phi=jtfs_operator,
+                                g=icassp23_synth,
+                                scaler=scaler,
+                                rescaled_param=rescaled_param
+                                )
+                            
+    icassp23_jacobian = functorch.jacfwd(icassp23_pnp_forward)
 
     torch.autograd.set_detect_anomaly(True)
     for i in range(id_start, id_end):
@@ -93,9 +104,9 @@ if __name__ == "__main__":
         )  # where the gradient starts taping
         fold = full_df.values[i, -1]
         id = full_df.values[i, 2]
-        raw_jtfs = cal_jtfs(param_n)
+        raw_jtfs = icassp23_pnp_forward(param_n)
         # cal grad
-        grads = functorch.jacfwd(cal_jtfs)(param_n)
+        grads = icassp23_jacobian(param_n)
         JTJ = torch.matmul(grads.T, grads)
         torch.cuda.empty_cache()
         np.save(
