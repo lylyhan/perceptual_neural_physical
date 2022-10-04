@@ -35,11 +35,9 @@ for n_thread in range(n_threads):
         f.write("#SBATCH --cpus-per-task=4\n")
         f.write("#SBATCH --time=1:00:00\n")
         f.write("#SBATCH --mem=16GB\n")
-        f.write("#SBATCH --gres=gpu:1\n")
         f.write("#SBATCH --output=" + job_name + "_%j.out\n")
         f.write("\n")
         f.write("module purge\n")
-        f.write("module load cuda/11.6.2\n")
         f.write("module load ffmpeg/4.2.4\n")
         f.write("\n")
 

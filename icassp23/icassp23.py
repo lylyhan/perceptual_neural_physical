@@ -1,13 +1,13 @@
 jtfs_params = dict(
-    J = 14, # scattering scale ~ 1000 ms
-    shape = (2**17,), # 2**16 of zero padding plus 2**16 of signal
-    Q = 12, # number of filters per octave
-    T = 2**13, # local temporal averaging
-    F = 2, # local frequential averaging
-    max_pad_factor=1, # temporal padding cannot be greater than 1x support
-    max_pad_factor_fr=1, # frequential padding cannot be greater than 1x support
-    average = True, # average in time
-    average_fr = True, # average in frequency
+    J=14,  # scattering scale ~ 1000 ms
+    shape=(2**17,),  # 2**16 of zero padding plus 2**16 of signal
+    Q=12,  # number of filters per octave
+    T=2**13,  # local temporal averaging
+    F=2,  # local frequential averaging
+    max_pad_factor=1,  # temporal padding cannot be greater than 1x support
+    max_pad_factor_fr=1,  # frequential padding cannot be greater than 1x support
+    average=True,  # average in time
+    average_fr=True,  # average in frequency
 )
 
 
@@ -31,7 +31,7 @@ def x_from_theta(theta):
     We apply 2**16 samples of zero padding (~3 seconds) on the left."""
     x = pnp_synth.ftm.rectangular_drum(theta, **pnp_synth.ftm.constants)
     padding = (pnp_synth.ftm.constants["dur"], 0)
-    x_padded = torch.nn.functional.pad(x, padding, mode='constant', value=0)
+    x_padded = torch.nn.functional.pad(x, padding, mode="constant", value=0)
     return x_padded
 
 
@@ -43,7 +43,7 @@ def S_from_x(jtfs_operator, x):
     Sx = jtfs_operator(x)
 
     # remove leading singleton dimension and unpad
-    Sx_unpadded = Sx[0, :, Sx.shape[-1]:]
+    Sx_unpadded = Sx[0, :, Sx.shape[-1] :]
 
     # flatten to shape (n_paths * n_time_frames,)
     Sx_flattened = Sx_unpadded.flatten()
@@ -67,7 +67,5 @@ def pnp_forward_factory(scaler, jtfs_params):
     Phi = functools.partial(S_from_theta, jtfs_operator=jtfs_operator)
 
     return functools.partial(
-        pnp_synth.pnp_forward,
-        Phi=S_from_x,
-        g=x_from_theta,
-        scaler=scaler)
+        pnp_synth.pnp_forward, Phi=S_from_x, g=x_from_theta, scaler=scaler
+    )

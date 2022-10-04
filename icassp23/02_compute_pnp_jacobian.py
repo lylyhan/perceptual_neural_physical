@@ -46,7 +46,7 @@ n_samples = params.shape[0]
 assert n_samples > id_end > id_start + 1 > 0  # id is between 0 and (100k-1)
 
 # Rescale shape parameters ("theta") to the interval [0, 1].
-nus, scaler = scale_theta(full_df)
+nus, scaler = icassp23.scale_theta(full_df)
 
 # Define the forward PNP operator.
 S_from_nu = icassp23.pnp_forward_factory(scaler, jtfs_params)
@@ -54,7 +54,7 @@ S_from_nu = icassp23.pnp_forward_factory(scaler, jtfs_params)
 # Define the associated Jacobian operator.
 # NB: jacfwd is faster than reverse-mode autodiff here because the input
 # is low-dimensional (5) whereas the output is high-dimensional (~1e4)
-nabla = functorch.jacfwd(pnp_forward)
+dS_over_dnu = functorch.jacfwd(pnp_forward)
 
 
 torch.autograd.set_detect_anomaly(True)
@@ -66,16 +66,16 @@ for i in range(id_start, id_end):
     S = S_from_nu(nu)
 
     # Compute Jacobian: d(S) / d(nu)
-    jacobian = icassp23_jacobian(nu)
+    J = dS_over_dnu(nu)
 
-    #torch.cuda.empty_cache()
+    # torch.cuda.empty_cache()
     np.save(
         os.path.join(out_path_jtfs, fold, id + "_jtfs.npy"),
-        S.cpu().detach().numpy(),
+        S.numpy(),
     )
     np.save(
         os.path.join(out_path_grad, fold, id + "_grad_jtfs.npy"),
-        jacobian.cpu().detach().numpy(),
+        J.numpy(),
     )
     print(datetime.datetime.now() + " Exported: {}/{}".format(fold, id))
 print("")
@@ -85,8 +85,8 @@ print(str(datetime.datetime.now()) + " Success.")
 elapsed_time = time.time() - int(start_time)
 elapsed_hours = int(elapsed_time / (60 * 60))
 elapsed_minutes = int((elapsed_time % (60 * 60)) / 60)
-elapsed_seconds = elapsed_time % 60.
-elapsed_str = "{:>02}:{:>02}:{:>05.2f}".format(elapsed_hours,
-                                               elapsed_minutes,
-                                               elapsed_seconds)
+elapsed_seconds = elapsed_time % 60.0
+elapsed_str = "{:>02}:{:>02}:{:>05.2f}".format(
+    elapsed_hours, elapsed_minutes, elapsed_seconds
+)
 print("Total elapsed time: " + elapsed_str + ".")
