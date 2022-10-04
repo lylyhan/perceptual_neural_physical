@@ -10,7 +10,7 @@ n_threads = 100
 n_per_th = id_max // n_threads
 script_name = os.path.basename(__file__)
 script_path = os.path.abspath(os.path.join("..", "icassp23", script_name))
-data_path = "/scratch/vl1019/icassp23_data"
+save_dir = "/scratch/vl1019/icassp23_data"
 
 # Create folder.
 sbatch_dir = os.path.join(".", os.path.basename(__file__)[:-3])
@@ -45,17 +45,8 @@ for n_thread in range(n_threads):
         id_end = id_start + 1  # (n_thread + 1) * n_per_th
         if n_thread == n_threads - 1:
             id_end = max(id_end, id_max)
-        f.write(
-            " ".join(
-                [
-                    "python",
-                    script_path,
-                    data_path,
-                    str(id_start),
-                    str(id_end) + "\n",
-                ]
-            )
-        )
+        cmd_args = [save_dir, str(id_start), str(id_end)]
+        f.write("python " + " ".join(cmd_args) + "\n"
 
 
 # Open shell file.
