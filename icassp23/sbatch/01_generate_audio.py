@@ -27,7 +27,7 @@ for n_thread in range(n_threads):
     with open(file_path, "w") as f:
         f.write("#!/bin/bash\n")
         f.write("\n")
-        f.write("#BATCH --job-name=" + script_name[:2] + "\n")
+        f.write("#BATCH --job-name=" + script_name + "\n")
         f.write("#SBATCH --nodes=1\n")
         f.write("#SBATCH --tasks-per-node=1\n")
         f.write("#SBATCH --cpus-per-task=4\n")
@@ -40,6 +40,12 @@ for n_thread in range(n_threads):
         f.write("module load cuda/11.6.2\n")
         f.write("module load ffmpeg/4.2.4\n")
         f.write("\n")
+        f.write(" ".join([
+            "singularity exec",
+            "--nv",
+            "--overlay overlay-50G-10M.ext3:ro",
+            "/scratch/work/public/singularity/cuda11.0-cudnn8-devel-ubuntu18.04.sif",
+            "/bin/bash"]))
 
         id_start = n_thread * n_per_th
         id_end = (n_thread + 1) * n_per_th

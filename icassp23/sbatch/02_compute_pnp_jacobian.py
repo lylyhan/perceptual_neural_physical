@@ -13,7 +13,7 @@ script_path = os.path.abspath(os.path.join("..", script_name))
 save_dir = "/scratch/vl1019/icassp23_data"
 
 # Create folder.
-sbatch_dir = os.path.join(".", os.path.basename(__file__)[:-3])
+sbatch_dir = os.path.join(".", script_name[:-3])
 os.makedirs(sbatch_dir, exist_ok=True)
 
 
@@ -29,7 +29,7 @@ for n_thread in range(n_threads):
     with open(file_path, "w") as f:
         f.write("#!/bin/bash\n")
         f.write("\n")
-        f.write("#BATCH --job-name=" + script_name[:2] + "\n")
+        f.write("#BATCH --job-name=" + script_name + "\n")
         f.write("#SBATCH --nodes=1\n")
         f.write("#SBATCH --tasks-per-node=1\n")
         f.write("#SBATCH --cpus-per-task=4\n")
