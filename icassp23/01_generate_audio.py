@@ -21,7 +21,7 @@ assert n_samp >= id_end > id_start >= 0  # nsamp is from 0 to 100k-1?
 
 for fold in folds:
     os.path.makedirs(os.path.join(save_folder, "x", fold), exist_ok=True)
-    
+
 
 for i in range(id_start, id_end):
     theta = params[i, 3:-1]

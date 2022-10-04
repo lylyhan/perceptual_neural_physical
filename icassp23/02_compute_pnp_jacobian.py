@@ -7,7 +7,6 @@ import functorch
 import functools
 import icassp23
 import kymatio
-from kymatio.torch import TimeFrequencyScattering1D
 import numpy as np
 import os
 import pandas as pd
@@ -16,9 +15,6 @@ import sklearn
 import sys
 import time
 import torch
-
-folds = ["train", "test", "val"]
-torch.autograd.set_detect_anomaly(True)
 
 # Print header
 start_time = int(time.time())
@@ -34,21 +30,21 @@ for module in [kymatio, np, pd, sklearn, torch]:
 print("")
 
 # Create folders
-for fold in folds:
+for fold in icassp23.folds:
     os.makedirs(os.path.join(save_dir, "S", fold), exist_ok=True)
     os.makedirs(os.path.join(save_dir, "J", fold), exist_ok=True)
 
 # Load DataFrame
-full_df = icassp23.load_dataframe(csv_path, folds)
+full_df = icassp23.load_dataframe()
 params = full_df.values
 n_samples = params.shape[0]
-assert n_samples > id_end > id_start + 1 > 0  # id is between 0 and (100k-1)
+assert n_samples > id_end > id_start >= 0  # id is between 0 and (100k-1)
 
 # Rescale shape parameters ("theta") to the interval [0, 1].
 nus, scaler = icassp23.scale_theta(full_df)
 
 # Define the forward PNP operator.
-S_from_nu = icassp23.pnp_forward_factory(scaler, jtfs_params)
+S_from_nu = icassp23.pnp_forward_factory(scaler)
 
 # Define the associated Jacobian operator.
 # NB: jacfwd is faster than reverse-mode autodiff here because the input
@@ -56,6 +52,7 @@ S_from_nu = icassp23.pnp_forward_factory(scaler, jtfs_params)
 dS_over_dnu = functorch.jacfwd(pnp_forward)
 
 # Loop over examples.
+torch.autograd.set_detect_anomaly(True)
 for i in range(id_start, id_end):
     # Compute forward transformation: nu -> theta -> x -> S
     nu = torch.tensor(nus[i, :], requires_grad=True)
