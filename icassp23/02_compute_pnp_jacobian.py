@@ -49,7 +49,7 @@ S_from_nu = icassp23.pnp_forward_factory(scaler)
 # Define the associated Jacobian operator.
 # NB: jacfwd is faster than reverse-mode autodiff here because the input
 # is low-dimensional (5) whereas the output is high-dimensional (~1e4)
-dS_over_dnu = functorch.jacfwd(pnp_forward)
+dS_over_dnu = functorch.jacfwd(S_from_nu)
 
 # Loop over examples.
 torch.autograd.set_detect_anomaly(True)
