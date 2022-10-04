@@ -1,8 +1,11 @@
+import functools
 from kymatio.torch import TimeFrequencyScattering1D
 import os
 import pandas as pd
 import pnp_synth
+from pnp_synth.neural import forward
 from pnp_synth.physical import ftm
+import sklearn.preprocessing
 import torch
 
 folds = ["train", "test", "val"]
@@ -46,10 +49,10 @@ def pnp_forward_factory(scaler):
     # Instantiate Joint-Time Frequency Scattering (JTFS) operator
     jtfs_operator = TimeFrequencyScattering1D(**jtfs_params)
 
-    Phi = functools.partial(S_from_theta, jtfs_operator=jtfs_operator)
+    Phi = functools.partial(S_from_x, jtfs_operator=jtfs_operator)
 
     return functools.partial(
-        pnp_synth.pnp_forward, Phi=S_from_x, g=x_from_theta, scaler=scaler
+        forward.pnp_forward, Phi=Phi, g=x_from_theta, scaler=scaler
     )
 
 
@@ -60,7 +63,7 @@ def scale_theta(full_df):
     """
     # Fit scaler according to training set only
     train_df = full_df.loc[full_df["set"] == "train"]
-    scaler = MinMaxScaler()
+    scaler = sklearn.preprocessing.MinMaxScaler()
     train_theta = train_df.values[:, 3:-1]
     scaler.fit(train_theta)
 
@@ -70,10 +73,8 @@ def scale_theta(full_df):
     return nu, scaler
 
 
-def S_from_x(jtfs_operator, x):
-    """
-    Computes log-compressed Joint-Time Frequency Scattering.
-    """
+def S_from_x(x, jtfs_operator):
+    "Computes log-compressed Joint-Time Frequency Scattering."
     # Sx is a tensor with shape (1, n_paths, n_time_frames)
     Sx = jtfs_operator(x)
 
@@ -84,7 +85,7 @@ def S_from_x(jtfs_operator, x):
     Sx_flattened = Sx_unpadded.flatten()
 
     # apply "stable" log transformation
-    log1p_Sx = log1p(Sx)
+    log1p_Sx = Sx_flattened #torch.log1p(Sx_flattened)
 
     return log1p_Sx
 
