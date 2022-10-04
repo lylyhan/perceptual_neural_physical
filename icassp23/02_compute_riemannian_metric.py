@@ -36,8 +36,12 @@ def load_dataframe(folds):
 
 
 def icassp23_synth(theta):
-    "Drum synthesizer, based on the Functional Transformation Method (FTM)."
-    return ftm.rectangular_drum(theta, **ftm.constants)
+    """Drum synthesizer, based on the Functional Transformation Method (FTM).
+    We apply 2**16 samples of zero padding (~3 seconds) on the left."""
+    x = pnp_synth.ftm.rectangular_drum(theta, **pnp_synth.ftm.constants)
+    padding = (2**16, 0)
+    x_padded = torch.nn.functional.pad(x, padding, mode='constant', value=0)
+    return x_padded
 
 
 # Print header
