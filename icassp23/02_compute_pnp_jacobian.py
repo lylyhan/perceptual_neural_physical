@@ -64,10 +64,12 @@ for i in range(id_start, id_end):
     J = dS_over_dnu(nu)
 
     # Convert to NumPy array and save to disk
-    S_path = os.path.join(save_dir, "S", fold, id + "_jtfs.npy")
-    np.save(S_path, S.numpy())
-    J_path = os.path.join(save_dir, "J", fold, id + "_grad_jtfs.npy")
-    np.save(J_path, J.numpy())
+    S_name = str(i).zfill(len(str(n_samples))) + "_jtfs.npy"
+    S_path = os.path.join(save_dir, "S", fold, S_name)
+    np.save(S_path, S.detach().numpy())
+    J_name = str(i).zfill(len(str(n_samples))) + "_grad_jtfs.npy"
+    J_path = os.path.join(save_dir, "J", fold, J_name)
+    np.save(J_path, J.detach().numpy())
     print(datetime.datetime.now() + " Exported: {}/{}".format(fold, id))
 print("")
 
