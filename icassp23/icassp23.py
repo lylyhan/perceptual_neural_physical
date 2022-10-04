@@ -85,7 +85,9 @@ def S_from_x(x, jtfs_operator):
     Sx_flattened = Sx_unpadded.flatten()
 
     # apply "stable" log transformation
-    log1p_Sx = Sx_flattened #torch.log1p(Sx_flattened)
+    # the number 1e4 is ad hoc and of the order of 10/mu where mu=1e-3 is the
+    # median value of Sx across all paths
+    log1p_Sx = torch.log1p(Sx_flattened*1e4)
 
     return log1p_Sx
 
