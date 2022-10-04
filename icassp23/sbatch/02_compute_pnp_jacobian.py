@@ -39,6 +39,13 @@ for n_thread in range(n_threads):
         f.write("\n")
         f.write("module purge\n")
         f.write("\n")
+        f.write(" ".join([
+            "singularity exec",
+            "--nv",
+            "--overlay overlay-50G-10M.ext3:ro",
+            "/scratch/work/public/singularity/cuda11.0-cudnn8-devel-ubuntu18.04.sif",
+            "/bin/bash"]) + "\n")
+        f.write("\n")
 
         id_start = n_thread * n_per_th
         id_end = (n_thread + 1) * n_per_th

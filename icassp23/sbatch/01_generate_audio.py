@@ -45,7 +45,8 @@ for n_thread in range(n_threads):
             "--nv",
             "--overlay overlay-50G-10M.ext3:ro",
             "/scratch/work/public/singularity/cuda11.0-cudnn8-devel-ubuntu18.04.sif",
-            "/bin/bash"]))
+            "/bin/bash"]) + "\n")
+        f.write("\n")
 
         id_start = n_thread * n_per_th
         id_end = (n_thread + 1) * n_per_th
