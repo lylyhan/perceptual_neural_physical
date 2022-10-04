@@ -79,7 +79,7 @@ def S_from_x(x, jtfs_operator):
     Sx = jtfs_operator(x)
 
     # remove leading singleton dimension and unpad
-    Sx_unpadded = Sx[0, :, Sx.shape[-1] :]
+    Sx_unpadded = Sx[0, :, Sx.shape[-1]//2:]
 
     # flatten to shape (n_paths * n_time_frames,)
     Sx_flattened = Sx_unpadded.flatten()
