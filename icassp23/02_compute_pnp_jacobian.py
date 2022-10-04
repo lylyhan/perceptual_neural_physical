@@ -17,17 +17,16 @@ import sys
 import time
 import torch
 
-save_dir = "/scratch/vl1019/icassp23_data"
 folds = ["train", "test", "val"]
+torch.autograd.set_detect_anomaly(True)
 
 # Print header
 start_time = int(time.time())
 print(str(datetime.datetime.now()) + " Start.")
 print(__doc__ + "\n")
-out_path_jtfs = sys.argv[1]
-out_path_grad = sys.argv[2]
-id_start = int(sys.argv[3])
-id_end = int(sys.argv[4])
+save_dir = sys.argv[1]
+id_start = int(sys.argv[2])
+id_end = int(sys.argv[3])
 print("Command-line arguments:\n" + "\n".join(sys.argv[1:]) + "\n")
 
 for module in [kymatio, np, pd, sklearn, torch]:
@@ -36,8 +35,8 @@ print("")
 
 # Create folders
 for fold in folds:
-    os.makedirs(os.path.join(out_path_jtfs, fold), exist_ok=True)
-    os.makedirs(os.path.join(out_path_grad, fold), exist_ok=True)
+    os.makedirs(os.path.join(save_dir, "S", fold), exist_ok=True)
+    os.makedirs(os.path.join(save_dir, "J", fold), exist_ok=True)
 
 # Load DataFrame
 full_df = icassp23.load_dataframe(csv_path, folds)
@@ -56,8 +55,7 @@ S_from_nu = icassp23.pnp_forward_factory(scaler, jtfs_params)
 # is low-dimensional (5) whereas the output is high-dimensional (~1e4)
 dS_over_dnu = functorch.jacfwd(pnp_forward)
 
-
-torch.autograd.set_detect_anomaly(True)
+# Loop over examples.
 for i in range(id_start, id_end):
     # Compute forward transformation: nu -> theta -> x -> S
     nu = torch.tensor(nus[i, :], requires_grad=True)
@@ -68,17 +66,14 @@ for i in range(id_start, id_end):
     # Compute Jacobian: d(S) / d(nu)
     J = dS_over_dnu(nu)
 
-    # torch.cuda.empty_cache()
-    np.save(
-        os.path.join(out_path_jtfs, fold, id + "_jtfs.npy"),
-        S.numpy(),
-    )
-    np.save(
-        os.path.join(out_path_grad, fold, id + "_grad_jtfs.npy"),
-        J.numpy(),
-    )
+    # Convert to NumPy array and save to disk
+    S_path = os.path.join(save_dir, "S", fold, id + "_jtfs.npy")
+    np.save(S_path, S.numpy())
+    J_path = os.path.join(save_dir, "J", fold, id + "_grad_jtfs.npy")
+    np.save(J_path, J.numpy())
     print(datetime.datetime.now() + " Exported: {}/{}".format(fold, id))
 print("")
+
 
 # Print elapsed time.
 print(str(datetime.datetime.now()) + " Success.")
