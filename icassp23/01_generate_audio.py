@@ -25,7 +25,7 @@ for fold in folds:
 
 for i in range(id_start, id_end):
     theta = params[i, 3:-1]
-    fold = full_df["fold"].iloc[i]
+    fold = full_df["set"].iloc[i]
     id = full_df["ID"].iloc[i]
     y = pnp_synth.ftm.rectangular_drum(theta, **ftm.constants)
     filename = os.path.join(out_path, fold, str(id) + "_sound.wav")

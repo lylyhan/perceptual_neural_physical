@@ -56,7 +56,7 @@ torch.autograd.set_detect_anomaly(True)
 for i in range(id_start, id_end):
     # Compute forward transformation: nu -> theta -> x -> S
     nu = torch.tensor(nus[i, :], requires_grad=True)
-    fold = full_df["fold"].iloc[i]
+    fold = full_df["set"].iloc[i]
     id = full_df["ID"].iloc[i]
     S = S_from_nu(nu)
 
