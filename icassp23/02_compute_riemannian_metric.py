@@ -11,25 +11,21 @@ import os
 import pandas as pd
 from pnp_synth.physical import ftm
 from pnp_synth.perceptual import jtfs
-from pnp_synth.neural import forward
+from pnp_synth.neural import forward, inverse_scale
 import sklearn
-from sklearn.preprocessing import MinMaxScaler
 import sys
 import time
 import torch
 
-
-csv_path = os.path.expanduser("~/perceptual_neural_physical/data")
 save_dir = "/scratch/vl1019/icassp23_data"
 folds = ["train", "test", "val"]
 
-
-def load_dataframe(csv_path, folds):
+def load_dataframe(folds):
     "Load DataFrame corresponding to the entire dataset (100k drum sounds)."
     fold_dfs = {}
     for fold in folds:
         csv_name = fold + "_param_log_v2.csv"
-        csv_path = os.path.join("..", "data", csv_name)
+        csv_path = os.path.join("data", csv_name)
         fold_df = pd.read_csv(csv_path)
         fold_dfs[fold] = fold_df
 
@@ -37,33 +33,6 @@ def load_dataframe(csv_path, folds):
     full_df = full_df.sort_values(by="ID", ignore_index=False)
     assert len(set(full_df["ID"])) == len(full_df)
     return full_df
-
-
-def scale_theta(full_df):
-    """
-    Take DataFrame, scale training set to [0, 1], return values (NumPy array)
-    and min-max scaler (sklearn object)
-    """
-    # Fit scaler according to training set only
-    train_df = full_df.loc[full_df["set"] == "train"]
-    scaler = MinMaxScaler()
-    train_theta = train_df.values[:, 3:-1]
-    scaler.fit(train_theta)
-
-    # Transform whole dataset with scaler
-    theta = full_df.values[:, 3:-1]
-    nu = scaler.transform(theta)
-    return nu, scaler
-
-
-def inverse_scale(nu, scaler):
-    "Apply inverse scaling theta = nu * (theta_max - theta_min) + theta_min"
-    # NB: we use an explicit formula instead of scaler.inverse_transform
-    # so as to preserve PyTorch differentiability.
-    theta_max = torch.tensor(scaler.data_max_)
-    theta_min = torch.tensor(scaler.data_min_)
-    theta = nu * (theta_max - theta_min) + theta_min
-    return theta
 
 
 def icassp23_synth(theta):
@@ -98,19 +67,24 @@ n_samples = params.shape[0]
 assert n_samples > id_end > id_start + 1 > 0  # id is between 0 and (100k-1)
 
 # Rescale shape parameters ("theta") to the interval [0, 1].
-nu, scaler = scale_theta(full_df)
+nus, scaler = scale_theta(full_df)
 
 # Instantiate Joint-Time Frequency Scattering (JTFS) operator
-jtfs_operator = TimeFrequencyScattering1D(**jtfs.jtfs_params).cuda()
+jtfs_params = dict(
+    J = 14, # scattering scale ~ 1000 ms
+    shape = (2**17,), # 2**16 of zero padding plus 2**16 of signal
+    Q = 12, # number of filters per octave
+    T = 2**13, # local temporal averaging
+    F = 2, # local frequential averaging
+    max_pad_factor=1, # temporal padding cannot be greater than 1x support
+    max_pad_factor_fr=1, # frequential padding cannot be greater than 1x support
+    average = True, # average in time
+    average_fr = True, # average in frequency
+)
+jtfs_operator = TimeFrequencyScattering1D(**jtfs_params).cuda()
 
 # Define the PNP forward operator, as a composition between
 def icassp23_pnp_forward(rescaled_param):
-    """
-    Computes S = (Phi o g o h^{-1})(nu) = (Phi o g)(theta) = Phi(x), given:
-    1. a MinMax scaler h
-    2. an FTM synthesizer g
-    3. a JTFS representation Phi
-    """
     return forward.pnp_forward(
         Phi=jtfs_operator,
         g=icassp23_synth,
