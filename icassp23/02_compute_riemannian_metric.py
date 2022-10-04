@@ -21,112 +21,138 @@ import torch
 
 csv_path = os.path.expanduser("~/perceptual_neural_physical/data")
 save_dir = "/scratch/vl1019/icassp23_data"
+folds = ["train", "test", "val"]
 
 
-def preprocess_gt(full_df):
-    # takes dataframe, scale values in dataframe, output dataframe and scaler
-    train_df = full_df.loc[full_df["set"] == "train"]
-    # normalize
-    scaler = MinMaxScaler()
-    scaler.fit(train_df.values[:, 3:-1])
-    full_df_norm = scaler.transform(
-        full_df.values[:, 3:-1]
-    )  # just a tensor, not dataframe
-    return full_df_norm, scaler
-
-
-def inverse_scale(y_norm, scaler):
-    sc_max = torch.tensor(scaler.data_max_)
-    sc_min = torch.tensor(scaler.data_min_)
-    y_norm_o = y_norm * (sc_max - sc_min) + sc_min
-    return y_norm_o
-
-
-if __name__ == "__main__":
-    out_path_jtfs = sys.argv[1]
-    out_path_grad = sys.argv[2]
-    csv_path = sys.argv[3]
-    id_start = int(sys.argv[4])
-    id_end = int(sys.argv[5])
-
-    # Print header.
-    start_time = int(time.time())
-    print(str(datetime.datetime.now()) + " Start.")
-    print(__doc__ + "\n")
-    print("Command-line arguments:\n" + "\n".join(sys.argv[1:]) + "\n")
-
-    for module in [kymatio, np, pd, sklearn, torch]:
-        print("{} version: {:s}".format(module.__name__, module.__version__))
-    print("")
-
-    folds = ["train", "test", "val"]
+def load_dataframe(csv_path, folds):
+    "Load DataFrame corresponding to the entire dataset (100k drum sounds)."
     fold_dfs = {}
     for fold in folds:
         csv_name = fold + "_param_log_v2.csv"
         csv_path = os.path.join("..", "data", csv_name)
         fold_df = pd.read_csv(csv_path)
         fold_dfs[fold] = fold_df
-        # make outpath dirs
-        if not os.path.exists(os.path.join(out_path_jtfs, fold)):
-            os.makedirs(os.path.join(out_path_jtfs, fold))
-        if not os.path.exists(os.path.join(out_path_grad, fold)):
-            os.makedirs(os.path.join(out_path_grad, fold))
 
-    full_df = pd.concat(fold_dfs.values()).sort_values(by="ID", ignore_index=False)
+    full_df = pd.concat(fold_dfs.values())
+    full_df = full_df.sort_values(by="ID", ignore_index=False)
     assert len(set(full_df["ID"])) == len(full_df)
-
-    params = full_df.values
-    n_samp = params.shape[0]
-    assert n_samp > id_end > id_start + 1 > 0  # nsamp is from 0 to 100k-1?
-
-    full_df_norm, scaler = preprocess_gt(full_df)
-
-    jtfs_operator = TimeFrequencyScattering1D(**jtfs.jtfs_params).cuda()
+    return full_df
 
 
-    def icassp23_synth(rescaled_param):
-        return ftm.rectangular_drum(rescaled_param, **ftm.constants)
+def scale_theta(full_df):
+    """
+    Take DataFrame, scale training set to [0, 1], return values (NumPy array)
+    and min-max scaler (sklearn object)
+    """
+    # Fit scaler according to training set only
+    train_df = full_df.loc[full_df["set"] == "train"]
+    scaler = MinMaxScaler()
+    train_theta = train_df.values[:, 3:-1]
+    scaler.fit(train_theta)
 
-    def icassp23_pnp_forward(rescaled_param):
-        return forward.pnp_forward(
-                                Phi=jtfs_operator,
-                                g=icassp23_synth,
-                                scaler=scaler,
-                                rescaled_param=rescaled_param
-                                )
-                            
-    icassp23_jacobian = functorch.jacfwd(icassp23_pnp_forward)
+    # Transform whole dataset with scaler
+    theta = full_df.values[:, 3:-1]
+    nu = scaler.transform(theta)
+    return nu, scaler
 
-    torch.autograd.set_detect_anomaly(True)
-    for i in range(id_start, id_end):
-        param_n = torch.tensor(
-            full_df_norm[i, :], requires_grad=True
-        )  # where the gradient starts taping
-        fold = full_df.values[i, -1]
-        id = full_df.values[i, 2]
-        raw_jtfs = icassp23_pnp_forward(param_n)
-        # cal grad
-        grads = icassp23_jacobian(param_n)
-        JTJ = torch.matmul(grads.T, grads)
-        torch.cuda.empty_cache()
-        np.save(
-            os.path.join(out_path_jtfs, fold, id + "_jtfs.npy"),
-            raw_jtfs.cpu().detach().numpy(),
+
+def inverse_scale(nu, scaler):
+    "Apply inverse scaling theta = nu * (theta_max - theta_min) + theta_min"
+    # NB: we use an explicit formula instead of scaler.inverse_transform
+    # so as to preserve PyTorch differentiability.
+    theta_max = torch.tensor(scaler.data_max_)
+    theta_min = torch.tensor(scaler.data_min_)
+    theta = nu * (theta_max - theta_min) + theta_min
+    return theta
+
+
+def icassp23_synth(theta):
+    "Drum synthesizer, based on the Functional Transformation Method (FTM)."
+    return ftm.rectangular_drum(theta, **ftm.constants)
+
+
+# Print header
+start_time = int(time.time())
+print(str(datetime.datetime.now()) + " Start.")
+print(__doc__ + "\n")
+out_path_jtfs = sys.argv[1]
+out_path_grad = sys.argv[2]
+csv_path = sys.argv[3]
+id_start = int(sys.argv[4])
+id_end = int(sys.argv[5])
+print("Command-line arguments:\n" + "\n".join(sys.argv[1:]) + "\n")
+
+for module in [kymatio, np, pd, sklearn, torch]:
+    print("{} version: {:s}".format(module.__name__, module.__version__))
+print("")
+
+# Create folders
+for fold in folds:
+    os.makedirs(os.path.join(out_path_jtfs, fold), exist_ok=True)
+    os.makedirs(os.path.join(out_path_grad, fold), exist_ok=True)
+
+# Load DataFrame
+full_df = load_dataframe(csv_path, folds)
+params = full_df.values
+n_samples = params.shape[0]
+assert n_samples > id_end > id_start + 1 > 0  # id is between 0 and (100k-1)
+
+# Rescale shape parameters ("theta") to the interval [0, 1].
+nu, scaler = scale_theta(full_df)
+
+# Instantiate Joint-Time Frequency Scattering (JTFS) operator
+jtfs_operator = TimeFrequencyScattering1D(**jtfs.jtfs_params).cuda()
+
+# Define the PNP forward operator, as a composition between
+def icassp23_pnp_forward(rescaled_param):
+    """
+    Computes S = (Phi o g o h^{-1})(nu) = (Phi o g)(theta) = Phi(x), given:
+    1. a MinMax scaler h
+    2. an FTM synthesizer g
+    3. a JTFS representation Phi
+    """
+    return forward.pnp_forward(
+        Phi=jtfs_operator,
+        g=icassp23_synth,
+        scaler=scaler,
+        rescaled_param=rescaled_param
         )
-        np.save(
-            os.path.join(out_path_grad, fold, id + "_grad_jtfs.npy"),
-            JTJ.cpu().detach().numpy(),
-        )
-        print(datetime.datetime.now() + " Exported: {}/{}".format(fold, id))
-    print("")
 
-    # Print elapsed time.
-    print(str(datetime.datetime.now()) + " Success.")
-    elapsed_time = time.time() - int(start_time)
-    elapsed_hours = int(elapsed_time / (60 * 60))
-    elapsed_minutes = int((elapsed_time % (60 * 60)) / 60)
-    elapsed_seconds = elapsed_time % 60.
-    elapsed_str = "{:>02}:{:>02}:{:>05.2f}".format(elapsed_hours,
-                                                   elapsed_minutes,
-                                                   elapsed_seconds)
-    print("Total elapsed time: " + elapsed_str + ".")
+# Define the associated Jacobian operator.
+# NB: jacfwd is faster than reverse-mode autodiff here because the input
+# is low-dimensional (5) whereas the output is high-dimensional (~1e4)
+icassp23_jacobian = functorch.jacfwd(icassp23_pnp_forward)
+
+torch.autograd.set_detect_anomaly(True)
+for i in range(id_start, id_end):
+    param_n = torch.tensor(
+        full_df_norm[i, :], requires_grad=True
+    )  # where the gradient starts taping
+    fold = full_df.values[i, -1]
+    id = full_df.values[i, 2]
+    raw_jtfs = icassp23_pnp_forward(param_n)
+    # cal grad
+    grads = icassp23_jacobian(param_n)
+    JTJ = torch.matmul(grads.T, grads)
+    torch.cuda.empty_cache()
+    np.save(
+        os.path.join(out_path_jtfs, fold, id + "_jtfs.npy"),
+        raw_jtfs.cpu().detach().numpy(),
+    )
+    np.save(
+        os.path.join(out_path_grad, fold, id + "_grad_jtfs.npy"),
+        JTJ.cpu().detach().numpy(),
+    )
+    print(datetime.datetime.now() + " Exported: {}/{}".format(fold, id))
+print("")
+
+# Print elapsed time.
+print(str(datetime.datetime.now()) + " Success.")
+elapsed_time = time.time() - int(start_time)
+elapsed_hours = int(elapsed_time / (60 * 60))
+elapsed_minutes = int((elapsed_time % (60 * 60)) / 60)
+elapsed_seconds = elapsed_time % 60.
+elapsed_str = "{:>02}:{:>02}:{:>05.2f}".format(elapsed_hours,
+                                               elapsed_minutes,
+                                               elapsed_seconds)
+print("Total elapsed time: " + elapsed_str + ".")
