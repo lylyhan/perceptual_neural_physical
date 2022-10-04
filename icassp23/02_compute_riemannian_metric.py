@@ -1,6 +1,6 @@
 """
-This script calculates the JTFS coefficients and the associated Riemannian metric with respect to each normalized parameter.
-There will be a vector of 5 associated to each sample.
+This script calculates the JTFS coefficients and the associated Riemannian
+metric with respect to each normalized parameter.
 """
 import datetime
 import functorch
