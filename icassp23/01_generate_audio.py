@@ -2,16 +2,16 @@ import numpy as np
 import pandas as pd
 import random
 import sys
-from pnp_synth.physical import ftm 
+from pnp_synth.physical import ftm
 import soundfile as sf
 import os
 
 
 out_path = sys.argv[1]
-csv_folder = sys.argv[2]
-id_start = int(sys.argv[3])
-id_end = int(sys.argv[4])
+id_start = int(sys.argv[2])
+id_end = int(sys.argv[3])
 
+csv_folder = os.path.join(os.path.dirname(__file__), "data")
 folds = ["test", "train", "val"]
 fold_dfs = {}
 
