@@ -38,9 +38,9 @@ for n_thread in range(n_threads):
         f.write("#BATCH --job-name=" + script_name + "\n")
         f.write("#SBATCH --nodes=1\n")
         f.write("#SBATCH --tasks-per-node=1\n")
-        f.write("#SBATCH --cpus-per-task=4\n")
+        f.write("#SBATCH --cpus-per-task=1\n")
         f.write("#SBATCH --time=24:00:00\n")
-        f.write("#SBATCH --mem=16GB\n")
+        f.write("#SBATCH --mem=32GB\n")
         f.write("#SBATCH --output=" + job_name + "_%j.out\n")
         f.write("\n")
         f.write("module purge\n")
@@ -52,11 +52,9 @@ for n_thread in range(n_threads):
             "/scratch/work/public/singularity/cuda11.0-cudnn8-devel-ubuntu18.04.sif",
             "/bin/bash",
             "-c",
-            "\"",
-                "source",
+            "\"source",
                 "/scratch/vl1019/env.sh;",
-                "python"
-            ] + cmd_args) + "\"\n")
+                "python"] + cmd_args) + "\"\n")
         f.write("\n")
 
 
