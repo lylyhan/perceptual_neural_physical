@@ -9,7 +9,7 @@ from kymatio.torch import TimeFrequencyScattering1D
 import numpy as np
 import os
 import pandas as pd
-from pnp_synth.physical import ftm
+import pnp_synth
 from pnp_synth.perceptual import jtfs
 from pnp_synth.neural import forward, inverse_scale
 import sklearn
@@ -19,6 +19,18 @@ import torch
 
 save_dir = "/scratch/vl1019/icassp23_data"
 folds = ["train", "test", "val"]
+
+jtfs_params = dict(
+    J = 14, # scattering scale ~ 1000 ms
+    shape = (2**17,), # 2**16 of zero padding plus 2**16 of signal
+    Q = 12, # number of filters per octave
+    T = 2**13, # local temporal averaging
+    F = 2, # local frequential averaging
+    max_pad_factor=1, # temporal padding cannot be greater than 1x support
+    max_pad_factor_fr=1, # frequential padding cannot be greater than 1x support
+    average = True, # average in time
+    average_fr = True, # average in frequency
+)
 
 def load_dataframe(folds):
     "Load DataFrame corresponding to the entire dataset (100k drum sounds)."
@@ -74,17 +86,6 @@ assert n_samples > id_end > id_start + 1 > 0  # id is between 0 and (100k-1)
 nus, scaler = scale_theta(full_df)
 
 # Instantiate Joint-Time Frequency Scattering (JTFS) operator
-jtfs_params = dict(
-    J = 14, # scattering scale ~ 1000 ms
-    shape = (2**17,), # 2**16 of zero padding plus 2**16 of signal
-    Q = 12, # number of filters per octave
-    T = 2**13, # local temporal averaging
-    F = 2, # local frequential averaging
-    max_pad_factor=1, # temporal padding cannot be greater than 1x support
-    max_pad_factor_fr=1, # frequential padding cannot be greater than 1x support
-    average = True, # average in time
-    average_fr = True, # average in frequency
-)
 jtfs_operator = TimeFrequencyScattering1D(**jtfs_params).cuda()
 
 # Define the PNP forward operator, as a composition between
