@@ -6,7 +6,7 @@ import sys
 import soundfile as sf
 import os
 
-save_folder = sys.argv[1]
+save_dir = sys.argv[1]
 id_start = int(sys.argv[2])
 id_end = int(sys.argv[3])
 
@@ -20,7 +20,7 @@ assert n_samp >= id_end > id_start >= 0  # nsamp is from 0 to 100k-1?
 
 
 for fold in folds:
-    os.path.makedirs(os.path.join(save_folder, "x", fold), exist_ok=True)
+    os.path.makedirs(os.path.join(save_dir, "x", fold), exist_ok=True)
 
 
 for i in range(id_start, id_end):
