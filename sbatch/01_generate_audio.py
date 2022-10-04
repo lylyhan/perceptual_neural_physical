@@ -8,8 +8,6 @@ sys.path.append("../src")
 id_max = 100000
 n_threads = 10
 n_per_th = id_max // n_threads
-script_name = os.path.basename(__file__)
-script_path = os.path.abspath(os.path.join("..", "icassp23", script_name))
 data_path = "/scratch/vl1019/icassp23_data"
 
 # Create folder.
@@ -49,7 +47,6 @@ for n_thread in range(n_threads):
             " ".join(
                 [
                     "python",
-                    script_path,
                     data_path,
                     str(id_start),
                     str(id_end) + "\n",
