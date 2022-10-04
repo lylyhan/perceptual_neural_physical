@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
+import pnp_synth
 import random
 import sys
-from pnp_synth.physical import ftm
 import soundfile as sf
 import os
 
@@ -40,6 +40,6 @@ for i in range(id_start, id_end):
     theta = params[i,3:-1]
     fold = params[i,-1]
     id = params[i,2]
-    y = ftm.rectangular_drum(theta, **ftm.constants)
+    y = pnp_synth.ftm.rectangular_drum(theta, **ftm.constants)
     filename = os.path.join(out_path, fold, str(id)+"_sound.wav")
     sf.write(filename, y, ftm.constants["sr"])
