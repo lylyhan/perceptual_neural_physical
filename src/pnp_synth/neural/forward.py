@@ -32,9 +32,9 @@ def inverse_scale(nus, scaler):
 def pnp_forward(Phi, g, scaler, nu):
     """
     Computes S = (Phi o g o h^{-1})(nu) = (Phi o g)(theta) = Phi(x), given:
-    1. a MinMax scaler h
-    2. an FTM synthesizer g
-    3. a JTFS representation Phi
+    1. a scaler h
+    2. a synthesizer g
+    3. a perceptual representation Phi
     """
     # Inverse parameter scaling
     theta = inverse_scale(nus, scaler)
@@ -43,5 +43,5 @@ def pnp_forward(Phi, g, scaler, nu):
     x = g(theta)
 
     # Spectral analysis
-    S = Phi(x).flatten().squeeze()
+    S = Phi(x)
     return S
