@@ -40,7 +40,7 @@ for n_thread in range(n_threads):
         f.write("#SBATCH --tasks-per-node=1\n")
         f.write("#SBATCH --cpus-per-task=1\n")
         f.write("#SBATCH --time=24:00:00\n")
-        f.write("#SBATCH --mem=64GB\n")
+        f.write("#SBATCH --mem=32GB\n")
         f.write("#SBATCH --output=" + job_name + "_%j.out\n")
         f.write("\n")
         f.write("module purge\n")

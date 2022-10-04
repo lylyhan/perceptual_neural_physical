@@ -12,7 +12,7 @@ folds = ["train", "test", "val"]
 
 jtfs_params = dict(
     J=14,  # scattering scale ~ 1000 ms
-    shape=(2**17,),  # 2**16 of zero padding plus 2**16 of signal
+    shape=(2**16,),  # 2**15 of zero padding plus 2**15 of signal
     Q=12,  # number of filters per octave
     T=2**13,  # local temporal averaging
     F=2,  # local frequential averaging
@@ -94,8 +94,10 @@ def S_from_x(x, jtfs_operator):
 
 def x_from_theta(theta):
     """Drum synthesizer, based on the Functional Transformation Method (FTM).
-    We apply 2**16 samples of zero padding (~3 seconds) on the left."""
+    We apply 2**15 samples of zero padding (~1.5 seconds) on the left."""
     x = ftm.rectangular_drum(theta, **ftm.constants)
-    padding = (ftm.constants["dur"], 0)
-    x_padded = torch.nn.functional.pad(x, padding, mode="constant", value=0)
+    x_trimmed = x[:ftm.constants["dur"]//2]
+    padding = (ftm.constants["dur"]//2, 0)
+    x_padded = torch.nn.functional.pad(
+        x_trimmed, padding, mode="constant", value=0)
     return x_padded
