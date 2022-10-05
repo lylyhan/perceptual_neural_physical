@@ -73,11 +73,6 @@ for i in range(id_start, id_end):
 
     # Print
     print(str(datetime.datetime.now()) + " Exported: {}/{}".format(fold, i))
-
-    # Release memory
-    nu = 0
-    S = 0
-    J = 0
     sys.stdout.flush()
 print("")
 
