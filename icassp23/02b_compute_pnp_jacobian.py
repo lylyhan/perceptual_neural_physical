@@ -56,7 +56,7 @@ for i in range(id_start, id_end):
     i_str = str(i).zfill(len(str(n_samples)))
 
     S_path = os.path.join(save_dir, "S", fold, i_str + "_jtfs.npy")
-    if not os.path.exists(S_path)
+    if not os.path.exists(S_path):
         S = S_from_nu(nu)
         np.save(S_path, S.detach().numpy())
         print(str(datetime.datetime.now()) + " Exported (S): {}/{}".format(
