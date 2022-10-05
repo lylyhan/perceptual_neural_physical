@@ -4,5 +4,8 @@ build/
 icassp23/.ipynb_checkpoints/
 sandbox/
 
+icassp23/sbatch/01_generate_audio/
+icassp23/sbatch/02_compute_pnp_jacobian/
+
 *.egg-info
 *.pyc
