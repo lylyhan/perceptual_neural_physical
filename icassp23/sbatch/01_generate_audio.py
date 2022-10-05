@@ -25,6 +25,12 @@ for n_thread in range(n_threads):
 
     # Generate file.
     with open(file_path, "w") as f:
+        id_start = n_thread * n_per_th
+        id_end = (n_thread + 1) * n_per_th
+        if n_thread == n_threads - 1:
+            id_end = max(id_end, id_max)
+        cmd_args = [script_path, save_dir, str(id_start), str(id_end)]
+
         f.write("#!/bin/bash\n")
         f.write("\n")
         f.write("#BATCH --job-name=" + script_name + "\n")
@@ -44,24 +50,12 @@ for n_thread in range(n_threads):
             "singularity exec",
             "--overlay /scratch/vl1019/overlay-50G-10M.ext3:ro",
             "/scratch/work/public/singularity/cuda11.0-cudnn8-devel-ubuntu18.04.sif",
-            "/bin/bash"]) + "\n")
+            "/bin/bash",
+            "-c",
+            "\"source",
+                "/scratch/vl1019/env.sh;",
+                "python"] + cmd_args) + "\"\n")
         f.write("\n")
-
-        id_start = n_thread * n_per_th
-        id_end = (n_thread + 1) * n_per_th
-        if n_thread == n_threads - 1:
-            id_end = max(id_end, id_max)
-        f.write(
-            " ".join(
-                [
-                    "python",
-                    script_path,
-                    save_dir,
-                    str(id_start),
-                    str(id_end) + "\n",
-                ]
-            )
-        )
 
 
 # Open shell file.
