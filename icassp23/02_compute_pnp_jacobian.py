@@ -28,6 +28,7 @@ print("Command-line arguments:\n" + "\n".join(sys.argv[1:]) + "\n")
 for module in [kymatio, np, pd, sklearn, torch]:
     print("{} version: {:s}".format(module.__name__, module.__version__))
 print("")
+sys.stdout.flush() 
 
 # Create folders
 for fold in icassp23.folds:
@@ -73,6 +74,7 @@ for i in range(id_start, id_end):
 
     # Print
     print(str(datetime.datetime.now()) + " Exported: {}/{}".format(fold, id))
+    sys.stdout.flush()
 print("")
 
 
