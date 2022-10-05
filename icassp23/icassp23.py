@@ -83,7 +83,7 @@ def S_from_x(x, jtfs_operator):
     Sx_array = torch.cat([path['coef'].flatten() for path in Sx_list])
 
     # apply "stable" log transformation
-    # the number 1e4 is ad hoc and of the order of 10/mu where mu=1e-3 is the
+    # the number 1e3 is ad hoc and of the order of 1/mu where mu=1e-3 is the
     # median value of Sx across all paths
     log1p_Sx = torch.log1p(Sx_array*1e3)
 
