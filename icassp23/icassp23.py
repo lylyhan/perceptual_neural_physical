@@ -19,7 +19,8 @@ jtfs_params = dict(
     F=2,  # local frequential averaging
     max_pad_factor=1,  # temporal padding cannot be greater than 1x support
     max_pad_factor_fr=1,  # frequential padding cannot be greater than 1x support
-    pad_mode='zero'
+    pad_mode='zero',
+    pad_mode_fr='zero'
 )
 
 
