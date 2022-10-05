@@ -20,7 +20,10 @@ os.makedirs(sbatch_dir, exist_ok=True)
 for n_thread in range(n_threads):
 
     job_name = "_".join(
-        [script_name[:2], "thread-" + str(n_thread).zfill(len(str(n_threads)))]
+        [
+            script_name.split("_")[0],
+            "thread-" + str(n_thread).zfill(len(str(n_threads)))
+        ]
     )
     file_name = job_name + ".sbatch"
     file_path = os.path.join(sbatch_dir, file_name)
@@ -58,7 +61,7 @@ for n_thread in range(n_threads):
 
 
 # Open shell file.
-file_path = os.path.join(sbatch_dir, script_name[:2] + ".sh")
+file_path = os.path.join(sbatch_dir, script_name.split("_")[0] + ".sh")
 
 with open(file_path, "w") as f:
     # Print header.
@@ -72,7 +75,10 @@ with open(file_path, "w") as f:
     for n_thread in range(n_threads):
         # Define job name.
         job_name = "_".join(
-            [script_name[:2], "thread-" + str(n_thread).zfill(len(str(n_threads)))]
+            [
+                script_name.split("_")[0],
+                "thread-" + str(n_thread).zfill(len(str(n_threads)))
+            ]
         )
         sbatch_str = "sbatch " + job_name + ".sbatch"
         # Write SBATCH command to shell file.
