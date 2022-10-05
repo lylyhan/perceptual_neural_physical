@@ -47,7 +47,6 @@ for n_thread in range(n_threads):
         f.write("\n")
         f.write(" ".join([
             "singularity exec",
-            "--nv",
             "--overlay /scratch/vl1019/overlay-50G-10M.ext3:ro",
             "/scratch/work/public/singularity/cuda11.0-cudnn8-devel-ubuntu18.04.sif",
             "/bin/bash",
