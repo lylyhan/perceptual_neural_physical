@@ -81,7 +81,7 @@ def S_from_x(x, jtfs_operator):
 
     # remove leading singleton dimension
     # and flatten to shape (n_paths * n_time_frames,)
-    Sx_flattened = Sx_unpadded.flatten()
+    Sx_flattened = Sx[0, :, :].flatten()
 
     # apply "stable" log transformation
     # the number 1e4 is ad hoc and of the order of 10/mu where mu=1e-3 is the
