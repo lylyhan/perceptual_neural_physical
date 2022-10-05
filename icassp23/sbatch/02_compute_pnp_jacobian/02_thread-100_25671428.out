@@ -1,0 +1,17 @@
+2022-10-05 05:04:16.504303 Start.
+
+This script calculates the JTFS coefficients and the associated Riemannian
+metric with respect to each normalized parameter.
+
+
+Command-line arguments:
+/scratch/vl1019/icassp23_data
+20000
+20200
+
+kymatio version: 0.3.dev0
+numpy version: 1.23.3
+pandas version: 1.5.0
+sklearn version: 1.1.2
+torch version: 1.12.1+rocm5.1.1
+
