@@ -11,15 +11,15 @@ import torch
 folds = ["train", "test", "val"]
 
 jtfs_params = dict(
-    J=14,  # scattering scale ~ 1000 ms
-    shape=(2**16,),  # 2**15 of zero padding plus 2**15 of signal
-    Q=12,  # number of filters per octave
-    T=2**13,  # local temporal averaging
+    J=13,  # scattering scale ~ 1000 ms
+    shape=(2**16,), # input duration ~ 3 seconds
+    Q=(12, 1),  # number of filters per octave in time at 1st, 2nd order
+    Q_fr=1, # number of fiters per octave in frequency
+    T='global',  # global temporal averaging
     F=2,  # local frequential averaging
     max_pad_factor=1,  # temporal padding cannot be greater than 1x support
     max_pad_factor_fr=1,  # frequential padding cannot be greater than 1x support
-    average=True,  # average in time
-    average_fr=True,  # average in frequency
+    pad_mode='zero'
 )
 
 
@@ -78,10 +78,8 @@ def S_from_x(x, jtfs_operator):
     # Sx is a tensor with shape (1, n_paths, n_time_frames)
     Sx = jtfs_operator(x)
 
-    # remove leading singleton dimension and unpad
-    Sx_unpadded = Sx[0, :, Sx.shape[-1]//2:]
-
-    # flatten to shape (n_paths * n_time_frames,)
+    # remove leading singleton dimension
+    # and flatten to shape (n_paths * n_time_frames,)
     Sx_flattened = Sx_unpadded.flatten()
 
     # apply "stable" log transformation
