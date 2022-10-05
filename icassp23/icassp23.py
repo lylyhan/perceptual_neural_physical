@@ -15,12 +15,12 @@ jtfs_params = dict(
     shape=(2**16,), # input duration ~ 3 seconds
     Q=(12, 1),  # number of filters per octave in time at 1st, 2nd order
     Q_fr=1, # number of fiters per octave in frequency
-    T='global',  # global temporal averaging
     F=2,  # local frequential averaging
     max_pad_factor=1,  # temporal padding cannot be greater than 1x support
     max_pad_factor_fr=1,  # frequential padding cannot be greater than 1x support
     pad_mode='zero',
-    pad_mode_fr='zero'
+    pad_mode_fr='zero',
+    average='global'
 )
 
 
