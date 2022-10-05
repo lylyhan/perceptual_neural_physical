@@ -77,7 +77,6 @@ with open(file_path, "w") as f:
         sbatch_str = "sbatch " + job_name + ".sbatch"
         # Write SBATCH command to shell file.
         f.write(sbatch_str + "\n")
-        f.write("\n")
 
 # Grant permission to execute the shell file.
 # https://stackoverflow.com/a/30463972
