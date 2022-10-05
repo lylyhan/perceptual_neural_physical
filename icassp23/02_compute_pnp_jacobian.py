@@ -28,7 +28,7 @@ print("Command-line arguments:\n" + "\n".join(sys.argv[1:]) + "\n")
 for module in [kymatio, np, pd, sklearn, torch]:
     print("{} version: {:s}".format(module.__name__, module.__version__))
 print("")
-sys.stdout.flush() 
+sys.stdout.flush()
 
 # Create folders
 for fold in icassp23.folds:
@@ -65,15 +65,19 @@ for i in range(id_start, id_end):
     J = dS_over_dnu(nu)
 
     # Convert to NumPy array and save to disk
-    S_name = str(i).zfill(len(str(n_samples))) + "_jtfs.npy"
-    S_path = os.path.join(save_dir, "S", fold, S_name)
+    i_str = str(i).zfill(len(str(n_samples)))
+    S_path = os.path.join(save_dir, "S", fold, i_str + "_jtfs.npy")
     np.save(S_path, S.detach().numpy())
-    J_name = str(i).zfill(len(str(n_samples))) + "_grad_jtfs.npy"
-    J_path = os.path.join(save_dir, "J", fold, J_name)
+    J_path = os.path.join(save_dir, "J", fold, i_str + "_grad_jtfs.npy")
     np.save(J_path, J.detach().numpy())
 
     # Print
     print(str(datetime.datetime.now()) + " Exported: {}/{}".format(fold, i))
+
+    # Release memory
+    nu = 0
+    S = 0
+    J = 0
     sys.stdout.flush()
 print("")
 
