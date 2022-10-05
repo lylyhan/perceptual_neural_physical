@@ -19,8 +19,7 @@ jtfs_params = dict(
     max_pad_factor=1,  # temporal padding cannot be greater than 1x support
     max_pad_factor_fr=1,  # frequential padding cannot be greater than 1x support
     pad_mode='zero',
-    pad_mode_fr='zero',
-    average='global'
+    pad_mode_fr='zero'
 )
 
 
@@ -48,7 +47,8 @@ def pnp_forward_factory(scaler):
     3. a JTFS representation Phi
     """
     # Instantiate Joint-Time Frequency Scattering (JTFS) operator
-    jtfs_operator = TimeFrequencyScattering1D(**jtfs_params)
+    jtfs_operator = TimeFrequencyScattering1D(**jtfs_params, out_type="list")
+    jtfs_operator.average_global = True
 
     Phi = functools.partial(S_from_x, jtfs_operator=jtfs_operator)
 
@@ -76,17 +76,16 @@ def scale_theta(full_df):
 
 def S_from_x(x, jtfs_operator):
     "Computes log-compressed Joint-Time Frequency Scattering."
-    # Sx is a tensor with shape (1, n_paths, n_time_frames)
-    Sx = jtfs_operator(x)
+    # Sx is a list of dictionaries
+    Sx_list = jtfs_operator(x)
 
-    # remove leading singleton dimension
-    # and flatten to shape (n_paths * n_time_frames,)
-    Sx_flattened = Sx[0, :, :].flatten()
+    # Convert to array
+    Sx_array = torch.cat([path['coef'].flatten() for path in Sx_list])
 
     # apply "stable" log transformation
     # the number 1e4 is ad hoc and of the order of 10/mu where mu=1e-3 is the
     # median value of Sx across all paths
-    log1p_Sx = torch.log1p(Sx_flattened*1e4)
+    log1p_Sx = torch.log1p(Sx_array*1e3)
 
     return log1p_Sx
 
