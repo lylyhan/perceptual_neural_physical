@@ -72,7 +72,7 @@ for i in range(id_start, id_end):
     np.save(J_path, J.detach().numpy())
 
     # Print
-    print(str(datetime.datetime.now()) + " Exported: {}/{}".format(fold, i))
+    print(str(datetime.datetime.now()) + " Exported: {}/{}".format(fold, i_str))
     sys.stdout.flush()
 print("")
 
