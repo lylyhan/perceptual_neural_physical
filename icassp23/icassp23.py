@@ -23,20 +23,19 @@ jtfs_params = dict(
 )
 
 
-def load_dataframe():
-    "Load DataFrame corresponding to the entire dataset (100k drum sounds)."
+def load_fold(fold="full"):
+    """Load DataFrame."""
     fold_dfs = {}
     csv_folder = os.path.join(os.path.dirname(__file__), "data")
-    for fold in folds:
-        csv_name = fold + "_param_log_v2.csv"
-        csv_path = os.path.join(csv_folder, csv_name)
-        fold_df = pd.read_csv(csv_path)
-        fold_dfs[fold] = fold_df
-
-    full_df = pd.concat(fold_dfs.values())
+    csv_name = "full_param_log_v2.csv"
+    csv_path = os.path.join(csv_folder, csv_name)
+    full_df = pd.read_csv(csv_path)
     full_df = full_df.sort_values(by="ID", ignore_index=False)
     assert len(set(full_df["ID"])) == len(full_df)
-    return full_df
+    if fold == "full":
+        return full_df
+    else:
+        return full_df[full_df["fold"]==fold]
 
 
 def pnp_forward_factory(scaler):
