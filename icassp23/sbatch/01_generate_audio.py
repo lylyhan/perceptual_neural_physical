@@ -9,8 +9,7 @@ save_dir = "/scratch/vl1019/icassp23_data"
 sbatch_dir = os.path.join(".", os.path.basename(__file__)[:-3])
 os.makedirs(sbatch_dir, exist_ok=True)
 
-job_name = "_".join([script_name[:2], "thread-" + str(n_thread)])
-file_name = job_name + ".sbatch"
+file_name = script_name[:2] + ".sbatch"
 file_path = os.path.join(sbatch_dir, file_name)
 
 # Generate file.
