@@ -31,7 +31,7 @@ print("")
 sys.stdout.flush()
 
 # Create folders
-for fold in icassp23.folds:
+for fold in icassp23.FOLDS:
     os.makedirs(os.path.join(save_dir, "S", fold), exist_ok=True)
     os.makedirs(os.path.join(save_dir, "J", fold), exist_ok=True)
 
