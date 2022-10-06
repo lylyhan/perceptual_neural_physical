@@ -1,3 +1,5 @@
+import h5py
+import icassp23
 import numpy as np
 import pandas as pd
 import pnp_synth
@@ -6,27 +8,38 @@ import sys
 import soundfile as sf
 import os
 
+# Print header
+start_time = int(time.time())
+print(str(datetime.datetime.now()) + " Start.")
+print(__doc__ + "\n")
 save_dir = sys.argv[1]
-id_start = int(sys.argv[2])
-id_end = int(sys.argv[3])
+print("Command-line arguments:\n" + "\n".join(sys.argv[1:]) + "\n")
 
-csv_folder = os.path.join(os.path.dirname(__file__), "data")
-folds = ["test", "train", "val"]
-full_df = load_dataframe(folds)
+for module in [h5py, np, pd]:
+    print("{} version: {:s}".format(module.__name__, module.__version__))
+print("")
+sys.stdout.flush()
 
-params = full_df.values
-n_samp = params.shape[0]
-assert n_samp >= id_end > id_start >= 0  # nsamp is from 0 to 100k-1?
+# Create directory for audio files.
+audio_dir = os.path.join(save_dir, "x")
+os.makedirs(audio_dir, exist_ok=True)
 
+for fold in icassp23.FOLDS:
+    # Define path to HDF5 file
+    fold_df = load_dataframe(fold)
+    h5_name = "icassp23_{}_audio.h5".format(fold)
+    h5_path = os.path.join(audio_dir, h5_name)
 
-for fold in folds:
-    os.path.makedirs(os.path.join(save_dir, "x", fold), exist_ok=True)
+    # Create HDF5 file
+    with h5py.File(h5_path) as h5_file:
+        audio_group = f.create_group("x")
 
+        # Loop over shapes
+        for i, row in fold_df.iterrows():
+            # Physical audio synthesis (g). theta -> x
+            theta = np.array([row[column] for for columns in THETA_COLUMNS])
+            x = pnp_synth.ftm.rectangular_drum(theta, **ftm.constants)
 
-for i in range(id_start, id_end):
-    theta = params[i, 3:-1]
-    fold = full_df["set"].iloc[i]
-    id = full_df["ID"].iloc[i]
-    y = pnp_synth.ftm.rectangular_drum(theta, **ftm.constants)
-    filename = os.path.join(out_path, fold, str(id) + "_sound.wav")
-    sf.write(filename, y, ftm.constants["sr"])
+            # Store waveform into HDF5 container.
+            key = str(row["ID"])
+            audio_group[key] = x
