@@ -9,7 +9,7 @@ from pnp_synth.physical import ftm
 import sklearn.preprocessing
 import torch
 
-folds = ["train", "test", "val"]
+FOLDS = ["train", "test", "val"]
 THETA_COLUMNS = ["omega", "tau", "p", "D", "alpha"]
 
 jtfs_params = dict(
