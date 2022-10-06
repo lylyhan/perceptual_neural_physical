@@ -6,10 +6,11 @@ script_path = os.path.abspath(os.path.join("..", script_name))
 save_dir = "/scratch/vl1019/icassp23_data"
 
 # Create folder.
-sbatch_dir = os.path.join(".", os.path.basename(__file__)[:-3])
+job_name = os.path.basename(__file__)[:-3]
+sbatch_dir = os.path.join(".", job_name)
 os.makedirs(sbatch_dir, exist_ok=True)
 
-file_name = script_name[:2] + ".sbatch"
+file_name = job_name.split("_")[0] + ".sbatch"
 file_path = os.path.join(sbatch_dir, file_name)
 
 # Generate file.
