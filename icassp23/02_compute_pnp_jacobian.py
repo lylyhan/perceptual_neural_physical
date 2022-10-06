@@ -36,7 +36,7 @@ for fold in icassp23.FOLDS:
     os.makedirs(os.path.join(save_dir, "J", fold), exist_ok=True)
 
 # Load DataFrame
-full_df = icassp23.load_fold()
+full_df = icassp23.load_fold("full")
 params = full_df.values
 n_samples = params.shape[0]
 assert n_samples > id_end > id_start >= 0  # id is between 0 and (100k-1)

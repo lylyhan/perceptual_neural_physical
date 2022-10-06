@@ -26,7 +26,7 @@ os.makedirs(audio_dir, exist_ok=True)
 
 for fold in icassp23.FOLDS:
     # Define path to HDF5 file
-    fold_df = load_dataframe(fold)
+    fold_df = icassp23.load_fold(fold)
     h5_name = "icassp23_{}_audio.h5".format(fold)
     h5_path = os.path.join(audio_dir, h5_name)
 
