@@ -9,6 +9,7 @@ import sklearn.preprocessing
 import torch
 
 folds = ["train", "test", "val"]
+THETA_COLUMNS = ["omega", "tau", "p", "D", "alpha"]
 
 jtfs_params = dict(
     J=13,  # scattering scale ~ 1000 ms
@@ -27,7 +28,7 @@ def load_fold(fold="full"):
     """Load DataFrame."""
     fold_dfs = {}
     csv_folder = os.path.join(os.path.dirname(__file__), "data")
-    csv_name = "full_param_log_v2.csv"
+    csv_name = "full_param_log.csv"
     csv_path = os.path.join(csv_folder, csv_name)
     full_df = pd.read_csv(csv_path)
     full_df = full_df.sort_values(by="ID", ignore_index=False)
@@ -56,21 +57,30 @@ def pnp_forward_factory(scaler):
     )
 
 
-def scale_theta(full_df):
+def scale_theta():
     """
-    Take DataFrame, scale training set to [0, 1], return values (NumPy array)
+    Scale training set to [0, 1], return values (NumPy array)
     and min-max scaler (sklearn object)
     """
+    # Load training set
+    train_df = load_fold(fold="train")
+
     # Fit scaler according to training set only
-    train_df = full_df.loc[full_df["set"] == "train"]
     scaler = sklearn.preprocessing.MinMaxScaler()
-    train_theta = train_df.values[:, 3:-1]
+    train_theta = np.stack([
+        train_df[column].values for column in THETA_COLUMNS
+    ], axis=1)
     scaler.fit(train_theta)
 
+    # Load whole dataset
+    full_df = load_fold(fold="full")
+
     # Transform whole dataset with scaler
-    theta = full_df.values[:, 3:-1]
-    nu = scaler.transform(theta)
-    return nu, scaler
+    theta = np.stack([
+        full_df[column].values for column in THETA_COLUMNS
+    ], axis=1)
+    nus = scaler.transform(theta)
+    return nus, scaler
 
 
 def S_from_x(x, jtfs_operator):
@@ -90,11 +100,6 @@ def S_from_x(x, jtfs_operator):
 
 
 def x_from_theta(theta):
-    """Drum synthesizer, based on the Functional Transformation Method (FTM).
-    We apply 2**15 samples of zero padding (~1.5 seconds) on the left."""
+    """Drum synthesizer, based on the Functional Transformation Method (FTM)."""
     x = ftm.rectangular_drum(theta, **ftm.constants)
-    x_trimmed = x[:ftm.constants["dur"]//2]
-    padding = (ftm.constants["dur"]//2, 0)
-    x_padded = torch.nn.functional.pad(
-        x_trimmed, padding, mode="constant", value=0)
-    return x_padded
+    return x
