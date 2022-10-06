@@ -32,8 +32,8 @@ for fold in icassp23.FOLDS:
 
     # Create HDF5 file
     with h5py.File(h5_path) as h5_file:
-        audio_group = f.create_group("x")
-        shape_group = f.create_group("theta")
+        audio_group = h5_file.create_group("x")
+        shape_group = h5_file.create_group("theta")
 
         # Loop over shapes
         for i, row in fold_df.iterrows():
