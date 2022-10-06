@@ -38,7 +38,7 @@ for fold in icassp23.FOLDS:
         # Loop over shapes
         for i, row in fold_df.iterrows():
             # Physical audio synthesis (g). theta -> x
-            theta = np.array([row[column] for for columns in THETA_COLUMNS])
+            theta = np.array([row[column] for columns in THETA_COLUMNS])
             x = pnp_synth.ftm.rectangular_drum(theta, **ftm.constants)
 
             # Store shape annd waveform into HDF5 container.
