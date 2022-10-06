@@ -58,7 +58,7 @@ for i in range(id_start, id_end):
     # Compute forward transformation: nu -> theta -> x -> S
     nu = torch.tensor(nus[i, :], requires_grad=True)
     fold = full_df["set"].iloc[i]
-    id = full_df["ID"].iloc[i]
+    assert i == full_df["ID"].iloc[i]
     S = S_from_nu(nu)
 
     # Compute Jacobian: d(S) / d(nu)
