@@ -65,10 +65,10 @@ for i in range(id_start, id_end):
     J = dS_over_dnu(nu)
 
     # Convert to NumPy array and save to disk
-    i_str = str(i).zfill(len(str(n_samples)))
-    S_path = os.path.join(save_dir, "S", fold, i_str + "_jtfs.npy")
+    i_prefix = "icassp23_" + str(i).zfill(len(str(n_samples)))
+    S_path = os.path.join(save_dir, "S", fold, i_prefix + "_jtfs.npy")
     np.save(S_path, S.detach().numpy())
-    J_path = os.path.join(save_dir, "J", fold, i_str + "_grad_jtfs.npy")
+    J_path = os.path.join(save_dir, "J", fold, i_prefix + "_grad_jtfs.npy")
     np.save(J_path, J.detach().numpy())
 
     # Print
