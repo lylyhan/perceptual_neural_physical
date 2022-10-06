@@ -36,13 +36,13 @@ for fold in icassp23.folds:
     os.makedirs(os.path.join(save_dir, "J", fold), exist_ok=True)
 
 # Load DataFrame
-full_df = icassp23.load_dataframe()
+full_df = icassp23.load_fold()
 params = full_df.values
 n_samples = params.shape[0]
 assert n_samples > id_end > id_start >= 0  # id is between 0 and (100k-1)
 
 # Rescale shape parameters ("theta") to the interval [0, 1].
-nus, scaler = icassp23.scale_theta(full_df)
+nus, scaler = icassp23.scale_theta()
 
 # Define the forward PNP operator.
 S_from_nu = icassp23.pnp_forward_factory(scaler)
