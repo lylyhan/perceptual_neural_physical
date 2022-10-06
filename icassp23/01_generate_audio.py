@@ -33,6 +33,7 @@ for fold in icassp23.FOLDS:
     # Create HDF5 file
     with h5py.File(h5_path) as h5_file:
         audio_group = f.create_group("x")
+        shape_group = f.create_group("theta")
 
         # Loop over shapes
         for i, row in fold_df.iterrows():
@@ -40,6 +41,7 @@ for fold in icassp23.FOLDS:
             theta = np.array([row[column] for for columns in THETA_COLUMNS])
             x = pnp_synth.ftm.rectangular_drum(theta, **ftm.constants)
 
-            # Store waveform into HDF5 container.
+            # Store shape annd waveform into HDF5 container.
             key = str(row["ID"])
             audio_group[key] = x
+            theta_group[key] = theta
