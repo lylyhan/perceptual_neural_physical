@@ -10,6 +10,7 @@ import numpy as np
 import os
 import pandas as pd
 import pnp_synth
+from pnp_synth.physical import ftm
 import random
 import sys
 import soundfile as sf
@@ -45,8 +46,8 @@ for fold in icassp23.FOLDS:
         # Loop over shapes
         for i, row in fold_df.iterrows():
             # Physical audio synthesis (g). theta -> x
-            theta = np.array([row[column] for columns in icassp23.THETA_COLUMNS])
-            x = pnp_synth.ftm.rectangular_drum(theta, **ftm.constants)
+            theta = np.array([row[column] for column in icassp23.THETA_COLUMNS])
+            x = ftm.rectangular_drum(theta, **ftm.constants)
 
             # Store shape annd waveform into HDF5 container.
             key = str(row["ID"])
