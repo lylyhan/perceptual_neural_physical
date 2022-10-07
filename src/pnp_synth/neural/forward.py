@@ -23,8 +23,8 @@ def inverse_scale(nu, scaler):
     "Apply inverse scaling theta = nu * (theta_max - theta_min) + theta_min"
     # NB: we use an explicit formula instead of scaler.inverse_transform
     # so as to preserve PyTorch differentiability.
-    theta_max = torch.tensor(scaler.data_max_)
-    theta_min = torch.tensor(scaler.data_min_)
+    theta_max = torch.tensor(scaler.data_max_).cuda()
+    theta_min = torch.tensor(scaler.data_min_).cuda()
     theta = nu * (theta_max - theta_min) + theta_min
     return theta
 
