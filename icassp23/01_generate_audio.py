@@ -52,4 +52,4 @@ for fold in icassp23.FOLDS:
             # Store shape annd waveform into HDF5 container.
             key = str(row["ID"])
             audio_group[key] = x
-            theta_group[key] = theta
+            shape_group[key] = theta
