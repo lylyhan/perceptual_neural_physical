@@ -1,0 +1,75 @@
+import os
+
+# Define constants.
+script_name = os.path.basename(__file__)
+script_path = os.path.abspath(os.path.join("..", script_name))
+save_dir = "/scratch/vl1019/icassp23_data"
+n_inits = 10
+
+# Create folder.
+sbatch_dir = os.path.join(".", script_name[:-3])
+os.makedirs(sbatch_dir, exist_ok=True)
+
+file_name = job_name.split("_")[0] + ".sbatch"
+file_path = os.path.join(sbatch_dir, file_name)
+
+for init_id in range(n_inits):
+    job_name = "_".join(os.path.basename(__file__)[:-3], str(init_id))
+
+    # Generate file.
+    with open(file_path, "w") as f:
+        cmd_args = [script_path, save_dir, str(init_id)]
+
+        f.write("#!/bin/bash\n")
+        f.write("\n")
+        f.write("#BATCH --job-name=" + script_name + "\n")
+        f.write("#SBATCH --nodes=1\n")
+        f.write("#SBATCH --tasks-per-node=1\n")
+        f.write("#SBATCH --cpus-per-task=4\n")
+        f.write("#SBATCH --time=24:00:00\n")
+        f.write("#SBATCH --mem=8GB\n")
+        f.write("#SBATCH --gres=gpu:1\n")
+        f.write("#SBATCH --output=" + job_name + "_%j.out\n")
+        f.write("\n")
+        f.write("module purge\n")
+        f.write("module load cuda/11.6.2\n")
+        f.write("module load ffmpeg/4.2.4\n")
+        f.write("\n")
+        f.write(" ".join([
+            "singularity exec",
+            "--overlay /scratch/vl1019/overlay-50G-10M.ext3:ro",
+            "/scratch/work/public/singularity/cuda11.0-cudnn8-devel-ubuntu18.04.sif",
+            "/bin/bash",
+            "-c",
+            "\"source",
+                "/scratch/vl1019/env.sh;",
+                "python"] + cmd_args) + "\"\n")
+        f.write("\n")
+
+
+# Open shell file.
+file_path = os.path.join(sbatch_dir, script_name.split("_")[0] + ".sh")
+
+with open(file_path, "w") as f:
+    # Print header.
+    f.write(
+        "# This shell script computes scattering features and "
+        "the associated Riemannian metric."
+    )
+    f.write("\n")
+
+    # Loop over folds: training and validation.
+    for n_thread in range(n_threads):
+        # Define job name.
+        job_name = "_".join(
+            [script_name[:2], "thread-" + str(n_thread).zfill(len(str(n_threads)))]
+        )
+        sbatch_str = "sbatch " + job_name + ".sbatch"
+        # Write SBATCH command to shell file.
+        f.write(sbatch_str + "\n")
+
+# Grant permission to execute the shell file.
+# https://stackoverflow.com/a/30463972
+mode = os.stat(file_path).st_mode
+mode |= (mode & 0o444) >> 2
+os.chmod(file_path, mode)
