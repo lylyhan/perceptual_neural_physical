@@ -26,7 +26,7 @@ for init_id in range(n_inits):
         f.write("#SBATCH --nodes=1\n")
         f.write("#SBATCH --tasks-per-node=1\n")
         f.write("#SBATCH --cpus-per-task=4\n")
-        f.write("#SBATCH --time=24:00:00\n")
+        f.write("#SBATCH --time=6:00:00\n")
         f.write("#SBATCH --mem=8GB\n")
         f.write("#SBATCH --gres=gpu:1\n")
         f.write("#SBATCH --output=" + job_name + "_%j.out\n")
@@ -53,16 +53,15 @@ file_path = os.path.join(sbatch_dir, script_name.split("_")[0] + ".sh")
 with open(file_path, "w") as f:
     # Print header.
     f.write(
-        "# This shell script computes scattering features and "
-        "the associated Riemannian metric."
+        "# This shell script trains EfficientNet on parameter loss."
     )
     f.write("\n")
 
     # Loop over folds: training and validation.
-    for n_thread in range(n_threads):
+    for init_id in range(n_inits):
         # Define job name.
         job_name = "_".join(
-            [script_name[:2], "thread-" + str(n_thread).zfill(len(str(n_threads)))]
+            [script_name[:2], "init-" + str(n_inits).zfill(len(str(init_id)))]
         )
         sbatch_str = "sbatch " + job_name + ".sbatch"
         # Write SBATCH command to shell file.
