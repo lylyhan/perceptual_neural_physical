@@ -10,6 +10,11 @@ dependencies = [
     "pandas",
     "sklearn",
     "soundfile",
+    "auraloss",
+    "pytorch-lightning",
+    "nnAudio",
+    "h5py",
+    "joblib"
 ]
 
 [project.urls]
