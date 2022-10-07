@@ -65,11 +65,11 @@ for fold in icassp23.FOLDS:
                 h5_file["x"][key] = x
                 h5_file["theta"][key] = theta
 
-            # Print
-            now = str(datetime.datetime.now())
-            batch_str = str(batch_id).zfill(len(str(n_batches)))
-            print(now + " Exported: {}, batch {}".format(fold, batch_str))
-            sys.stdout.flush()
+        # Print
+        now = str(datetime.datetime.now())
+        batch_str = str(batch_id).zfill(len(str(n_batches)))
+        print(now + " Exported: {}, batch {}".format(fold, batch_str))
+        sys.stdout.flush()
 
     # Empty line between folds
     print("")
