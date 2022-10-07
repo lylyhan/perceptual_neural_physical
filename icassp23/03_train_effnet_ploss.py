@@ -4,10 +4,13 @@ with Parametric Loss (P-Loss) as its objective.
 """
 from ast import Mod
 import datetime
+import joblib
+import nnAudio
 import numpy as np
 import os
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
+import sklearn
 import sys
 import time
 
@@ -21,7 +24,7 @@ save_dir = sys.argv[1]  # /home/han/data/
 init_id = sys.argv[2]
 print("Command-line arguments:\n" + "\n".join(sys.argv[1:]) + "\n")
 
-for module in [np, pl, sklearn, torch]:
+for module in [joblib, nnAudio, np, pl, sklearn, torch]:
     print("{} version: {:s}".format(module.__name__, module.__version__))
 print("")
 sys.stdout.flush()
