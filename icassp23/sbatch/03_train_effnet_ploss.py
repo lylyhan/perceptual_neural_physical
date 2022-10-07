@@ -11,7 +11,7 @@ sbatch_dir = os.path.join(".", script_name)
 os.makedirs(sbatch_dir, exist_ok=True)
 
 for init_id in range(n_inits):
-    job_name = "_".join(script_name, str(init_id))
+    job_name = "_".join([script_name, str(init_id)])
 
     file_name = job_name + ".sbatch"
     file_path = os.path.join(sbatch_dir, file_name)
