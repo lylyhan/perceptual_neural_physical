@@ -36,7 +36,7 @@ for init_id in range(n_inits):
         f.write("module load ffmpeg/4.2.4\n")
         f.write("\n")
         f.write(" ".join([
-            "singularity exec",
+            "singularity exec --nv",
             "--overlay /scratch/vl1019/overlay-50G-10M.ext3:ro",
             "/scratch/work/public/singularity/cuda11.0-cudnn8-devel-ubuntu18.04.sif",
             "/bin/bash",
