@@ -18,7 +18,6 @@ def loss_spec(outputs, y, specloss,scaler):
     wav_gt = torch.stack(wav_gt)
     wav_pred = torch.stack(wav_pred)
     loss = specloss(wav_pred, wav_gt)
-    print(loss)
     return loss
 
 def loss_bilinear(outputs, y, M):
