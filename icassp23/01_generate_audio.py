@@ -21,7 +21,9 @@ start_time = int(time.time())
 print(str(datetime.datetime.now()) + " Start.")
 print(__doc__ + "\n")
 save_dir = sys.argv[1]
+batch_size = 100
 print("Command-line arguments:\n" + "\n".join(sys.argv[1:]) + "\n")
+print("Batch size: {}\n".format(batch_size))
 
 for module in [h5py, np, pd]:
     print("{} version: {:s}".format(module.__name__, module.__version__))
@@ -43,13 +45,43 @@ for fold in icassp23.FOLDS:
         audio_group = h5_file.create_group("x")
         shape_group = h5_file.create_group("theta")
 
-        # Loop over shapes
-        for i, row in fold_df.iterrows():
+    # Define row iterator
+    row_iter = fold_df.iterrows()
+
+    # Loop over batches.
+    n_batches = 1 + len(fold_df) // batch_size
+    for batch_id in range(n_batches):
+        for irow, _ in zip(row_iter, range(batch_size)):
+            i, row = irow
+
             # Physical audio synthesis (g). theta -> x
             theta = np.array([row[column] for column in icassp23.THETA_COLUMNS])
             x = ftm.rectangular_drum(theta, **ftm.constants)
-
-            # Store shape annd waveform into HDF5 container.
             key = str(row["ID"])
-            audio_group[key] = x
-            shape_group[key] = theta
+
+            # Append to HDF5 file
+            with h5py.File(h5_path, "a") as h5_file:
+                # Store shape annd waveform into HDF5 container.
+                h5_file["x"][key] = x
+                h5_file["theta"][key] = theta
+
+            # Print
+            now = str(datetime.datetime.now())
+            batch_str = str(batch_id).zfill(len(str(n_batches)))
+            print(now + " Exported: {}, batch {}".format(fold, batch_str))
+            sys.stdout.flush()
+
+    # Empty line between folds
+    print("")
+
+
+# Print elapsed time.
+print(str(datetime.datetime.now()) + " Success.")
+elapsed_time = time.time() - int(start_time)
+elapsed_hours = int(elapsed_time / (60 * 60))
+elapsed_minutes = int((elapsed_time % (60 * 60)) / 60)
+elapsed_seconds = elapsed_time % 60.0
+elapsed_str = "{:>02}:{:>02}:{:>05.2f}".format(
+    elapsed_hours, elapsed_minutes, elapsed_seconds
+)
+print("Total elapsed time: " + elapsed_str + ".")
