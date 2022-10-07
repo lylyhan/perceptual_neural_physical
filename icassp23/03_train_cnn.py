@@ -8,8 +8,6 @@ import sys
 sys.path.append("../src/pnp_synth")
 from neural import cnn
 from neural.cnn import DrumDataModule, wav2shape, EffNet
-#from ..src.pnp_synth.neural import cnn
-#from ..src.pnp_synth.neural.cnn import  DrumDataModule, wav2shape, EffNet
 import torchvision
 import icassp23
 import sys
@@ -23,8 +21,7 @@ cqt_dir = data_dir
 
 
 
-
-batchsize = 2
+batchsize = 64 #should be smaller for spectral loss
 epoch_max = 10
 steps_per_epoch = 50
 max_steps = steps_per_epoch * epoch_max
@@ -77,8 +74,8 @@ if __name__ == "__main__":
                         max_epochs=epoch_max,
                         max_steps = max_steps,
                         weights_save_path=model_save_path,
-                        limit_train_batches=0.05, #if integer than it's #steps per epoch, if float then it's percentage
-                        limit_val_batches=0.5,
+                        limit_train_batches=steps_per_epoch, #if integer than it's #steps per epoch, if float then it's percentage
+                        limit_val_batches=1.0,
                         limit_test_batches=1.0,
                         callbacks=[checkpoint_cb],
                         )
