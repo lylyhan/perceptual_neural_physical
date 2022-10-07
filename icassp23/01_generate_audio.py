@@ -38,7 +38,7 @@ for fold in icassp23.FOLDS:
     h5_path = os.path.join(audio_dir, h5_name)
 
     # Create HDF5 file
-    with h5py.File(h5_path) as h5_file:
+    with h5py.File(h5_path, "w") as h5_file:
         audio_group = h5_file.create_group("x")
         shape_group = h5_file.create_group("theta")
 
