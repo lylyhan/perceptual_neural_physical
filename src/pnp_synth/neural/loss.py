@@ -7,6 +7,9 @@ from pnp_synth import utils
 def loss_spec(outputs, y, specloss,scaler):
     #put through synth ##TODO: need the batch processing!!! or make a loop
     #temporary loop
+    if outputs.shape[1] == 4 and y.shape[1] == 5:
+        outputs = torch.cat((y[:,0][:,None], outputs),dim=1)
+        assert outputs.shape[1] == 5
     wav_gt = []
     wav_pred = []
     for i in range(y.shape[0]):
@@ -14,10 +17,11 @@ def loss_spec(outputs, y, specloss,scaler):
         wav_pred.append(forward.pnp_forward(outputs[i,:], Phi=nn.Identity(), g=utils.x_from_theta, scaler=scaler))
     wav_gt = torch.stack(wav_gt)
     wav_pred = torch.stack(wav_pred)
-    return specloss(wav_pred, wav_gt)
+    loss = specloss(wav_pred, wav_gt)
+    print(loss)
+    return loss
 
 def loss_bilinear(outputs, y, M):
-
     diff = outputs - y 
     loss = torch.bmm(torch.bmm(diff[:,None,:], M), diff[:,:,None])
     return torch.mean(loss.squeeze())

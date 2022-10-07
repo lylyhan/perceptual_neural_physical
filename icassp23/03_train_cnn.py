@@ -12,29 +12,41 @@ from neural.cnn import DrumDataModule, wav2shape, EffNet
 #from ..src.pnp_synth.neural.cnn import  DrumDataModule, wav2shape, EffNet
 import torchvision
 import icassp23
+import sys
 
-batchsize = 64
-epoch_max = 30
+save_dir = sys.argv[1] #/home/han/data/
+
+data_dir = os.path.join(save_dir, 'x')
+weight_dir = os.path.join(save_dir, 'J')
+model_dir = os.path.join(save_dir, 'f_W')
+cqt_dir = data_dir
+
+
+
+
+batchsize = 2
+epoch_max = 10
 steps_per_epoch = 50
 max_steps = steps_per_epoch * epoch_max
 #feature parameters
 Q = 12
 J = 10
-outdim = 5
-cnn_type = "wav2shape" # efficientnet / wav2shape
-loss_type = "ploss" # spec / pnp / ploss
+outdim = 4
+cnn_type = "efficientnet" # efficientnet / wav2shape
+loss_type = "ploss" # spec / weighted_p / ploss
 weight_type = "None" #novol / pnp / None
-model_save_path = os.path.join("../icassp23/models/", "_".join([cnn_type, loss_type, weight_type, str(J), str(Q)]))
-os.makedirs(model_save_path, exist_ok=True)
 
 if __name__ == "__main__":
+    model_save_path = os.path.join(model_dir, "_".join([cnn_type, loss_type, weight_type, str(J), str(Q),"batchsize"+str(batchsize)]))
+    os.makedirs(model_save_path, exist_ok=True) 
     y_norms, scaler = icassp23.scale_theta()
     full_df = icassp23.load_fold(fold="full")
     #initialize dataset
     dataset = DrumDataModule(batch_size=batchsize,
-                            data_dir='/home/han/data/drum_data/',
+                            data_dir=data_dir, #path to hdf5 files
+                            cqt_dir=cqt_dir,
                             df=full_df,
-                            weight_dir = '/home/han/data/drum_data/',
+                            weight_dir=weight_dir, #path to gradient folders
                             weight_type = weight_type, #novol, pnp
                             feature='cqt',
                             J = J,
@@ -55,7 +67,6 @@ if __name__ == "__main__":
                                     save_last=True,
                                     filename="ckpt-{epoch:02d}-{val_loss:.2f}",
                                     save_weights_only=False,
-                                    #every_n_train_steps=steps_per_epoch,
                                     )
 
     #initialize trainer, declare training parameters, possiibly in neural/cnn.py
@@ -66,13 +77,14 @@ if __name__ == "__main__":
                         max_epochs=epoch_max,
                         max_steps = max_steps,
                         weights_save_path=model_save_path,
-                        limit_train_batches=0.01,
+                        limit_train_batches=0.05, #if integer than it's #steps per epoch, if float then it's percentage
                         limit_val_batches=0.5,
+                        limit_test_batches=1.0,
                         callbacks=[checkpoint_cb],
-                        #limit_train_batches=n_batches_train
                         )
     #train
     trainer.fit(model, dataset)
 
 
-    trainer.test(model, dataset,) 
+    test_loss = trainer.test(model, dataset, verbose=True)
+    print("average test loss", test_loss) 

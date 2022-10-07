@@ -1,3 +1,4 @@
+from decimal import Clamped
 from re import X
 import pytorch_lightning as pl
 from torch.utils.data import Dataset, DataLoader
@@ -16,7 +17,8 @@ import numpy as np
 from pnp_synth.physical import ftm
 import auraloss
 from pnp_synth import utils
-
+import h5py
+import joblib 
 
 
 #logscale param
@@ -62,7 +64,7 @@ class wav2shape(pl.LightningModule):
                            track_running_stats=True),
             nn.ReLU(),
             nn.Linear(64,outdim),#add nonneg kernel regulation
-            #nn.Linear.weight.data.clamp(min=0) #nonnegative constraint
+            nn.Sigmoid()
             #LINEAR ACTIVATION??
         )
         self.loss_type = loss
@@ -74,7 +76,8 @@ class wav2shape(pl.LightningModule):
             self.loss = losses.loss_spec
             self.specloss = auraloss.freq.MultiResolutionSTFTLoss()
         self.scaler = scaler
-        
+        self.outdim = outdim
+
     def forward(self, input_tensor):
         #weights (n filters, n_current channel, kernel 1, kernel2)
         #input (n_channel, bs, width, height)    
@@ -88,15 +91,17 @@ class wav2shape(pl.LightningModule):
         weight = batch['weight']
         M = batch['M']
         outputs = self(Sy)
-        
-        #print("dimensions",M.shape,weight.shape,outputs.shape)
-
-        if self.loss_type == "weighted_p":
-            loss = self.loss(weight[:,None] * outputs, y, M)
-        elif self.loss_type == "spec":
-            loss = self.loss(weight[:,None] * outputs, y, self.specloss, self.scaler)
+        if self.loss_type == "spec":
+            loss = self.loss(outputs, y, self.specloss, self.scaler)
         else:
-            loss = self.loss(weight[:,None] * outputs, y)
+            if self.outdim == 4:
+                y = y[:,1:] #exclude pitch when computing mse loss
+                if M is not None:
+                    M = M[:,1:,1:]
+            if self.loss_type == "weighted_p":
+                loss = self.loss(weight[:,None] * outputs, y, M)
+            else:
+                loss = self.loss(weight[:,None] * outputs, y)
 
         tensorboard_logs = {fold + '_loss': loss}
         return {'loss': loss, 'log':tensorboard_logs}
@@ -113,7 +118,6 @@ class wav2shape(pl.LightningModule):
     def training_epoch_end(self, outputs):
         loss = torch.stack([x['loss'] for x in outputs]).mean()
         self.log('train_loss', loss, prog_bar=True)
-        
     
     def test_epoch_end(self, outputs):
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
@@ -130,20 +134,18 @@ class wav2shape(pl.LightningModule):
         # use key 'log' to load Tensorboard
         return {'val_loss': avg_loss, 'log': tensorboard_logs}
 
-
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=1e-3)
-
-#dataset
 
 
 class EffNet(pl.LightningModule):
     def __init__(self, in_channels,outdim,loss,scaler):
         super().__init__()
-        self.batchnorm1 = nn.BatchNorm2d(out_channels=1, eps=1e-05, momentum=0.1, affine=True,
+        self.batchnorm1 = nn.BatchNorm2d(1, eps=1e-05, momentum=0.1, affine=True,
                            track_running_stats=True)
         self.conv2d = nn.Conv2d(in_channels=1, out_channels=3,kernel_size=(3,3))
         self.model = torchvision.models.efficientnet_b0(in_channels=in_channels, num_classes=outdim)
+        self.act = nn.Sigmoid()
         self.loss_type = loss
         self.metrics = forward.pnp_forward
         if self.loss_type == "ploss":
@@ -154,16 +156,15 @@ class EffNet(pl.LightningModule):
             self.loss = losses.loss_spec
             self.specloss = auraloss.freq.MultiResolutionSTFTLoss()
         self.val_loss = None
-
-        self.y_max, self.y_min = scaler.data_max_, scaler.data_min_
+        self.scaler = scaler
+        self.outdim = outdim
 
     def forward(self, input_tensor):
         input_tensor = input_tensor.unsqueeze(1) 
         x = self.batchnorm1(input_tensor)
         x = self.conv2d(x) # adapt to efficientnet's mandatory 3 input channels
         x = self.model(x)
-        #input_tensor = torch.stack([input_tensor]*3,dim=1).type(torch.float32)
-        ##TODO: concatenate three channels to be real part, imaginary part, magnitude of the CQT spectrum
+        x = self.act(x)
         return x
 
     def step(self, batch, fold):
@@ -171,21 +172,21 @@ class EffNet(pl.LightningModule):
         y = batch['y']
         weight = batch['weight']
         M = batch['M']
-
         outputs = self(Sy)
-        if self.loss_type == "weighted_p":
-            loss = self.loss(weight[:,None] * outputs, y, M)
-        elif self.loss_type == "spec":
-            loss = self.loss(weight[:,None] * outputs, y, self.specloss, self.scaler)
+        if self.loss_type == "spec":
+            loss = self.loss(outputs, y, self.specloss, self.scaler)
         else:
-            loss = self.loss(weight[:,None] * outputs, y)
+            if self.outdim == 4:
+                y = y[:,1:] #exclude pitch when computing mse loss
+                if M is not None:
+                    M = M[:,1:,1:]
+            if self.loss_type == "weighted_p":
+                loss = self.loss(weight[:,None] * outputs, y, M)
+            else:
+                loss = self.loss(weight[:,None] * outputs, y)
 
         tensorboard_logs = {fold + '_loss': loss}
-       
-        if fold == "val":
-            self.log('val_loss', loss, on_step=False,
-                 prog_bar=True, on_epoch=True)
-        return {fold + '_loss': loss, 'log':tensorboard_logs}
+        return {'loss': loss, 'log':tensorboard_logs}
 
     def training_step(self, batch, batch_idx):
         return self.step(batch, "train")
@@ -197,15 +198,12 @@ class EffNet(pl.LightningModule):
         return self.step(batch, "test")
     
     def training_epoch_end(self, outputs):
-
         loss = torch.stack([x['loss'] for x in outputs]).mean()
         self.log('train_loss', loss, prog_bar=True)
-        
     
     def test_epoch_end(self, outputs):
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
         self.log('test_loss', avg_loss)
-
         return avg_loss
 
     def validation_epoch_end(self, outputs):
@@ -225,29 +223,29 @@ class DrumData(Dataset):
     def __init__(self,
                  y_norms, #normalized groundtruth
                  ids,
-                 audio_dir = '/home/han/data/drum_data', #dir to one of the hdf5 files
-                 weights_dir = '/home/han/data/drum_data', #dir to folder that stores weights
-                 weight_type = 'novol', #novol, pnp
-                 fold='train',
-                 feature='cqt',
-                 J = 10,
-                 Q = 12):
+                 audio_dir, #path to audio hdf files
+                 cqt_dir, #path to cached cqt 
+                 weights_dir, #path to weight files
+                 weight_type, #novol, pnp
+                 fold,
+                 feature,
+                 J,
+                 Q):
         super().__init__()
 
         self.fold = fold
         self.y_norms = y_norms # partial annotation corresponding to current set load_fold(fold)
         self.ids = ids
-        self.audio_dir = audio_dir
+        self.audio_dir = audio_dir #path to hdf5 file
         self.weights_dir = weights_dir
         self.weight_type = weight_type
-        #normalization 
         
         self.feature = feature
         self.J = J
         self.Q = Q
         #temporary for han
-        self.M = torch.tensor(np.load(os.path.join(weights_dir, fold+"_grad_jtfs.npy")),
-                            dtype=torch.float32).cuda()
+        #self.M = torch.tensor(np.load(os.path.join(weights_dir, fold+"_grad_jtfs.npy")),
+        #                    dtype=torch.float32).cuda()
         self.sr = ftm.constants['sr']
         if feature == 'cqt':
             cqt_params = {
@@ -260,52 +258,57 @@ class DrumData(Dataset):
                 fmin = 0.4 * cqt_params['sr'] / 2 ** self.J
             else:
                 fmin = 32.7
-            self.cqt = CQT(**cqt_params,fmin=fmin).cuda()
-        
-   
+            self.cqt_from_x = CQT(**cqt_params,fmin=fmin).cuda()
+
+        # Initialize joblib Memory object
+        self.cqt_memory = joblib.Memory(cqt_dir, verbose=0)
+        self.cqt_from_id = self.cqt_memory.cache(self.cqt_from_id)
+       
 
     def __getitem__(self, idx): #conundrum: id and y_norm belong to different data structures df_annotation has the id, self.y_norms has the y_norm
-        
-        y_norm = self.y_norms[idx,:]
+        y_norm = self.y_norms[idx,:] # look up which row is this id corresponding to ??
         id = self.ids[idx]
         M = None
         weight = torch.tensor(1)
-        if self.weight_type:
+        if self.weight_type != "None":
             #load JTJ
-            #M = np.read(os.path.join(self.weights_dir, self.fold, str(id) + "_grad_jtfs.npy")) #(5, 5) on hpc
             #temporary for han
-            M = self.M[idx, :, :]
+            M = self.M[idx, :, :] 
             #compute riemannian
             if self.weight_type == "pnp":
                 w,v = torch.linalg.eig(M)
                 w = w.type(torch.float32)
                 #take 2 biggest eigenvaluess
                 weight = torch.sqrt((sorted(w)[-1]*sorted(w)[-2]))
-
+        
         if self.feature == "cqt":
-            #need to change this to loading hdf5 files 
-            x, sr = sf.read(os.path.join(self.audio_dir, self.fold, str(id) + "_sound.wav"))
-            #print(sr,self.sr)
-            #assert int(sr) != int(self.sr)
-            x = torch.tensor(x, dtype=torch.float32).cuda()
-            Sy = self.cqt(x)[0]
-            #logscale
-            Sy = torch.log1p(Sy/eps)
+            Sy = self.cqt_from_id(id, eps)
             return {'feature': torch.abs(Sy), 'y': y_norm, 'weight': weight, 'M': M}
 
     def __len__(self):
-        return self.y_norms.shape[0]
+        return len(self.ids)
+
+
+    def cqt_from_id(self, id, eps):
+        with h5py.File(self.audio_dir, "r") as f:
+            x = np.array(f['x'][str(id)])
+        x = torch.tensor(x, dtype=torch.float32).cuda()
+        Sy = self.cqt_from_x(x)[0]
+        Sy = torch.log1p(Sy/eps)
+        return Sy
+
 
 class DrumDataModule(pl.LightningDataModule):
     def __init__(self,
-                 data_dir: str = '/home/han/data/drum_data/',
-                 df=None,
-                 weight_dir = '/home/han/data/drum_data',
-                 weight_type = 'novol', #novol, pnp
-                 batch_size: int = 32,
-                 J = 10,
-                 Q = 12,
-                 feature='cqt'):
+                 data_dir,
+                 cqt_dir,
+                 df,
+                 weight_dir,
+                 weight_type, 
+                 batch_size,
+                 J,
+                 Q,
+                 feature):
         super().__init__()
         self.data_dir = data_dir
   
@@ -316,6 +319,7 @@ class DrumDataModule(pl.LightningDataModule):
         self.J = J
         self.Q = Q
         self.full_df = df
+        self.cqt_dir = cqt_dir
 
 
     def setup(self, stage=None):
@@ -324,13 +328,25 @@ class DrumDataModule(pl.LightningDataModule):
         y_norms_test, scaler = utils.scale_theta(self.full_df, "test") 
         y_norms_val, scaler = utils.scale_theta(self.full_df, "val")
 
-        train_ids = self.full_df[self.full_df["fold"]=="train"]['ID'].values
-        test_ids = self.full_df[self.full_df["fold"]=="test"]['ID'].values
-        val_ids = self.full_df[self.full_df["fold"]=="val"]['ID'].values
+        #"""
+       
+        #temporary for mini hdf5 files
+        with h5py.File(os.path.join(self.data_dir, "icassp23_train_audio.h5")) as f:
+            train_ids = list(f['x'].keys())
+        with h5py.File(os.path.join(self.data_dir, "icassp23_test_audio.h5")) as f:
+            test_ids = list(f['x'].keys())
+        with h5py.File(os.path.join(self.data_dir, "icassp23_val_audio.h5")) as f:
+            val_ids = list(f['x'].keys())
+        #"""    
 
+        #train_ids = self.full_df[self.full_df["fold"]=="train"]['ID'].values
+        #test_ids = self.full_df[self.full_df["fold"]=="test"]['ID'].values
+        #val_ids = self.full_df[self.full_df["fold"]=="val"]['ID'].values
+        
         self.train_ds = DrumData(y_norms_train, #partial dataframe
                                 train_ids,
-                                self.data_dir, 
+                                os.path.join(self.data_dir,"icassp23_train_audio.h5"), 
+                                self.cqt_dir,
                                 self.weight_dir,
                                 self.weight_type,
                                 fold='train',
@@ -340,7 +356,8 @@ class DrumDataModule(pl.LightningDataModule):
         
         self.val_ds = DrumData(y_norms_val, #partial dataframe
                                 val_ids,
-                                self.data_dir, 
+                                os.path.join(self.data_dir,"icassp23_val_audio.h5"),
+                                self.cqt_dir,
                                 self.weight_dir,
                                 self.weight_type,
                                 fold='val',
@@ -350,7 +367,8 @@ class DrumDataModule(pl.LightningDataModule):
 
         self.test_ds = DrumData(y_norms_test, #partial dataframe
                                 test_ids,
-                                self.data_dir,
+                                os.path.join(self.data_dir,"icassp23_test_audio.h5"),
+                                self.cqt_dir,
                                 self.weight_dir,
                                 self.weight_type,
                                 fold='test',
@@ -360,7 +378,7 @@ class DrumDataModule(pl.LightningDataModule):
 
 
     def collate_batch(self, batch):
-        Sy = torch.tensor(torch.stack([s['feature'] for s in batch])) #(64,120,257)
+        Sy = torch.tensor(torch.stack([s['feature'] for s in batch])) #(64,120,257)x
         y = torch.tensor([s['y'].astype(np.float32) for s in batch])
         weight = torch.tensor(torch.stack([s['weight'] for s in batch]))
         if type(batch[0]['M']) != type(None):
