@@ -8,6 +8,7 @@ from pnp_synth.neural import forward
 from pnp_synth.physical import ftm
 import sklearn.preprocessing
 import torch
+import numpy as np
 
 FOLDS = ["train", "test", "val"]
 THETA_COLUMNS = ["omega", "tau", "p", "D", "alpha"]

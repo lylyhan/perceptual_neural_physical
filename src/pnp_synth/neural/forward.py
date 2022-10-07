@@ -15,8 +15,8 @@ def scale_theta(full_df):
 
     # Transform whole dataset with scaler
     thetas = full_df.values[:, 3:-1]
-    nus = scaler.transform(theta)
-    return nus, scaler
+    nus = scaler.transform(thetas)
+    return nus, scaler.data_max_, scaler.data_min_
 
 
 def inverse_scale(nu, scaler):

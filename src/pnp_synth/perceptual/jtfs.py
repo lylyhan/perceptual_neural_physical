@@ -1,3 +1,5 @@
+
+
 """
 # kymatio main branch parameters
 jtfs_params = dict(
@@ -14,7 +16,7 @@ jtfs_params = dict(
 jtfs_params = dict(
             J = 14, #scale
             shape = (2**16, ), 
-            Q = 1, #filters per octave, frequency resolution
+            Q = 12, #filters per octave, frequency resolution
             T = 2**13,  #local averaging
             F = 2,
             max_pad_factor=1,
@@ -22,3 +24,4 @@ jtfs_params = dict(
             average = True,
             average_fr = True,
 )
+
