@@ -38,7 +38,7 @@ for init_id in range(n_inits):
         f.write(" ".join([
             "singularity exec --nv",
             "--overlay /scratch/vl1019/overlay-50G-10M.ext3:ro",
-            "/scratch/work/public/singularity/cuda11.0-cudnn8-devel-ubuntu18.04.sif",
+            "/scratch/work/public/singularity/cuda11.6.124-cudnn8.4.0.27-devel-ubuntu20.04.4.sif",
             "/bin/bash",
             "-c",
             "\"source",
