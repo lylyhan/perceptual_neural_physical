@@ -13,6 +13,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 import sklearn
 import sys
 import time
+import torch
 
 import icassp23
 from pnp_synth.neural import cnn
