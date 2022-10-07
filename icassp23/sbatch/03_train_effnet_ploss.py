@@ -1,20 +1,20 @@
 import os
 
 # Define constants.
-script_name = os.path.basename(__file__)
+script_name = os.path.basename(__file__)[:-3] # remove .py
 script_path = os.path.abspath(os.path.join("..", script_name))
 save_dir = "/scratch/vl1019/icassp23_data"
 n_inits = 10
 
 # Create folder.
-sbatch_dir = os.path.join(".", script_name[:-3])
+sbatch_dir = os.path.join(".", script_name)
 os.makedirs(sbatch_dir, exist_ok=True)
 
-file_name = job_name.split("_")[0] + ".sbatch"
-file_path = os.path.join(sbatch_dir, file_name)
-
 for init_id in range(n_inits):
-    job_name = "_".join(os.path.basename(__file__)[:-3], str(init_id))
+    job_name = "_".join(script_name, str(init_id))
+
+    file_name = job_name + ".sbatch"
+    file_path = os.path.join(sbatch_dir, file_name)
 
     # Generate file.
     with open(file_path, "w") as f:
