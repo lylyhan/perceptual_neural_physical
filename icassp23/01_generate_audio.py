@@ -1,3 +1,8 @@
+"""
+This script computes 100k drum sounds by solving a 4th-order partial
+differential equation with the pnp_synth.ftm submodule.
+FTM stands for Functional Transformation Method.
+"""
 import datetime
 import h5py
 import icassp23
