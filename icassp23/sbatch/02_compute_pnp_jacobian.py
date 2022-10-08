@@ -70,13 +70,14 @@ with open(file_path, "w") as f:
 
     # Loop over folds: training and validation.
     for n_thread in range(n_threads):
-        # Define job name.
-        job_name = "_".join(
-            [script_name[:2], "thread-" + str(n_thread).zfill(len(str(n_threads)))]
-        )
-        sbatch_str = "sbatch " + job_name + ".sbatch"
-        # Write SBATCH command to shell file.
-        f.write(sbatch_str + "\n")
+        if (n_thread <= 399 and n_thread >= 99) or (n_thread <= 499 and n_thread >=496):
+            # Define job name.
+            job_name = "_".join(
+                [script_name[:2], "thread-" + str(n_thread).zfill(len(str(n_threads)))]
+            )
+            sbatch_str = "sbatch " + job_name + ".sbatch"
+            # Write SBATCH command to shell file.
+            f.write(sbatch_str + "\n")
 
 # Grant permission to execute the shell file.
 # https://stackoverflow.com/a/30463972
