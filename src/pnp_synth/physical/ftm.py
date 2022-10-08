@@ -18,6 +18,11 @@ constants = {
 
 
 def rectangular_drum(theta, **constants):
+    if torch.cuda.is_available():
+        device = "cuda"
+    else:
+        device = "cpu"
+
     #theta
     w11 = 10 ** theta[0]
     tau11 = theta[1]
@@ -41,8 +46,8 @@ def rectangular_drum(theta, **constants):
 
     EI = S ** 4 
 
-    mu = torch.arange(1, constants['m1'] + 1).cuda() #(m,)
-    mu2 = torch.arange(1, constants['m2'] + 1).cuda() #(m,)
+    mu = torch.arange(1, constants['m1'] + 1).to(device) #(m,)
+    mu2 = torch.arange(1, constants['m2'] + 1).to(device) #(m,)
     dur = constants['dur']
     n = (mu * pi / l0) ** 2 + (mu2 * pi / l2)**2 #(m,)
     n2 = n ** 2 
@@ -65,7 +70,7 @@ def rectangular_drum(theta, **constants):
         / omega[:mode_corr] #(mode)
     )
 
-    time_steps = torch.linspace(0, dur, dur).cuda() / constants['sr'] #(T,)
+    time_steps = torch.linspace(0, dur, dur).to(device) / constants['sr'] #(T,)
     y = torch.exp(-alpha[:mode_corr,None] * time_steps[None,:]) * torch.sin(
         omega[:mode_corr,None] * time_steps[None,:]
     ) # (mode,T)
