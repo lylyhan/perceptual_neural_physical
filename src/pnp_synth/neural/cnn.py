@@ -243,6 +243,7 @@ class DrumData(Dataset):
         self.feature = feature
         self.J = J
         self.Q = Q
+        self.fold = fold
         #temporary for han
         #self.M = torch.tensor(np.load(os.path.join(weights_dir, fold+"_grad_jtfs.npy")),
         #                    dtype=torch.float32).cuda()
@@ -273,7 +274,8 @@ class DrumData(Dataset):
         if self.weight_type != "None":
             #load JTJ
             #temporary for han
-            M = self.M[idx, :, :]
+            #M = self.M[idx, :, :] 
+            M = self.M_from_id(id)
             #compute riemannian
             if self.weight_type == "pnp":
                 w,v = torch.linalg.eig(M)
@@ -288,7 +290,10 @@ class DrumData(Dataset):
     def __len__(self):
         return len(self.ids)
 
-
+    def M_from_id(self,id):
+        i_prefix = "icassp23_" + str(id).zfill(len(self.ids))
+        return np.load(os.path.join(self.weights_dir, self.fold, i_prefix + "_grad_jtfs.py"))
+        
     def cqt_from_id(self, id, eps):
         with h5py.File(self.audio_dir, "r") as f:
             x = np.array(f['x'][str(id)])
@@ -319,14 +324,14 @@ class DrumDataModule(pl.LightningDataModule):
         self.feature = feature
         self.J = J
         self.Q = Q
-        self.full_df = df
+        self.full_df = df #sorted df
         self.cqt_dir = cqt_dir
 
 
     def setup(self, stage=None):
-
-        y_norms_train, scaler= utils.scale_theta(self.full_df, "train")
-        y_norms_test, scaler = utils.scale_theta(self.full_df, "test")
+        
+        y_norms_train, scaler= utils.scale_theta(self.full_df, "train") #sorted by id
+        y_norms_test, scaler = utils.scale_theta(self.full_df, "test") 
         y_norms_val, scaler = utils.scale_theta(self.full_df, "val")
 
         """
@@ -340,7 +345,7 @@ class DrumDataModule(pl.LightningDataModule):
             val_ids = list(f['x'].keys())
         """
 
-        train_ids = self.full_df[self.full_df["fold"]=="train"]['ID'].values
+        train_ids = self.full_df[self.full_df["fold"]=="train"]['ID'].values #sorted by id
         test_ids = self.full_df[self.full_df["fold"]=="test"]['ID'].values
         val_ids = self.full_df[self.full_df["fold"]=="val"]['ID'].values
 

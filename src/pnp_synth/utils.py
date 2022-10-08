@@ -27,6 +27,7 @@ jtfs_params = dict(
 
 def load_fold(full_df, fold="full"): 
     """Load DataFrame."""
+    full_df = full_df.sort_values(by="ID", ignore_index=False)
     assert len(set(full_df["ID"])) == len(full_df)
     if fold == "full":
         return full_df

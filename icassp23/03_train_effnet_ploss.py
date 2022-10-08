@@ -48,83 +48,83 @@ cnn_type = "efficientnet"  # efficientnet / cnn.wav2shape
 loss_type = "ploss"  # spec / weighted_p / ploss
 weight_type = "None"  # novol / pnp / None
 
-
-model_save_path = os.path.join(
-    model_dir,
-    "_".join(
-        [
-            cnn_type,
-            loss_type,
-            weight_type,
-            str(J),
-            str(Q),
-            "batch_size" + str(batch_size),
-        ]
-    ),
-)
-os.makedirs(model_save_path, exist_ok=True)
-y_norms, scaler = icassp23.scale_theta()
-full_df = icassp23.load_fold(fold="full")
-# initialize dataset
-dataset = cnn.DrumDataModule(
-    batch_size=batch_size,
-    data_dir=data_dir,  # path to hdf5 files
-    cqt_dir=cqt_dir,
-    df=full_df,
-    weight_dir=weight_dir,  # path to gradient folders
-    weight_type=weight_type,  # novol, pnp
-    feature="cqt",
-    J=J,
-    Q=Q,
-    num_workers=0
-)
-
-print(str(datetime.datetime.now()) + " Finished initializing dataset")
-# initialize model, designate loss function
-if cnn_type == "cnn.wav2shape":
-    model = cnn.wav2shape(
-        in_channels=1, bin_per_oct=Q, outdim=outdim, loss=loss_type, scaler=scaler
+if __name__ == "__main__":
+    model_save_path = os.path.join(
+        model_dir,
+        "_".join(
+            [
+                cnn_type,
+                loss_type,
+                weight_type,
+                str(J),
+                str(Q),
+                "batch_size" + str(batch_size),
+            ]
+        ),
     )
-elif cnn_type == "efficientnet":
-    model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler)
-print(str(datetime.datetime.now()) + " Finished initializing model")
+    os.makedirs(model_save_path, exist_ok=True)
+    y_norms, scaler = icassp23.scale_theta()
+    full_df = icassp23.load_fold(fold="full")
+    # initialize dataset
+    dataset = cnn.DrumDataModule(
+        batch_size=batch_size,
+        data_dir=data_dir,  # path to hdf5 files
+        cqt_dir=cqt_dir,
+        df=full_df,
+        weight_dir=weight_dir,  # path to gradient folders
+        weight_type=weight_type,  # novol, pnp
+        feature="cqt",
+        J=J,
+        Q=Q,
+        num_workers=0
+    )
 
-# initialize checkpoint methods
-checkpoint_cb = ModelCheckpoint(
-    dirpath=model_save_path,
-    monitor="val_loss",
-    save_last=True,
-    filename="ckpt-{epoch:02d}-{val_loss:.2f}",
-    save_weights_only=False,
-)
+    print(str(datetime.datetime.now()) + " Finished initializing dataset")
+    # initialize model, designate loss function
+    if cnn_type == "cnn.wav2shape":
+        model = cnn.wav2shape(
+            in_channels=1, bin_per_oct=Q, outdim=outdim, loss=loss_type, scaler=scaler
+        )
+    elif cnn_type == "efficientnet":
+        model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler)
+    print(str(datetime.datetime.now()) + " Finished initializing model")
 
-# initialize trainer, declare training parameters, possiibly in neural/cnn.py
-trainer = pl.Trainer(
-    accelerator="gpu",
-    devices=-1,
-    auto_select_gpus=True,
-    max_epochs=epoch_max,
-    max_steps=max_steps,
-    limit_train_batches=steps_per_epoch,  # if integer than it's #steps per epoch, if float then it's percentage
-    limit_val_batches=1.0,
-    limit_test_batches=1.0,
-    callbacks=[checkpoint_cb],
-)
-# train
-trainer.fit(model, dataset)
+    # initialize checkpoint methods
+    checkpoint_cb = ModelCheckpoint(
+        dirpath=model_save_path,
+        monitor="val_loss",
+        save_last=True,
+        filename="ckpt-{epoch:02d}-{val_loss:.2f}",
+        save_weights_only=False,
+    )
 
-test_loss = trainer.test(model, dataset, verbose=True)
-print("Model saved at: {}".format(model_save_path))
-print("Average test loss: {}".format(test_loss))
-print("\n")
+    # initialize trainer, declare training parameters, possiibly in neural/cnn.py
+    trainer = pl.Trainer(
+        accelerator="gpu",
+        devices=-1,
+        auto_select_gpus=True,
+        max_epochs=epoch_max,
+        max_steps=max_steps,
+        limit_train_batches=steps_per_epoch,  # if integer than it's #steps per epoch, if float then it's percentage
+        limit_val_batches=1.0,
+        limit_test_batches=1.0,
+        callbacks=[checkpoint_cb],
+    )
+    # train
+    trainer.fit(model, dataset)
 
-# Print elapsed time.
-print(str(datetime.datetime.now()) + " Success.")
-elapsed_time = time.time() - int(start_time)
-elapsed_hours = int(elapsed_time / (60 * 60))
-elapsed_minutes = int((elapsed_time % (60 * 60)) / 60)
-elapsed_seconds = elapsed_time % 60.0
-elapsed_str = "{:>02}:{:>02}:{:>05.2f}".format(
-    elapsed_hours, elapsed_minutes, elapsed_seconds
-)
-print("Total elapsed time: " + elapsed_str + ".")
+    test_loss = trainer.test(model, dataset, verbose=True)
+    print("Model saved at: {}".format(model_save_path))
+    print("Average test loss: {}".format(test_loss))
+    print("\n")
+
+    # Print elapsed time.
+    print(str(datetime.datetime.now()) + " Success.")
+    elapsed_time = time.time() - int(start_time)
+    elapsed_hours = int(elapsed_time / (60 * 60))
+    elapsed_minutes = int((elapsed_time % (60 * 60)) / 60)
+    elapsed_seconds = elapsed_time % 60.0
+    elapsed_str = "{:>02}:{:>02}:{:>05.2f}".format(
+        elapsed_hours, elapsed_minutes, elapsed_seconds
+    )
+    print("Total elapsed time: " + elapsed_str + ".")

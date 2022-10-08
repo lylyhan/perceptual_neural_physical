@@ -49,7 +49,7 @@ for fold in icassp23.FOLDS:
     row_iter = fold_df.iterrows()
 
     # Loop over batches.
-    n_batches = 1 + len(fold_df) // batch_size
+    n_batches = 1# + len(fold_df) // batch_size
     for batch_id in range(n_batches):
         for irow, _ in zip(row_iter, range(batch_size)):
             i, row = irow
@@ -62,7 +62,7 @@ for fold in icassp23.FOLDS:
             # Append to HDF5 file
             with h5py.File(h5_path, "a") as h5_file:
                 # Store shape annd waveform into HDF5 container.
-                h5_file["x"][key] = x
+                h5_file["x"][key] = x.cpu()
                 h5_file["theta"][key] = theta
 
         # Print

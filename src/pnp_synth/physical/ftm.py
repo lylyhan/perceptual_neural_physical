@@ -41,8 +41,8 @@ def rectangular_drum(theta, **constants):
 
     EI = S ** 4 
 
-    mu = torch.arange(1, constants['m1'] + 1) #(m,)
-    mu2 = torch.arange(1, constants['m2'] + 1) #(m,)
+    mu = torch.arange(1, constants['m1'] + 1).cuda() #(m,)
+    mu2 = torch.arange(1, constants['m2'] + 1).cuda() #(m,)
     dur = constants['dur']
     n = (mu * pi / l0) ** 2 + (mu2 * pi / l2)**2 #(m,)
     n2 = n ** 2 
@@ -55,7 +55,7 @@ def rectangular_drum(theta, **constants):
 
     #adaptively change mode number according to nyquist frequency
     temp = (omega / 2 / pi) <= constants['sr'] / 2
-    mode_corr = torch.sum(temp.to(torch.int32),) 
+    mode_corr = torch.sum(temp.to(torch.int32),)
     
     N = l0 * l2 / 4
     yi = (
@@ -65,7 +65,7 @@ def rectangular_drum(theta, **constants):
         / omega[:mode_corr] #(mode)
     )
 
-    time_steps = torch.linspace(0, dur, dur) / constants['sr'] #(T,)
+    time_steps = torch.linspace(0, dur, dur).cuda() / constants['sr'] #(T,)
     y = torch.exp(-alpha[:mode_corr,None] * time_steps[None,:]) * torch.sin(
         omega[:mode_corr,None] * time_steps[None,:]
     ) # (mode,T)
