@@ -55,26 +55,27 @@ dS_over_dnu = functorch.jacfwd(S_from_nu)
 # Loop over examples.
 torch.autograd.set_detect_anomaly(True)
 for i in range(id_start, id_end):
-    # Compute forward transformation: nu -> theta -> x -> S
-    nu = torch.tensor(nus[i, :], requires_grad=True)
-    fold = full_df["fold"].iloc[i]
-    assert i == full_df["ID"].iloc[i]
-    S = S_from_nu(nu)
-
-    # Compute Jacobian: d(S) / d(nu)
-    J = dS_over_dnu(nu)
-
-    # Convert to NumPy array and save to disk
+     # Convert to NumPy array and save to disk
     i_prefix = "icassp23_" + str(i).zfill(len(str(n_samples)))
     S_path = os.path.join(save_dir, "S", fold, i_prefix + "_jtfs.npy")
-    np.save(S_path, S.detach().numpy())
     J_path = os.path.join(save_dir, "J", fold, i_prefix + "_grad_jtfs.npy")
-    np.save(J_path, J.detach().numpy())
+    if not (os.path.exists(S_path) and os.path.exists(J_path)):
+        # Compute forward transformation: nu -> theta -> x -> S
+        nu = torch.tensor(nus[i, :], requires_grad=True)
+        fold = full_df["fold"].iloc[i]
+        assert i == full_df["ID"].iloc[i]
+        S = S_from_nu(nu)
 
-    # Print
-    now = str(datetime.datetime.now())
-    print(now + " Exported: {}/{}".format(fold, i_prefix))
-    sys.stdout.flush()
+        # Compute Jacobian: d(S) / d(nu)
+        J = dS_over_dnu(nu)
+
+        np.save(S_path, S.detach().numpy())
+        np.save(J_path, J.detach().numpy())
+
+        # Print
+        now = str(datetime.datetime.now())
+        print(now + " Exported: {}/{}".format(fold, i_prefix))
+        sys.stdout.flush()
 print("")
 
 
