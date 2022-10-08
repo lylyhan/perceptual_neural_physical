@@ -21,9 +21,7 @@ start_time = int(time.time())
 print(str(datetime.datetime.now()) + " Start.")
 print(__doc__ + "\n")
 save_dir = sys.argv[1]
-#batch_size = 100000
 print("Command-line arguments:\n" + "\n".join(sys.argv[1:]) + "\n")
-#print("Batch size: {}\n".format(batch_size))
 
 for module in [h5py, np, pd]:
     print("{} version: {:s}".format(module.__name__, module.__version__))
@@ -52,26 +50,25 @@ for fold in icassp23.FOLDS:
     batch_size = len(fold_df)
     n_batches = 1 + len(fold_df) // batch_size
 
-    for batch_id in range(n_batches):
-        for irow, _ in zip(row_iter, range(batch_size)):
-            i, row = irow
+    for i, row in row_iter:
+        i, row = irow
 
-            # Physical audio synthesis (g). theta -> x
-            theta = np.array([row[column] for column in icassp23.THETA_COLUMNS])
-            x = ftm.rectangular_drum(theta, **ftm.constants)
-            key = str(row["ID"])
+        # Physical audio synthesis (g). theta -> x
+        theta = np.array([row[column] for column in icassp23.THETA_COLUMNS])
+        x = ftm.rectangular_drum(theta, **ftm.constants)
+        key = str(row["ID"])
 
-            # Append to HDF5 file
-            with h5py.File(h5_path, "a") as h5_file:
-                # Store shape annd waveform into HDF5 container.
-                h5_file["x"][key] = x.cpu()
-                h5_file["theta"][key] = theta
+        # Append to HDF5 file
+        with h5py.File(h5_path, "a") as h5_file:
+            # Store shape annd waveform into HDF5 container.
+            h5_file["x"][key] = x.cpu()
+            h5_file["theta"][key] = theta
 
-        # Print
-        now = str(datetime.datetime.now())
-        batch_str = str(batch_id).zfill(len(str(n_batches)))
-        print(now + " Exported: {}, batch {}".format(fold, batch_str))
-        sys.stdout.flush()
+    # Print
+    now = str(datetime.datetime.now())
+    batch_str = str(batch_id).zfill(len(str(n_batches)))
+    print(now + " Exported: {}, batch {}".format(fold, batch_str))
+    sys.stdout.flush()
 
     # Empty line between folds
     print("")
