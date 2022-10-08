@@ -21,9 +21,9 @@ start_time = int(time.time())
 print(str(datetime.datetime.now()) + " Start.")
 print(__doc__ + "\n")
 save_dir = sys.argv[1]
-batch_size = 100
+#batch_size = 100000
 print("Command-line arguments:\n" + "\n".join(sys.argv[1:]) + "\n")
-print("Batch size: {}\n".format(batch_size))
+#print("Batch size: {}\n".format(batch_size))
 
 for module in [h5py, np, pd]:
     print("{} version: {:s}".format(module.__name__, module.__version__))
@@ -49,7 +49,9 @@ for fold in icassp23.FOLDS:
     row_iter = fold_df.iterrows()
 
     # Loop over batches.
-    n_batches = 1# + len(fold_df) // batch_size
+    batch_size = len(fold_df)
+    n_batches = 1 + len(fold_df) // batch_size
+
     for batch_id in range(n_batches):
         for irow, _ in zip(row_iter, range(batch_size)):
             i, row = irow
