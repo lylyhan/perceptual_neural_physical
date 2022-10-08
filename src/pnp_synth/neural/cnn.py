@@ -18,7 +18,7 @@ from pnp_synth.physical import ftm
 import auraloss
 from pnp_synth import utils
 import h5py
-import joblib 
+import joblib
 
 
 #logscale param
@@ -80,11 +80,11 @@ class wav2shape(pl.LightningModule):
 
     def forward(self, input_tensor):
         #weights (n filters, n_current channel, kernel 1, kernel2)
-        #input (n_channel, bs, width, height)    
+        #input (n_channel, bs, width, height)
         input_tensor = input_tensor.unsqueeze(1).type(torch.float32)
         return self.block(input_tensor)
 
-    
+
     def step(self, batch, fold):
         Sy = batch['feature']
         y = batch['y']
@@ -118,7 +118,7 @@ class wav2shape(pl.LightningModule):
     def training_epoch_end(self, outputs):
         loss = torch.stack([x['loss'] for x in outputs]).mean()
         self.log('train_loss', loss, prog_bar=True)
-    
+
     def test_epoch_end(self, outputs):
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
         self.log('test_loss', avg_loss)
@@ -160,7 +160,7 @@ class EffNet(pl.LightningModule):
         self.outdim = outdim
 
     def forward(self, input_tensor):
-        input_tensor = input_tensor.unsqueeze(1) 
+        input_tensor = input_tensor.unsqueeze(1)
         x = self.batchnorm1(input_tensor)
         x = self.conv2d(x) # adapt to efficientnet's mandatory 3 input channels
         x = self.model(x)
@@ -196,11 +196,11 @@ class EffNet(pl.LightningModule):
 
     def test_step(self, batch, batch_idx):
         return self.step(batch, "test")
-    
+
     def training_epoch_end(self, outputs):
         loss = torch.stack([x['loss'] for x in outputs]).mean()
         self.log('train_loss', loss, prog_bar=True)
-    
+
     def test_epoch_end(self, outputs):
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
         self.log('test_loss', avg_loss)
@@ -224,7 +224,7 @@ class DrumData(Dataset):
                  y_norms, #normalized groundtruth
                  ids,
                  audio_dir, #path to audio hdf files
-                 cqt_dir, #path to cached cqt 
+                 cqt_dir, #path to cached cqt
                  weights_dir, #path to weight files
                  weight_type, #novol, pnp
                  fold,
@@ -239,7 +239,7 @@ class DrumData(Dataset):
         self.audio_dir = audio_dir #path to hdf5 file
         self.weights_dir = weights_dir
         self.weight_type = weight_type
-        
+
         self.feature = feature
         self.J = J
         self.Q = Q
@@ -263,7 +263,7 @@ class DrumData(Dataset):
         # Initialize joblib Memory object
         self.cqt_memory = joblib.Memory(cqt_dir, verbose=0)
         self.cqt_from_id = self.cqt_memory.cache(self.cqt_from_id)
-       
+
 
     def __getitem__(self, idx): #conundrum: id and y_norm belong to different data structures df_annotation has the id, self.y_norms has the y_norm
         y_norm = self.y_norms[idx,:] # look up which row is this id corresponding to ??
@@ -273,14 +273,14 @@ class DrumData(Dataset):
         if self.weight_type != "None":
             #load JTJ
             #temporary for han
-            M = self.M[idx, :, :] 
+            M = self.M[idx, :, :]
             #compute riemannian
             if self.weight_type == "pnp":
                 w,v = torch.linalg.eig(M)
                 w = w.type(torch.float32)
                 #take 2 biggest eigenvaluess
                 weight = torch.sqrt((sorted(w)[-1]*sorted(w)[-2]))
-        
+
         if self.feature == "cqt":
             Sy = self.cqt_from_id(id, eps)
             return {'feature': torch.abs(Sy), 'y': y_norm, 'weight': weight, 'M': M}
@@ -304,14 +304,15 @@ class DrumDataModule(pl.LightningDataModule):
                  cqt_dir,
                  df,
                  weight_dir,
-                 weight_type, 
+                 weight_type,
                  batch_size,
                  J,
                  Q,
-                 feature):
+                 feature,
+                 num_workers):
         super().__init__()
         self.data_dir = data_dir
-  
+        self.num_workers = num_workers
         self.weight_dir = weight_dir
         self.weight_type = weight_type
         self.batch_size = batch_size
@@ -323,13 +324,13 @@ class DrumDataModule(pl.LightningDataModule):
 
 
     def setup(self, stage=None):
-        
-        y_norms_train, scaler= utils.scale_theta(self.full_df, "train") 
-        y_norms_test, scaler = utils.scale_theta(self.full_df, "test") 
+
+        y_norms_train, scaler= utils.scale_theta(self.full_df, "train")
+        y_norms_test, scaler = utils.scale_theta(self.full_df, "test")
         y_norms_val, scaler = utils.scale_theta(self.full_df, "val")
 
         """
-       
+
         #temporary for mini hdf5 files
         with h5py.File(os.path.join(self.data_dir, "icassp23_train_audio.h5")) as f:
             train_ids = list(f['x'].keys())
@@ -337,15 +338,15 @@ class DrumDataModule(pl.LightningDataModule):
             test_ids = list(f['x'].keys())
         with h5py.File(os.path.join(self.data_dir, "icassp23_val_audio.h5")) as f:
             val_ids = list(f['x'].keys())
-        """    
+        """
 
         train_ids = self.full_df[self.full_df["fold"]=="train"]['ID'].values
         test_ids = self.full_df[self.full_df["fold"]=="test"]['ID'].values
         val_ids = self.full_df[self.full_df["fold"]=="val"]['ID'].values
-        
+
         self.train_ds = DrumData(y_norms_train, #partial dataframe
                                 train_ids,
-                                os.path.join(self.data_dir,"icassp23_train_audio.h5"), 
+                                os.path.join(self.data_dir,"icassp23_train_audio.h5"),
                                 self.cqt_dir,
                                 self.weight_dir,
                                 self.weight_type,
@@ -353,7 +354,7 @@ class DrumDataModule(pl.LightningDataModule):
                                 feature='cqt',
                                 J = self.J,
                                 Q = self.Q)
-        
+
         self.val_ds = DrumData(y_norms_val, #partial dataframe
                                 val_ids,
                                 os.path.join(self.data_dir,"icassp23_val_audio.h5"),
@@ -393,7 +394,7 @@ class DrumDataModule(pl.LightningDataModule):
                           shuffle=True,
                           drop_last=True,
                           collate_fn=self.collate_batch,
-                          num_workers=0)
+                          num_workers=self.num_workers)
 
     def val_dataloader(self):
         return DataLoader(self.val_ds,
@@ -401,7 +402,7 @@ class DrumDataModule(pl.LightningDataModule):
                           shuffle=False,
                           drop_last=True,
                           collate_fn=self.collate_batch,
-                          num_workers=0)
+                          num_workers=self.num_workers)
 
     def test_dataloader(self):
         return DataLoader(self.test_ds,
@@ -409,4 +410,4 @@ class DrumDataModule(pl.LightningDataModule):
                           shuffle=False,
                           drop_last=True,
                           collate_fn=self.collate_batch,
-                          num_workers=0)
+                          num_workers=self.num_workers)
