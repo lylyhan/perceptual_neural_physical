@@ -261,8 +261,8 @@ class DrumData(Dataset):
             self.cqt_from_x = CQT(**cqt_params,fmin=fmin).cuda()
 
         # Initialize joblib Memory object
-        self.cqt_memory = joblib.Memory(cqt_dir, verbose=0)
-        self.cqt_from_id = self.cqt_memory.cache(self.cqt_from_id)
+        # self.cqt_memory = joblib.Memory(cqt_dir, verbose=0)
+        # self.cqt_from_id = self.cqt_memory.cache(self.cqt_from_id)
 
 
     def __getitem__(self, idx): #conundrum: id and y_norm belong to different data structures df_annotation has the id, self.y_norms has the y_norm
