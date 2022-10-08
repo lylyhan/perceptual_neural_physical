@@ -76,7 +76,7 @@ dataset = cnn.DrumDataModule(
     feature="cqt",
     J=J,
     Q=Q,
-    num_workers=64
+    num_workers=1
 )
 
 print(str(datetime.datetime.now()) + " Finished initializing dataset")
