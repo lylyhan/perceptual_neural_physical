@@ -105,7 +105,6 @@ trainer = pl.Trainer(
     auto_select_gpus=True,
     max_epochs=epoch_max,
     max_steps=max_steps,
-    weights_save_path=model_save_path,
     limit_train_batches=steps_per_epoch,  # if integer than it's #steps per epoch, if float then it's percentage
     limit_val_batches=1.0,
     limit_test_batches=1.0,
