@@ -49,6 +49,7 @@ loss_type = "ploss"  # spec / weighted_p / ploss
 weight_type = "None"  # novol / pnp / None
 
 if __name__ == "__main__":
+    torch.multiprocessing.set_start_method('spawn')
     model_save_path = os.path.join(
         model_dir,
         "_".join(
@@ -113,7 +114,7 @@ if __name__ == "__main__":
     # train
     trainer.fit(model, dataset)
 
-    test_loss = trainer.test(model, dataset, verbose=True)
+    test_loss = trainer.test(model, dataset, verbose=False)
     print("Model saved at: {}".format(model_save_path))
     print("Average test loss: {}".format(test_loss))
     print("\n")

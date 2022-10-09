@@ -103,8 +103,7 @@ class wav2shape(pl.LightningModule):
             else:
                 loss = self.loss(weight[:,None] * outputs, y)
 
-        tensorboard_logs = {fold + '_loss': loss}
-        return {'loss': loss, 'log':tensorboard_logs}
+        return {'loss': loss}
 
     def training_step(self, batch, batch_idx):
         return self.step(batch, "train")
@@ -128,11 +127,9 @@ class wav2shape(pl.LightningModule):
     def validation_epoch_end(self, outputs):
         # outputs = list of dictionaries
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
-        tensorboard_logs = {'avg_val_loss': avg_loss}
         self.log('val_loss', avg_loss, on_step=False,
                  prog_bar=True, on_epoch=True)
-        # use key 'log' to load Tensorboard
-        return {'val_loss': avg_loss, 'log': tensorboard_logs}
+        return {'val_loss': avg_loss}
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=1e-3)
@@ -184,9 +181,8 @@ class EffNet(pl.LightningModule):
                 loss = self.loss(weight[:,None] * outputs, y, M)
             else:
                 loss = self.loss(weight[:,None] * outputs, y)
-
-        tensorboard_logs = {fold + '_loss': loss}
-        return {'loss': loss, 'log':tensorboard_logs}
+        
+        return {'loss': loss}
 
     def training_step(self, batch, batch_idx):
         return self.step(batch, "train")
@@ -209,11 +205,9 @@ class EffNet(pl.LightningModule):
     def validation_epoch_end(self, outputs):
         # outputs = list of dictionaries
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
-        tensorboard_logs = {'avg_val_loss': avg_loss}
         self.log('val_loss', avg_loss, on_step=False,
                  prog_bar=True, on_epoch=True)
-        # use key 'log' to load Tensorboard
-        return {'val_loss': avg_loss, 'log': tensorboard_logs}
+        return {'val_loss': avg_loss}
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=1e-3)
