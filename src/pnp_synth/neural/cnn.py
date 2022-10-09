@@ -384,13 +384,14 @@ class DrumDataModule(pl.LightningDataModule):
 
 
     def collate_batch(self, batch):
-        Sy = torch.tensor(torch.stack([s['feature'] for s in batch])) #(64,120,257)x
-        y = torch.tensor([s['y'].astype(np.float32) for s in batch])
-        weight = torch.tensor(torch.stack([s['weight'] for s in batch]))
+        Sy = torch.stack([s['feature'] for s in batch]) #(64,120,257)x
+        y = torch.tensor(np.array([s['y'].astype(np.float32) for s in batch]))
+        weight = torch.stack([s['weight'] for s in batch])
         if type(batch[0]['M']) != type(None):
-            M = torch.tensor(torch.stack([s['M'] for s in batch]))
+            M = torch.stack([s['M'] for s in batch])
         else:
             M = None
+        print( "shapes", Sy.shape, y.shape, weight.shape)
         return {'feature': Sy, 'y': y, 'weight': weight, 'M': M}
 
     def train_dataloader(self):
