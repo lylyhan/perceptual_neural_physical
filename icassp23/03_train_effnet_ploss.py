@@ -60,6 +60,7 @@ if __name__ == "__main__":
                 str(J),
                 str(Q),
                 "batch_size" + str(batch_size),
+                "init-" + str(init_id),
             ]
         ),
     )
