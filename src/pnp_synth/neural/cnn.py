@@ -385,7 +385,7 @@ class DrumDataModule(pl.LightningDataModule):
             M = torch.stack([s['M'] for s in batch])
         else:
             M = None
-        print( "shapes", Sy.shape, y.shape, weight.shape)
+        #print( "shapes", Sy.shape, y.shape, weight.shape)#(64, 120, 257), (64, 5), (64,1)
         return {'feature': Sy, 'y': y, 'weight': weight, 'M': M}
 
     def train_dataloader(self):
