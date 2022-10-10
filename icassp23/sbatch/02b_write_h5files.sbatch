@@ -7,7 +7,7 @@
 #SBATCH --time=10:00:00
 #SBATCH --mem=62GB
 #SBATCH --gres=gpu:1
-#SBATCH --output=./01s01_thread-9_%j.out
+#SBATCH --output=./02b_%j.out
 
 module purge
 module load cuda/9.0.176
