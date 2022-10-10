@@ -19,8 +19,8 @@ folds = ["train", "test", "val"]
 
 for fold in folds:
     x_h5 = os.path.join(data_path, "x", "_".join(["icassp23", fold, "audio.h5"]))
-    S_h5 = os.path.join(data_path, "S", "_".join(["icassp23", fold, "audio.h5"]))
-    J_h5 = os.path.join(data_path, "J", "_".join(["icassp23", fold, "audio.h5"]))
+    S_h5 = os.path.join(data_path, "S", "_".join(["icassp23", fold, "jtfs.h5"]))
+    J_h5 = os.path.join(data_path, "J", "_".join(["icassp23", fold, "grad.h5"]))
 
     #extract ids from x_h5
     ids = None
@@ -29,7 +29,7 @@ for fold in folds:
     n_samples = len(ids)
     print("sanity check, there are " + str(n_samples) + " sounds in " + fold)
     sys.stdout.flush()
-    
+
     h5_files = [J_h5, S_h5]
     #open S_h5 and J_h5 to write
     for j, content in enumerate(["J","S"]):
@@ -59,7 +59,7 @@ for fold in folds:
             #read the file and write it in h5 file
             with h5py.File(h5_files[j], "a") as h5_file:
                 c = np.load(c_file) #load content
-                h5_file[content][str(i)] = c
+                    h5_file[content][str(i)] = c
 
         #check if h5 files are maximally filled
         written_ids = None
