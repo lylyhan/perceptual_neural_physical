@@ -1,6 +1,6 @@
 """
 This script trains an EfficientNet for sound matching of drum sounds
-with Parametric Loss (P-Loss) as its objective.
+with Multi-Scale Spectral Loss (MSS) as its objective.
 """
 from ast import Mod
 import datetime
