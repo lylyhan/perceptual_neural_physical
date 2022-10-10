@@ -25,7 +25,7 @@ for fold in folds:
 
     #extract ids from x_h5
     ids = None
-    with h5py.File(x_h5,"r") as f:
+    with h5py.File(x_h5, "r") as f:
         ids = list(f["x"].keys())
         theta_dict = dict(f["theta"])
     n_samples = len(ids)
@@ -36,11 +36,21 @@ for fold in folds:
     #open S_h5 and J_h5 to write
     for j, content in enumerate(["J", "S"]):
         #initilize h5 files for S and J
-        with h5py.File(h5_files[j], "w") as h5_file:
-            audio_group = h5_file.create_group(content)
-            shape_group = h5_file.create_group("theta")
+        if not os.path.exists(h5_files[j]):
+            with h5py.File(h5_files[j], "w") as h5_file:
+                audio_group = h5_file.create_group(content)
+                shape_group = h5_file.create_group("theta")
+            missing_ids = ids
+            print("Created " + h5_files[j])
+        else:
+            with h5py.File(h5_files[j], "r") as h5_file:
+                missing_ids = [
+                    id for id in ids if id not in h5_file[content].keys()]
+                print("Opened " + h5_files[j])
+                print("Missing files: {}".format(len(missing_ids)))
+        sys.stdout.flush()
 
-        for i in ids:
+        for i in missing_ids:
             if content == "S":
                 filename = "_".join(["icassp23", str(i).zfill(6), "jtfs.npy"])
             else:
@@ -70,5 +80,5 @@ for fold in folds:
         written_ids = None
         with h5py.File(h5_files[j], "r") as f:
             written_ids = list(f[content].keys())
-        print("there are ", str(len(written_ids)), " ids in " + content)
+        print("There are ", str(len(written_ids)), " ids in " + content)
         sys.stdout.flush()
