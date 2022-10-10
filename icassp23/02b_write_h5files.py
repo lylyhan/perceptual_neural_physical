@@ -32,14 +32,14 @@ for fold in folds:
     for j, content in enumerate(["J","S"]):
         for i in ids:
             if content == "S":
-                filename = "_".join(["icassp23", str(i).zfill(len(str(n_samples))), "jtfs.npy"])
+                filename = "_".join(["icassp23", str(i).zfill(6), "jtfs.npy"])
             else:
-                filename = "_".join(["icassp23", str(i).zfill(len(str(n_samples))), "grad", "jtfs.npy"])
+                filename = "_".join(["icassp23", str(i).zfill(6), "grad", "jtfs.npy"])
 
-            c_files = glob.glob(os.path.join(data_path, content) + '/*/' + filename) #search filename under S folder
+            c_files = glob.glob(os.path.join(data_path, content, "*", filename)) #search filename under S folder
             
             assert len(c_files) <= 2 # we are in trouble if duplicates are more than 2
-            assert len(c_files) > 0, "can't find id " + str(i) # we are in trouble if can't find this file
+            assert len(c_files) > 0, "can't find id " + os.path.join(data_path, content, "*", filename) # we are in trouble if can't find this file
             if len(c_files) == 2:
                 assert md5checksum(c_files[0]) == md5checksum(c_files[1]) #check md5checksum
                 f1 = np.load(c_files[0])
