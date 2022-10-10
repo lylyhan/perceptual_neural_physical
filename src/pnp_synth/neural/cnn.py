@@ -78,6 +78,8 @@ class wav2shape(pl.LightningModule):
             self.specloss = auraloss.freq.MultiResolutionSTFTLoss()
         self.scaler = scaler
         self.outdim = outdim
+        self.metric_macro = metrics.JTFSloss(self.scaler, "macro")
+        self.metric_micro = metrics.JTFSloss(self.scaler, "micro")
 
     def forward(self, input_tensor):
         #weights (n filters, n_current channel, kernel 1, kernel2)
@@ -92,17 +94,24 @@ class wav2shape(pl.LightningModule):
         weight = batch['weight']
         M = batch['M']
         outputs = self(Sy)
+
+         # match outputs and y dimension
+        if outputs.shape[1] == 4 and y.shape[1] == 5:
+            outputs = torch.cat((y[:,0][:,None], outputs),dim=1)
+        assert outputs.shape[1] == 5
+
+        #compute loss function
         if self.loss_type == "spec":
             loss = self.loss(outputs, y, self.specloss, self.scaler)
         else:
-            if self.outdim == 4:
-                y = y[:,1:] #exclude pitch when computing mse loss
-                if M is not None:
-                    M = M[:,1:,1:]
             if self.loss_type == "weighted_p":
                 loss = self.loss(weight[:,None] * outputs, y, M)
             else:
                 loss = self.loss(weight[:,None] * outputs, y)
+        #compute metrics
+        if fold == "test":
+            self.metric_macro.update(outputs, y, weight) 
+            self.metric_micro.update(outputs, y, weight)
 
         return {'loss': loss}
 
@@ -121,8 +130,12 @@ class wav2shape(pl.LightningModule):
 
     def test_epoch_end(self, outputs):
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
+        avg_macro_metric = self.metric_macro.compute() #torch.stack(x['metric'] for x in outputs).mean()
+        avg_micro_metric = self.metric_micro.compute()
         self.log('test_loss', avg_loss)
-        return avg_loss
+        self.log('macro_metics', avg_macro_metric)
+        self.log('micro_metrics', avg_micro_metric)
+        return avg_loss, avg_macro_metric, avg_micro_metric
 
     def validation_epoch_end(self, outputs):
         # outputs = list of dictionaries
@@ -155,7 +168,8 @@ class EffNet(pl.LightningModule):
         self.val_loss = None
         self.scaler = scaler
         self.outdim = outdim
-        self.metric = metrics.JTFSloss(self.scaler)
+        self.metric_macro = metrics.JTFSloss(self.scaler, "macro")
+        self.metric_micro = metrics.JTFSloss(self.scaler, "micro")
 
     def forward(self, input_tensor):
         input_tensor = input_tensor.unsqueeze(1)
@@ -172,24 +186,29 @@ class EffNet(pl.LightningModule):
         M = batch['M']
         outputs = self(Sy)
 
+        # match outputs and y dimension
+        if outputs.shape[1] == 4 and y.shape[1] == 5:
+            outputs = torch.cat((y[:,0][:,None], outputs),dim=1)
+        assert outputs.shape[1] == 5
+
         #compute loss function
         if self.loss_type == "spec":
             loss = self.loss(outputs, y, self.specloss, self.scaler)
         else:
-            if self.outdim == 4:
-                y = y[:,1:] #exclude pitch when computing mse loss
-                if M is not None:
-                    M = M[:,1:,1:]
+            #if self.outdim == 4:
+            #    y = y[:,1:] #exclude pitch when computing mse loss
+            #    if M is not None:
+            #        M = M[:,1:,1:]
             if self.loss_type == "weighted_p":
                 loss = self.loss(weight[:,None] * outputs, y, M)
             else:
                 loss = self.loss(weight[:,None] * outputs, y)
         #compute metrics
         if fold == "test":
-            metric = self.metric.update(outputs, y) ## TODO: add micro and macro metrics
-            return {'loss': loss, 'metrics': metric}
-        else:  
-            return {'loss': loss}
+            self.metric_macro.update(outputs, y, weight) 
+            self.metric_micro.update(outputs, y, weight)
+
+        return {'loss': loss}
 
     def training_step(self, batch, batch_idx):
         return self.step(batch, "train")
@@ -206,9 +225,12 @@ class EffNet(pl.LightningModule):
 
     def test_epoch_end(self, outputs):
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
-        avg_metric = torch.stack(x['metric'] for x in outputs).mean()
-        self.log('test_loss', avg_loss,'test_metics', avg_metric)
-        return avg_loss, avg_metric
+        avg_macro_metric = self.metric_macro.compute() #torch.stack(x['metric'] for x in outputs).mean()
+        avg_micro_metric = self.metric_micro.compute()
+        self.log('test_loss', avg_loss)
+        self.log('macro_metics', avg_macro_metric)
+        self.log('micro_metrics', avg_micro_metric)
+        return avg_loss, avg_macro_metric, avg_micro_metric
 
     def validation_epoch_end(self, outputs):
         # outputs = list of dictionaries
@@ -293,8 +315,14 @@ class DrumData(Dataset):
         return len(self.ids)
 
     def M_from_id(self,id):
-        i_prefix = "icassp23_" + str(id).zfill(len(self.ids))
-        return np.load(os.path.join(self.weights_dir, self.fold, i_prefix + "_grad_jtfs.py"))
+        #load from h5
+        with h5py.File(self.weights_dir, "r") as f:
+            M = np.array(f['M'][str(id)])
+        return M
+
+        #load from numpy files
+        #i_prefix = "icassp23_" + str(id).zfill(len(self.ids))
+        #return np.load(os.path.join(self.weights_dir, self.fold, i_prefix + "_grad_jtfs.py"))
         
     def cqt_from_id(self, id, eps):
         with h5py.File(self.audio_dir, "r") as f:
@@ -336,7 +364,7 @@ class DrumDataModule(pl.LightningDataModule):
         y_norms_test, scaler = utils.scale_theta(self.full_df, "test") 
         y_norms_val, scaler = utils.scale_theta(self.full_df, "val")
 
-       # """
+        """
 
         #temporary for mini hdf5 files
         with h5py.File(os.path.join(self.data_dir, "icassp23_train_audio.h5")) as f:
@@ -345,17 +373,17 @@ class DrumDataModule(pl.LightningDataModule):
             test_ids = list(f['x'].keys())
         with h5py.File(os.path.join(self.data_dir, "icassp23_val_audio.h5")) as f:
             val_ids = list(f['x'].keys())
-        #"""
+        """
 
-        #train_ids = self.full_df[self.full_df["fold"]=="train"]['ID'].values #sorted by id
-        #test_ids = self.full_df[self.full_df["fold"]=="test"]['ID'].values
-        #val_ids = self.full_df[self.full_df["fold"]=="val"]['ID'].values
+        train_ids = self.full_df[self.full_df["fold"]=="train"]['ID'].values #sorted by id
+        test_ids = self.full_df[self.full_df["fold"]=="test"]['ID'].values
+        val_ids = self.full_df[self.full_df["fold"]=="val"]['ID'].values
 
         self.train_ds = DrumData(y_norms_train, #partial dataframe
                                 train_ids,
                                 os.path.join(self.data_dir,"icassp23_train_audio.h5"),
                                 self.cqt_dir,
-                                self.weight_dir,
+                                os.path.join(self.weight_dir,"icassp23_train_M.h5"),
                                 self.weight_type,
                                 fold='train',
                                 feature='cqt',
@@ -366,7 +394,7 @@ class DrumDataModule(pl.LightningDataModule):
                                 val_ids,
                                 os.path.join(self.data_dir,"icassp23_val_audio.h5"),
                                 self.cqt_dir,
-                                self.weight_dir,
+                                os.path.join(self.weight_dir,"icassp23_val_M.h5"),
                                 self.weight_type,
                                 fold='val',
                                 feature='cqt',
@@ -377,7 +405,7 @@ class DrumDataModule(pl.LightningDataModule):
                                 test_ids,
                                 os.path.join(self.data_dir,"icassp23_test_audio.h5"),
                                 self.cqt_dir,
-                                self.weight_dir,
+                                os.path.join(self.weight_dir,"icassp23_test_M.h5"),
                                 self.weight_type,
                                 fold='test',
                                 feature='cqt',
@@ -393,7 +421,6 @@ class DrumDataModule(pl.LightningDataModule):
             M = torch.stack([s['M'] for s in batch])
         else:
             M = None
-        #print( "shapes", Sy.shape, y.shape, weight.shape)#(64, 120, 257), (64, 5), (64,1)
         return {'feature': Sy, 'y': y, 'weight': weight, 'M': M}
 
     def train_dataloader(self):

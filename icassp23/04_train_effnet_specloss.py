@@ -14,6 +14,7 @@ import sklearn
 import sys
 import time
 import torch
+from pytorch_lightning import loggers as pl_loggers
 
 import icassp23
 from pnp_synth.neural import cnn
@@ -99,6 +100,7 @@ if __name__ == "__main__":
         filename="ckpt-{epoch:02d}-{val_loss:.2f}",
         save_weights_only=False,
     )
+    tb_logger = pl_loggers.TensorBoardLogger(save_dir=os.path.join(model_save_path,"logs"))
 
     # initialize trainer, declare training parameters, possiibly in neural/cnn.py
     trainer = pl.Trainer(
@@ -111,6 +113,7 @@ if __name__ == "__main__":
         limit_val_batches=1.0,
         limit_test_batches=1.0,
         callbacks=[checkpoint_cb],
+        logger=tb_logger,
     )
     # train
     trainer.fit(model, dataset)
