@@ -328,7 +328,7 @@ class DrumDataModule(pl.LightningDataModule):
         y_norms_test, scaler = utils.scale_theta(self.full_df, "test") 
         y_norms_val, scaler = utils.scale_theta(self.full_df, "val")
 
-        """
+       # """
 
         #temporary for mini hdf5 files
         with h5py.File(os.path.join(self.data_dir, "icassp23_train_audio.h5")) as f:
@@ -337,11 +337,11 @@ class DrumDataModule(pl.LightningDataModule):
             test_ids = list(f['x'].keys())
         with h5py.File(os.path.join(self.data_dir, "icassp23_val_audio.h5")) as f:
             val_ids = list(f['x'].keys())
-        """
+        #"""
 
-        train_ids = self.full_df[self.full_df["fold"]=="train"]['ID'].values #sorted by id
-        test_ids = self.full_df[self.full_df["fold"]=="test"]['ID'].values
-        val_ids = self.full_df[self.full_df["fold"]=="val"]['ID'].values
+        #train_ids = self.full_df[self.full_df["fold"]=="train"]['ID'].values #sorted by id
+        #test_ids = self.full_df[self.full_df["fold"]=="test"]['ID'].values
+        #val_ids = self.full_df[self.full_df["fold"]=="val"]['ID'].values
 
         self.train_ds = DrumData(y_norms_train, #partial dataframe
                                 train_ids,
