@@ -67,6 +67,7 @@ for fold in folds:
                 h5_file["theta"][str(i)] = theta_dict[str(i)]
 
             gc.collect()
+            print(fold, content, i)
 
         #check if h5 files are maximally filled
         written_ids = None
