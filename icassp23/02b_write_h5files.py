@@ -68,6 +68,7 @@ for fold in folds:
 
             gc.collect()
             print(fold, content, i)
+            sys.stdout.flush()
 
         #check if h5 files are maximally filled
         written_ids = None
