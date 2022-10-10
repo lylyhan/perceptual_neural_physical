@@ -15,6 +15,7 @@ import torchvision.transforms as transforms
 import torch.nn.functional as F
 import numpy as np
 from pnp_synth.physical import ftm
+from pnp_synth.perceptual import metrics
 import auraloss
 from pnp_synth import utils
 import h5py
@@ -116,19 +117,18 @@ class wav2shape(pl.LightningModule):
 
     def training_epoch_end(self, outputs):
         loss = torch.stack([x['loss'] for x in outputs]).mean()
-        self.log('train_loss', loss, prog_bar=True)
+        self.log('train_loss', loss, prog_bar=False, sync_dist=True)
 
     def test_epoch_end(self, outputs):
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
         self.log('test_loss', avg_loss)
-
         return avg_loss
 
     def validation_epoch_end(self, outputs):
         # outputs = list of dictionaries
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
         self.log('val_loss', avg_loss, on_step=False,
-                 prog_bar=True, on_epoch=True)
+                 prog_bar=False, on_epoch=True)
         return {'val_loss': avg_loss}
 
     def configure_optimizers(self):
@@ -155,6 +155,7 @@ class EffNet(pl.LightningModule):
         self.val_loss = None
         self.scaler = scaler
         self.outdim = outdim
+        self.metric = metrics.JTFSloss(self.scaler)
 
     def forward(self, input_tensor):
         input_tensor = input_tensor.unsqueeze(1)
@@ -170,6 +171,8 @@ class EffNet(pl.LightningModule):
         weight = batch['weight']
         M = batch['M']
         outputs = self(Sy)
+
+        #compute loss function
         if self.loss_type == "spec":
             loss = self.loss(outputs, y, self.specloss, self.scaler)
         else:
@@ -181,8 +184,12 @@ class EffNet(pl.LightningModule):
                 loss = self.loss(weight[:,None] * outputs, y, M)
             else:
                 loss = self.loss(weight[:,None] * outputs, y)
-        
-        return {'loss': loss}
+        #compute metrics
+        if fold == "test":
+            metric = self.metric.update(outputs, y) ## TODO: add micro and macro metrics
+            return {'loss': loss, 'metrics': metric}
+        else:  
+            return {'loss': loss}
 
     def training_step(self, batch, batch_idx):
         return self.step(batch, "train")
@@ -195,18 +202,19 @@ class EffNet(pl.LightningModule):
 
     def training_epoch_end(self, outputs):
         loss = torch.stack([x['loss'] for x in outputs]).mean()
-        self.log('train_loss', loss, prog_bar=True)
+        self.log('train_loss', loss, prog_bar=False)
 
     def test_epoch_end(self, outputs):
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
-        self.log('test_loss', avg_loss)
-        return avg_loss
+        avg_metric = torch.stack(x['metric'] for x in outputs).mean()
+        self.log('test_loss', avg_loss,'test_metics', avg_metric)
+        return avg_loss, avg_metric
 
     def validation_epoch_end(self, outputs):
         # outputs = list of dictionaries
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
         self.log('val_loss', avg_loss, on_step=False,
-                 prog_bar=True, on_epoch=True)
+                 prog_bar=False, on_epoch=True)
         return {'val_loss': avg_loss}
 
     def configure_optimizers(self):
