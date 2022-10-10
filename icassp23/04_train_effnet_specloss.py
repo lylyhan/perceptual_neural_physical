@@ -36,7 +36,7 @@ model_dir = os.path.join(save_dir, "f_W")
 cqt_dir = data_dir
 
 
-batch_size = 2  # should be smaller for spectral loss
+batch_size = 64  # should be smaller for spectral loss
 epoch_max = 10
 steps_per_epoch = 50
 max_steps = steps_per_epoch * epoch_max
