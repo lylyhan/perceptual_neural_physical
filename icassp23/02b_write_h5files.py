@@ -3,6 +3,7 @@ import h5py
 import glob
 import hashlib
 import numpy as np
+import sys
 
 
 data_path = "/scratch/vl1019/icassp23_data"
@@ -27,13 +28,15 @@ for fold in folds:
         ids = list(f['x'].keys())
     n_samples = len(ids)
     print("sanity check, there are " + str(n_samples) + " sounds in " + fold)
+    sys.stdout.flush()
+    
     h5_files = [J_h5, S_h5]
     #open S_h5 and J_h5 to write
     for j, content in enumerate(["J","S"]):
         #initilize h5 files for S and J
         with h5py.File(h5_files[j], "w") as h5_file:
             audio_group = h5_file.create_group(content)
-            
+
         for i in ids:
             if content == "S":
                 filename = "_".join(["icassp23", str(i).zfill(6), "jtfs.npy"])
@@ -41,7 +44,7 @@ for fold in folds:
                 filename = "_".join(["icassp23", str(i).zfill(6), "grad", "jtfs.npy"])
 
             c_files = glob.glob(os.path.join(data_path, content, "*", filename)) #search filename under S folder
-            
+
             assert len(c_files) <= 2 # we are in trouble if duplicates are more than 2
             assert len(c_files) > 0, "can't find id " + os.path.join(data_path, content, "*", filename) # we are in trouble if can't find this file
             if len(c_files) == 2:
@@ -52,14 +55,15 @@ for fold in folds:
                 c_file = c_files[0]
             else:
                 c_file = c_files[0]
-                
+
             #read the file and write it in h5 file
             with h5py.File(h5_files[j], "a") as h5_file:
                 c = np.load(c_file) #load content
                 h5_file[content][str(i)] = c
-    
+
         #check if h5 files are maximally filled
         written_ids = None
         with h5py.File(h5_files[j],"r") as f:
             written_ids = list(f[content].keys())
-        print("after writing" + content + ", sanity check, there are " , str(len(written_ids)), " ids in h5 file") 
+        print("after writing" + content + ", sanity check, there are " , str(len(written_ids)), " ids in h5 file")
+        sys.stdout.flush()
