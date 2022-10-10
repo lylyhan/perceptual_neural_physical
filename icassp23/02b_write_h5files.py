@@ -25,18 +25,20 @@ for fold in folds:
     ids = None
     with h5py.File(x_h5,"r") as f:
         ids = list(f['x'].keys())
-    print("sanity check, there are " + len(ids) + " sounds in " + fold)
+    n_samples = len(ids)
+    print("sanity check, there are " + str(n_samples) + " sounds in " + fold)
     h5_files = [J_h5, S_h5]
     #open S_h5 and J_h5 to write
     for j, content in enumerate(["J","S"]):
         for i in ids:
             if content == "S":
-                filename = "_".join(["icassp23", str(i).zfill(len(ids)), "jtfs.npy"])
+                filename = "_".join(["icassp23", str(i).zfill(len(str(n_samples))), "jtfs.npy"])
             else:
-                filename = "_".join(["icassp23", str(i).zfill(len(ids)), "grad", "jtfs.npy"])
+                filename = "_".join(["icassp23", str(i).zfill(len(str(n_samples))), "grad", "jtfs.npy"])
 
             c_files = glob.glob(os.path.join(data_path, content) + '*/' + filename) #search filename under S folder
             assert len(c_files) <= 2 #we are in trouble if duplicates are more than 2
+            assert len(c_files) > 0 #we are in trouble if can't find this file
             if len(c_files) == 2:
                 assert md5checksum(c_files[0]) == md5checksum(c_files[1]) #check md5checksum
                 f1 = np.load(c_files[0])
@@ -59,4 +61,4 @@ for fold in folds:
         written_ids = None
         with h5py.File(h5_files[j],"r") as f:
             written_ids = list(f[content].keys())
-        print("after writing" + content + ", sanity check, there are " , len(written_ids), " ids in h5 file") 
+        print("after writing" + content + ", sanity check, there are " , str(len(written_ids)), " ids in h5 file") 
