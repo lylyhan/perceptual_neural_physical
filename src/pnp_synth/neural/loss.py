@@ -7,9 +7,6 @@ from pnp_synth import utils
 def loss_spec(outputs, y, specloss,scaler):
     #put through synth ##TODO: need the batch processing!!! or make a loop
     #temporary loop
-    if outputs.shape[1] == 4 and y.shape[1] == 5:
-        outputs = torch.cat((y[:,0][:,None], outputs),dim=1)
-        assert outputs.shape[1] == 5
     wav_gt = []
     wav_pred = []
     for i in range(y.shape[0]):

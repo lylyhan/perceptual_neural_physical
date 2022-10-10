@@ -67,8 +67,9 @@ def pnp_forward_factory(scaler):
     2. an FTM synthesizer g
     3. a JTFS representation Phi
     """
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     # Instantiate Joint-Time Frequency Scattering (JTFS) operator
-    jtfs_operator = TimeFrequencyScattering1D(**jtfs_params, out_type="list")
+    jtfs_operator = TimeFrequencyScattering1D(**jtfs_params, out_type="list").to(device)
     jtfs_operator.average_global = True
 
     Phi = functools.partial(S_from_x, jtfs_operator=jtfs_operator)
