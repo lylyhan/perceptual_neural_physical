@@ -39,7 +39,7 @@ for fold in icassp23.FOLDS:
 full_df = icassp23.load_fold("full")
 params = full_df.values
 n_samples = params.shape[0]
-assert n_samples > id_end > id_start >= 0  # id is between 0 and (100k-1)
+assert n_samples >= id_end > id_start >= 0  # id is between 0 and (100k-1)
 
 # Rescale shape parameters ("theta") to the interval [0, 1].
 nus, scaler = icassp23.scale_theta()
