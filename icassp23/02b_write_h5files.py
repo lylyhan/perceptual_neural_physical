@@ -30,6 +30,10 @@ for fold in folds:
     h5_files = [J_h5, S_h5]
     #open S_h5 and J_h5 to write
     for j, content in enumerate(["J","S"]):
+        #initilize h5 files for S and J
+        with h5py.File(h5_files[j], "w") as h5_file:
+            audio_group = h5_file.create_group(content)
+            
         for i in ids:
             if content == "S":
                 filename = "_".join(["icassp23", str(i).zfill(6), "jtfs.npy"])
@@ -48,11 +52,7 @@ for fold in folds:
                 c_file = c_files[0]
             else:
                 c_file = c_files[0]
-
-            #initilize h5 files for S and J
-            with h5py.File(h5_files[j], "w") as h5_file:
-                audio_group = h5_file.create_group(content)
-
+                
             #read the file and write it in h5 file
             with h5py.File(h5_files[j], "a") as h5_file:
                 c = np.load(c_file) #load content
