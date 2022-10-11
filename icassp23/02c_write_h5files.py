@@ -60,6 +60,7 @@ for i in missing_ids:
 
     if len(c_files) == 2 and (md5checksum(c_files[0]) == md5checksum(c_files[1])):
         print(c_files[0] + " does not match " + c_files[1])
+        print("np.allclose: {}\n".format(np.allclose(np.load(c_files[0]), np.load(c_files[1]))))
     c_file = c_files[0]
 
     #read the file and write it in h5 file
