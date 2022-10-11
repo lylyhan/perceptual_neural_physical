@@ -25,7 +25,7 @@ for fold in folds:
 
     #extract ids from x_h5
     ids = None
-    with h5py.File(x_h5,"r") as f:
+    with h5py.File(x_h5, "r") as f:
         ids = list(f["x"].keys())
         theta_dict = dict(f["theta"])
     n_samples = len(ids)
@@ -35,44 +35,58 @@ for fold in folds:
     h5_files = [J_h5, S_h5]
     #open S_h5 and J_h5 to write
     for j, content in enumerate(["J", "S"]):
-        #initilize h5 files for S and J
-        with h5py.File(h5_files[j], "w") as h5_file:
-            audio_group = h5_file.create_group(content)
-            shape_group = h5_file.create_group("theta")
+        failed_ids = []
 
-        for i in ids:
+        #initilize h5 files for S and J
+        if not os.path.exists(h5_files[j]):
+            with h5py.File(h5_files[j], "w") as h5_file:
+                audio_group = h5_file.create_group(content)
+                shape_group = h5_file.create_group("theta")
+            missing_ids = ids
+            print("Created " + h5_files[j])
+        else:
+            with h5py.File(h5_files[j], "r") as h5_file:
+                missing_ids = [
+                    id for id in ids if id not in h5_file[content].keys()]
+                print("Opened " + h5_files[j])
+                print("Missing files: {}".format(len(missing_ids)))
+        sys.stdout.flush()
+
+        for i in missing_ids:
             if content == "S":
                 filename = "_".join(["icassp23", str(i).zfill(6), "jtfs.npy"])
             else:
                 filename = "_".join(["icassp23", str(i).zfill(6), "grad", "jtfs.npy"])
 
             glob_regexp = os.path.join(data_path, content, "*", filename)
-            c_files = glob.glob(glob_regexp) #search filename under S folder
+            c_files = list(glob.glob(glob_regexp)) #search filename under S folder
 
             assert len(c_files) <= 2
             assert len(c_files) > 0, "can't find id " + glob_regexp
+
             if len(c_files) == 2:
-                assert md5checksum(c_files[0]) == md5checksum(c_files[1])
-                f1 = np.load(c_files[0])
-                f2 = np.load(c_files[1])
-                assert np.allclose(f1, f2) #check if contents are the same
-                c_file = c_files[0]
-            else:
-                c_file = c_files[0]
+                ch0 = md5checksum(c_files[0])
+                ch1 = md5checksum(c_files[1])
+                if not (ch0 == ch1):
+                    print("Mismatch at ID={}".format(i))
+                    print("{}, md5={}".format(c_files[0], ch0))
+                    print("{}, md5={}".format(c_files[1], ch1))
+                    print("")
+                    failed_ids.append(i)
+                    continue
+
+            c_file = c_files[0]
 
             #read the file and write it in h5 file
             with h5py.File(h5_files[j], "a") as h5_file:
                 c = np.load(c_file) #load content
                 h5_file[content][str(i)] = c
-                h5_file["theta"][str(i)] = theta_dict[str(i)]
-
-            gc.collect()
-            print(fold, content, i)
-            sys.stdout.flush()
 
         #check if h5 files are maximally filled
         written_ids = None
         with h5py.File(h5_files[j], "r") as f:
             written_ids = list(f[content].keys())
-        print("there are ", str(len(written_ids)), " ids in " + content)
+        print("There are ", str(len(written_ids)), " ids in " + content)
         sys.stdout.flush()
+
+        np.save("failed_ids_{}_{}.npy".format(fold, content), np.array(failed_ids))
