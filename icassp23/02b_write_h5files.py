@@ -83,8 +83,8 @@ for fold in folds:
                 print("numpy loaded")
                 h5_file[content][str(i)] = c
                 print("content written")
-                h5_file["theta"][str(i)] = theta_dict[str(i)]
-                print("shape written")
+                #h5_file["theta"][str(i)] = theta_dict[str(i)]
+                #print("shape written")
 
             print("Done with {}, {}".format(c_file, glob_regexp))
 
