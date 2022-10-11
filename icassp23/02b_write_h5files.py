@@ -57,7 +57,7 @@ for fold in folds:
                 filename = "_".join(["icassp23", str(i).zfill(6), "grad", "jtfs.npy"])
 
             glob_regexp = os.path.join(data_path, content, "*", filename)
-            c_files = glob.glob(glob_regexp) #search filename under S folder
+            c_files = list(glob.glob(glob_regexp)) #search filename under S folder
 
             assert len(c_files) <= 2
             assert len(c_files) > 0, "can't find id " + glob_regexp
