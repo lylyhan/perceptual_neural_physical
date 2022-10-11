@@ -10,4 +10,4 @@
 
 module purge
 
-singularity exec --overlay /scratch/vl1019/overlay-50G-10M.ext3:ro /scratch/work/public/singularity/cuda11.0-cudnn8-devel-ubuntu18.04.sif /bin/bash -c "source /scratch/vl1019/env.sh; python test J /home/vl1019/perceptual_neural_physical/icassp23/02c_write_h5files.py"
+singularity exec --overlay /scratch/vl1019/overlay-50G-10M.ext3:ro /scratch/work/public/singularity/cuda11.0-cudnn8-devel-ubuntu18.04.sif /bin/bash -c "source /scratch/vl1019/env.sh; python /home/vl1019/perceptual_neural_physical/icassp23/02c_write_h5files.py test J"
