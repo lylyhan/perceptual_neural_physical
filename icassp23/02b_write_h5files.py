@@ -65,6 +65,7 @@ for fold in folds:
 
             assert len(c_files) <= 2
             assert len(c_files) > 0, "can't find id " + glob_regexp
+
             if len(c_files) == 2:
                 assert md5checksum(c_files[0]) == md5checksum(c_files[1])
                 f1 = np.load(c_files[0])
@@ -75,10 +76,15 @@ for fold in folds:
                 c_file = c_files[0]
 
             #read the file and write it in h5 file
+            print("will open h5_files[j] ")
             with h5py.File(h5_files[j], "a") as h5_file:
+                print("file opened")
                 c = np.load(c_file) #load content
+                print("numpy loaded")
                 h5_file[content][str(i)] = c
+                print("content written")
                 h5_file["theta"][str(i)] = theta_dict[str(i)]
+                print("shape written")
 
             print("Done with {}, {}".format(c_file, glob_regexp))
 
