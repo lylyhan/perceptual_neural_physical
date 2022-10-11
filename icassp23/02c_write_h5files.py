@@ -59,7 +59,7 @@ for i in missing_ids:
     assert len(c_files) > 0, "can't find id " + glob_regexp
 
     if len(c_files) == 2:
-        assert md5checksum(c_files[0]) == md5checksum(c_files[1])
+        assert md5checksum(c_files[0]) == md5checksum(c_files[1]), c_files[0] + " does not match " + c_files[1]
         f1 = np.load(c_files[0])
         f2 = np.load(c_files[1])
         assert np.allclose(f1, f2) #check if contents are the same
