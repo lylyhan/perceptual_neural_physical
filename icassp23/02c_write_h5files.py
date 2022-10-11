@@ -58,7 +58,7 @@ for i in missing_ids:
     assert len(c_files) <= 2
     assert len(c_files) > 0, "can't find id " + glob_regexp
 
-    if len(c_files) == 2 and (md5checksum(c_files[0]) == md5checksum(c_files[1])):
+    if len(c_files) == 2 and (md5checksum(c_files[0]) != md5checksum(c_files[1])):
         print(c_files[0] + " does not match " + c_files[1])
         print("np.allclose: {}\n".format(np.allclose(np.load(c_files[0]), np.load(c_files[1]))))
         sys.stdout.flush()
