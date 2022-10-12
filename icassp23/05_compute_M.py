@@ -58,6 +58,9 @@ for i in range(id_start, id_end):
     with h5py.File(h5_path, "a") as h5_file:
         h5_file['M'][str(i)] = M
         h5_file['sigma'][str(i)] = np.linalg.eigvals(M)
+    if (i%100 == 0):
+        print(str(i) + " DONE " + str(datetime.datetime.now()))
+        sys.stdout.flush()
 
 
 # Print elapsed time.
