@@ -1,7 +1,7 @@
 """
-This script computes the Riemannian metric
-M(theta) = (J(theta)^T J(theta))
-associated to the Jacobian of (Phi o g) at theta, and so for every theta_n.
+This script computes the Riemannian metric M(theta) = (J(theta)^T J(theta))
+associated to the Jacobian of (Phi o g) at theta, and so for every theta_n
+in the dataset.
 """
 import os
 import time
@@ -54,7 +54,8 @@ for i in range(id_start, id_end):
     J = np.load(J_path)
     M = np.matmul(J.T, J)
     assert M.shape[0] == 5 and M.shape[1] == 5
-    with h5py.File(os.path.join(audio_dir, "icassp23_{}_M.h5".format(fold)), "a") as h5_file:
+    h5_path = os.path.join(audio_dir, "icassp23_{}_M.h5".format(fold))
+    with h5py.File(h5_path, "a") as h5_file:
         h5_file['M'][str(i)] = M
         h5_file['sigma'][str(i)] = np.linalg.eigvals(M)
 
