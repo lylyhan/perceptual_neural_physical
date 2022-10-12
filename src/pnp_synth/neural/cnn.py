@@ -317,8 +317,8 @@ class DrumData(Dataset):
     def M_from_id(self,id):
         #load from h5
         with h5py.File(self.weights_dir, "r") as f:
-            M = np.array(f['M'][str(id)])
-            sigma = np.array(f['sigma'][str(id)])
+            M = torch.tensor(f['M'][str(id)])
+            sigma = torch.tensor(f['sigma'][str(id)])
         return M, sigma
 
         #load from numpy files
