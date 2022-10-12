@@ -6,7 +6,7 @@ sys.path.append("../src")
 
 # Define constants.
 id_max = 100000
-n_threads = 500
+n_threads = 1
 n_per_th = id_max // n_threads
 script_name = os.path.basename(__file__)
 script_path = os.path.abspath(os.path.join("..", script_name))
@@ -70,14 +70,13 @@ with open(file_path, "w") as f:
 
     # Loop over folds: training and validation.
     for n_thread in range(n_threads):
-        if (n_thread <= 399 and n_thread >= 99) or (n_thread <= 499 and n_thread >=496):
-            # Define job name.
-            job_name = "_".join(
-                [script_name[:2], "thread-" + str(n_thread).zfill(len(str(n_threads)))]
-            )
-            sbatch_str = "sbatch " + job_name + ".sbatch"
-            # Write SBATCH command to shell file.
-            f.write(sbatch_str + "\n")
+        # Define job name.
+        job_name = "_".join(
+            [script_name[:2], "thread-" + str(n_thread).zfill(len(str(n_threads)))]
+        )
+        sbatch_str = "sbatch " + job_name + ".sbatch"
+        # Write SBATCH command to shell file.
+        f.write(sbatch_str + "\n")
 
 # Grant permission to execute the shell file.
 # https://stackoverflow.com/a/30463972
