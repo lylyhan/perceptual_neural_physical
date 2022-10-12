@@ -32,7 +32,7 @@ print("")
 sys.stdout.flush()
 
 data_dir = os.path.join(save_dir, "x")
-weight_dir = os.path.join(save_dir, "J")
+weight_dir = os.path.join(save_dir, "M")
 model_dir = os.path.join(save_dir, "f_W")
 cqt_dir = data_dir
 

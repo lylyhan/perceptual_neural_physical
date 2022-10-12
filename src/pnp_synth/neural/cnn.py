@@ -299,13 +299,13 @@ class DrumData(Dataset):
             #load JTJ
             #temporary for han
             #M = self.M[idx, :, :] 
-            M = self.M_from_id(id)
+            M, sigma = self.M_from_id(id)
             #compute riemannian
             if self.weight_type == "pnp":
-                w,v = torch.linalg.eig(M)
-                w = w.type(torch.float32)
+                #w,v = torch.linalg.eig(M)
+                #w = w.type(torch.float32)
                 #take 2 biggest eigenvaluess
-                weight = torch.sqrt((sorted(w)[-1]*sorted(w)[-2]))
+                weight = torch.sqrt((sorted(sigma)[-1]*sorted(sigma)[-2]))
 
         if self.feature == "cqt":
             Sy = self.cqt_from_id(id, eps)
@@ -318,7 +318,8 @@ class DrumData(Dataset):
         #load from h5
         with h5py.File(self.weights_dir, "r") as f:
             M = np.array(f['M'][str(id)])
-        return M
+            sigma = np.array(f['sigma'][str(id)])
+        return M, sigma
 
         #load from numpy files
         #i_prefix = "icassp23_" + str(id).zfill(len(self.ids))

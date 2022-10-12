@@ -39,7 +39,7 @@ for fold in icassp23.FOLDS:
 full_df = icassp23.load_fold("full")
 params = full_df.values
 n_samples = params.shape[0]
-assert n_samples >= id_end > id_start >= 0  # id is between 0 and (100k-1)
+assert n_samples > id_end > id_start >= 0  # id is between 0 and (100k-1)
 
 # Rescale shape parameters ("theta") to the interval [0, 1].
 nus, scaler = icassp23.scale_theta()
@@ -56,14 +56,16 @@ dS_over_dnu = functorch.jacfwd(S_from_nu)
 torch.autograd.set_detect_anomaly(True)
 for i in range(id_start, id_end):
      # Convert to NumPy array and save to disk
+    fold = full_df["fold"].iloc[i]
+    assert i == full_df["ID"].iloc[i]
     i_prefix = "icassp23_" + str(i).zfill(len(str(n_samples)))
     S_path = os.path.join(save_dir, "S", fold, i_prefix + "_jtfs.npy")
     J_path = os.path.join(save_dir, "J", fold, i_prefix + "_grad_jtfs.npy")
     if not (os.path.exists(S_path) and os.path.exists(J_path)):
         # Compute forward transformation: nu -> theta -> x -> S
         nu = torch.tensor(nus[i, :], requires_grad=True)
-        fold = full_df["fold"].iloc[i]
-        assert i == full_df["ID"].iloc[i]
+        #fold = full_df["fold"].iloc[i]
+        #assert i == full_df["ID"].iloc[i]
         S = S_from_nu(nu)
 
         # Compute Jacobian: d(S) / d(nu)

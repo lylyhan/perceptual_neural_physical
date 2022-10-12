@@ -20,4 +20,4 @@ def loss_spec(outputs, y, specloss,scaler):
 def loss_bilinear(outputs, y, M):
     diff = outputs - y 
     loss = torch.bmm(torch.bmm(diff[:,None,:], M), diff[:,:,None])
-    return torch.mean(loss.squeeze())
+    return 0.5*torch.mean(loss.squeeze())
