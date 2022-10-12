@@ -39,7 +39,7 @@ for n_thread in range(n_threads):
         f.write("#SBATCH --nodes=1\n")
         f.write("#SBATCH --tasks-per-node=1\n")
         f.write("#SBATCH --cpus-per-task=1\n")
-        f.write("#SBATCH --time=0:01:00\n")
+        f.write("#SBATCH --time=8:00:00\n")
         f.write("#SBATCH --mem=1GB\n")
         f.write("#SBATCH --output=" + job_name + "_%j.out\n")
         f.write("\n")
