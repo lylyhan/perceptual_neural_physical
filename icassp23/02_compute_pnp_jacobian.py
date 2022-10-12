@@ -1,6 +1,6 @@
 """
-This script calculates the JTFS coefficients and the associated Riemannian
-metric with respect to each normalized parameter.
+This script calculates the JTFS coefficients and the associated Jacobian
+with respect to each normalized parameter.
 """
 import datetime
 import functorch
