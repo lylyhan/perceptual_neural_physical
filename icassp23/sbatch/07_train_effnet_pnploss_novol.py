@@ -4,7 +4,7 @@ import os
 script_name = os.path.basename(__file__)[:-3] # remove .py
 script_path = os.path.abspath(os.path.join("..", script_name)) + ".py"
 save_dir = "/scratch/vl1019/icassp23_data"
-n_inits = 1
+n_inits = 10
 
 # Create folder.
 sbatch_dir = os.path.join(".", script_name)
