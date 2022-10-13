@@ -38,7 +38,7 @@ cqt_dir = data_dir
 
 
 batch_size = 64  # should be smaller for spectral loss
-epoch_max = 10
+epoch_max = 30
 steps_per_epoch = 50
 max_steps = steps_per_epoch * epoch_max
 # feature parameters
@@ -50,6 +50,7 @@ loss_type = "ploss"  # spec / weighted_p / ploss
 weight_type = "None"  # novol / pnp / None
 
 if __name__ == "__main__":
+    print("Current device: ", torch.cuda.get_device_name(0))
     torch.multiprocessing.set_start_method('spawn')
     model_save_path = os.path.join(
         model_dir,
@@ -113,11 +114,11 @@ if __name__ == "__main__":
         limit_val_batches=1.0,
         limit_test_batches=1.0,
         callbacks=[checkpoint_cb],
+        enable_progress_bar=False,
         logger=tb_logger,
     )
     # train
     trainer.fit(model, dataset)
-
     test_loss = trainer.test(model, dataset, verbose=False)
     print("Model saved at: {}".format(model_save_path))
     print("Average test loss: {}".format(test_loss))

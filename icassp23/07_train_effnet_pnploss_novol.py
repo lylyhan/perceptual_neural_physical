@@ -1,6 +1,6 @@
 """
 This script trains an EfficientNet for sound matching of drum sounds
-with Multi-Scale Spectral Loss (MSS) as its objective.
+with PNP loss without Riemmanian volume weights as its objective.
 """
 from ast import Mod
 import datetime
@@ -37,17 +37,17 @@ model_dir = os.path.join(save_dir, "f_W")
 cqt_dir = data_dir
 
 
-batch_size = 32  # should be smaller for spectral loss
+batch_size = 64  # should be smaller for spectral loss
 epoch_max = 30
-steps_per_epoch = 100
+steps_per_epoch = 50
 max_steps = steps_per_epoch * epoch_max
 # feature parameters
 Q = 12
 J = 10
 outdim = 4
 cnn_type = "efficientnet"  # efficientnet / cnn.wav2shape
-loss_type = "spec"  # spec / weighted_p / ploss
-weight_type = "None"  # novol / pnp / None
+loss_type = "weighted_p"  # spec / weighted_p / ploss
+weight_type = "novol"  # novol / pnp / None
 
 if __name__ == "__main__":
     print("Current device: ", torch.cuda.get_device_name(0))
@@ -102,7 +102,6 @@ if __name__ == "__main__":
         save_weights_only=False,
     )
     tb_logger = pl_loggers.TensorBoardLogger(save_dir=os.path.join(model_save_path,"logs"))
-
     # initialize trainer, declare training parameters, possiibly in neural/cnn.py
     trainer = pl.Trainer(
         accelerator="gpu",

@@ -170,6 +170,7 @@ class EffNet(pl.LightningModule):
         self.outdim = outdim
         self.metric_macro = metrics.JTFSloss(self.scaler, "macro")
         self.metric_micro = metrics.JTFSloss(self.scaler, "micro")
+        #self.epoch = 0
 
     def forward(self, input_tensor):
         input_tensor = input_tensor.unsqueeze(1)
@@ -238,7 +239,7 @@ class EffNet(pl.LightningModule):
         self.log('val_loss', avg_loss, on_step=False,
                  prog_bar=False, on_epoch=True)
         return {'val_loss': avg_loss}
-
+        
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=1e-3)
 
@@ -297,13 +298,9 @@ class DrumData(Dataset):
         weight = torch.tensor(1)
         if self.weight_type != "None":
             #load JTJ
-            #temporary for han
-            #M = self.M[idx, :, :] 
             M, sigma = self.M_from_id(id)
             #compute riemannian
             if self.weight_type == "pnp":
-                #w,v = torch.linalg.eig(M)
-                #w = w.type(torch.float32)
                 #take 2 biggest eigenvaluess
                 weight = torch.sqrt((sorted(sigma)[-1]*sorted(sigma)[-2]))
 
