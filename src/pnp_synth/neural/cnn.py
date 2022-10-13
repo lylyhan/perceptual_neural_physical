@@ -378,12 +378,13 @@ class DrumDataModule(pl.LightningDataModule):
         val_ids = self.full_df[self.full_df["fold"]=="val"]['ID'].values
 
         #temporary: only keep 1 file in the dataset
-        train_ids = np.array(train_ids[0])
-        test_ids = np.array(test_ids[0])
-        val_ids = np.array(val_ids[0])
-        y_norms_train = y_norms_train[0,:][None,:]
-        y_norms_test = y_norms_test[0,:][None,:]
-        y_norms_val = y_norms_val[0,:][None,:]
+        temp_n = 64
+        train_ids = np.array(train_ids[:temp_n])
+        test_ids = np.array(test_ids[:temp_n])
+        val_ids = np.array(val_ids[:temp_n])
+        y_norms_train = y_norms_train[:temp_n,:]
+        y_norms_test = y_norms_test[:temp_n,:]
+        y_norms_val = y_norms_val[:temp_n,:]
 
 
         self.train_ds = DrumData(y_norms_train, #partial dataframe
