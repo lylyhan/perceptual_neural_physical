@@ -377,6 +377,15 @@ class DrumDataModule(pl.LightningDataModule):
         test_ids = self.full_df[self.full_df["fold"]=="test"]['ID'].values
         val_ids = self.full_df[self.full_df["fold"]=="val"]['ID'].values
 
+        #temporary: only keep 1 file in the dataset
+        train_ids = np.array(train_ids[0])
+        test_ids = np.array(test_ids[0])
+        val_ids = np.array(val_ids[0])
+        y_norms_train = y_norms_train[0,:][None,:]
+        y_norms_test = y_norms_test[0,:][None,:]
+        y_norms_val = y_norms_val[0,:][None,:]
+
+
         self.train_ds = DrumData(y_norms_train, #partial dataframe
                                 train_ids,
                                 os.path.join(self.data_dir,"icassp23_train_audio.h5"),
