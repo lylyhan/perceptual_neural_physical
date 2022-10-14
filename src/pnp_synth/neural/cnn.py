@@ -155,7 +155,8 @@ class EffNet(pl.LightningModule):
                            track_running_stats=True)
         self.conv2d = nn.Conv2d(in_channels=1, out_channels=3,kernel_size=(3,3))
         self.model = torchvision.models.efficientnet_b0(in_channels=in_channels, num_classes=outdim)
-        self.act = nn.Sigmoid()
+        self.batchnorm2 = nn.BatchNorm1d(outdim, eps=1e-5, momentum=0.1, affine=False)
+        self.act = nn.Tanh()#nn.Sigmoid()
         self.loss_type = loss
         self.metrics = forward.pnp_forward
         if self.loss_type == "ploss":
@@ -177,7 +178,9 @@ class EffNet(pl.LightningModule):
         x = self.batchnorm1(input_tensor)
         x = self.conv2d(x) # adapt to efficientnet's mandatory 3 input channels
         x = self.model(x)
+        x = self.batchnorm2(x)
         x = self.act(x)
+        x = x / torch.tensor(2.0) + torch.tensor(0.5) #to adapt to tanh activation
         return x
 
     def step(self, batch, fold):
@@ -185,6 +188,7 @@ class EffNet(pl.LightningModule):
         y = batch['y']
         weight = batch['weight']
         M = batch['M']
+        metric_weight = batch['metric_weight']
         outputs = self(Sy)
 
         # match outputs and y dimension
@@ -201,13 +205,14 @@ class EffNet(pl.LightningModule):
             #    if M is not None:
             #        M = M[:,1:,1:]
             if self.loss_type == "weighted_p":
-                loss = self.loss(weight[:,None] * outputs, y, M)
+                #apply relu on M to enforce positive semi-definiteness
+                loss = self.loss(weight[:,None] * outputs.double(), y.double(), M.double())
             else:
                 loss = self.loss(weight[:,None] * outputs, y)
         #compute metrics
         if fold == "test":
-            self.metric_macro.update(outputs, y, weight) 
-            self.metric_micro.update(outputs, y, weight)
+            self.metric_macro.update(outputs, y, metric_weight) 
+            self.metric_micro.update(outputs, y, metric_weight)
 
         return {'loss': loss}
 
@@ -269,9 +274,6 @@ class DrumData(Dataset):
         self.J = J
         self.Q = Q
         self.fold = fold
-        #temporary for han
-        #self.M = torch.tensor(np.load(os.path.join(weights_dir, fold+"_grad_jtfs.npy")),
-        #                    dtype=torch.float32).cuda()
         self.sr = ftm.constants['sr']
         if feature == 'cqt':
             cqt_params = {
@@ -296,17 +298,15 @@ class DrumData(Dataset):
         id = self.ids[idx]
         M = None
         weight = torch.tensor(1)
-        if self.weight_type != "None":
-            #load JTJ
-            M, sigma = self.M_from_id(id)
-            #compute riemannian
-            if self.weight_type == "pnp":
-                #take 2 biggest eigenvaluess
-                weight = torch.sqrt((sorted(sigma)[-1]*sorted(sigma)[-2]))
-
+        #load JTJ
+        M, sigma = self.M_from_id(id)
+        metric_weight = torch.sqrt((sorted(sigma)[-1]*sorted(sigma)[-2]))
+        if self.weight_type != "None" and self.weight_type == "pnp":
+            weight = metric_weight
         if self.feature == "cqt":
             Sy = self.cqt_from_id(id, eps)
-            return {'feature': torch.abs(Sy), 'y': y_norm, 'weight': weight, 'M': M}
+            return {'feature': torch.abs(Sy), 'y': y_norm, 'weight': weight, 'M': M,
+                    'metric_weight': metric_weight}
 
     def __len__(self):
         return len(self.ids)
@@ -314,7 +314,7 @@ class DrumData(Dataset):
     def M_from_id(self,id):
         #load from h5
         with h5py.File(self.weights_dir, "r") as f:
-            M = torch.tensor(f['M'][str(id)])
+            M = torch.tensor(np.array(f['M'][str(id)]))
             sigma = torch.tensor(f['sigma'][str(id)])
         return M, sigma
 
@@ -362,21 +362,11 @@ class DrumDataModule(pl.LightningDataModule):
         y_norms_test, scaler = utils.scale_theta(self.full_df, "test") 
         y_norms_val, scaler = utils.scale_theta(self.full_df, "val")
 
-        """
-
-        #temporary for mini hdf5 files
-        with h5py.File(os.path.join(self.data_dir, "icassp23_train_audio.h5")) as f:
-            train_ids = list(f['x'].keys())
-        with h5py.File(os.path.join(self.data_dir, "icassp23_test_audio.h5")) as f:
-            test_ids = list(f['x'].keys())
-        with h5py.File(os.path.join(self.data_dir, "icassp23_val_audio.h5")) as f:
-            val_ids = list(f['x'].keys())
-        """
-
         train_ids = self.full_df[self.full_df["fold"]=="train"]['ID'].values #sorted by id
         test_ids = self.full_df[self.full_df["fold"]=="test"]['ID'].values
         val_ids = self.full_df[self.full_df["fold"]=="val"]['ID'].values
 
+        """
         #temporary: only keep 1 file in the dataset
         temp_n = 64
         train_ids = np.array(train_ids[:temp_n])
@@ -385,6 +375,7 @@ class DrumDataModule(pl.LightningDataModule):
         y_norms_train = y_norms_train[:temp_n,:]
         y_norms_test = y_norms_test[:temp_n,:]
         y_norms_val = y_norms_val[:temp_n,:]
+        """
 
 
         self.train_ds = DrumData(y_norms_train, #partial dataframe
@@ -425,11 +416,12 @@ class DrumDataModule(pl.LightningDataModule):
         Sy = torch.stack([s['feature'] for s in batch]) #(64,120,257)x
         y = torch.tensor(np.array([s['y'].astype(np.float32) for s in batch]))
         weight = torch.stack([s['weight'] for s in batch])
+        metric_weight = torch.stack([s['metric_weight'] for s in batch])
         if type(batch[0]['M']) != type(None):
             M = torch.stack([s['M'] for s in batch])
         else:
             M = None
-        return {'feature': Sy, 'y': y, 'weight': weight, 'M': M}
+        return {'feature': Sy, 'y': y, 'weight': weight, 'M': M, 'metric_weight': metric_weight}
 
     def train_dataloader(self):
         return DataLoader(self.train_ds,
