@@ -19,7 +19,7 @@ for init_id in range(n_inits):
 
     # Generate file.
     with open(file_path, "w") as f:
-        cmd_args = [script_path, save_dir, str(init_id), batch_size]
+        cmd_args = [script_path, save_dir, str(init_id), str(batch_size)]
 
         f.write("#!/bin/bash\n")
         f.write("\n")
