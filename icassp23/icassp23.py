@@ -12,6 +12,7 @@ import numpy as np
 
 FOLDS = ["train", "test", "val"]
 THETA_COLUMNS = ["omega", "tau", "p", "D", "alpha"]
+SAMPLES_PER_EPOCH = 512*50
 
 jtfs_params = dict(
     J=13,  # scattering scale ~ 1000 ms

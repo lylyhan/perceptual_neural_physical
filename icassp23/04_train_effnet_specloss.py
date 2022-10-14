@@ -44,7 +44,7 @@ cqt_dir = data_dir
 
 
 epoch_max = 30
-steps_per_epoch = 50
+steps_per_epoch = icassp23.SAMPLES_PER_EPOCH / batch_size
 max_steps = steps_per_epoch * epoch_max
 # feature parameters
 Q = 12

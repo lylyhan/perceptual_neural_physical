@@ -37,9 +37,9 @@ model_dir = os.path.join(save_dir, "f_W")
 cqt_dir = data_dir
 
 
-batch_size = 64  # should be smaller for spectral loss
-epoch_max = 10
-steps_per_epoch = 50
+batch_size = 32  # should be smaller for spectral loss
+epoch_max = 30
+steps_per_epoch = icassp23.SAMPLES_PER_EPOCH / batch_size
 max_steps = steps_per_epoch * epoch_max
 # feature parameters
 Q = 12
@@ -50,6 +50,7 @@ loss_type = "weighted_p"  # spec / weighted_p / ploss
 weight_type = "pnp"  # novol / pnp / None
 
 if __name__ == "__main__":
+    print("Current device: ", torch.cuda.get_device_name(0))
     torch.multiprocessing.set_start_method('spawn')
     model_save_path = os.path.join(
         model_dir,
@@ -118,10 +119,10 @@ if __name__ == "__main__":
     # train
     trainer.fit(model, dataset)
 
-    test_loss = trainer.test(model, dataset, verbose=False)
-    print("Model saved at: {}".format(model_save_path))
-    print("Average test loss: {}".format(test_loss))
-    print("\n")
+    #test_loss = trainer.test(model, dataset, verbose=False)
+    #print("Model saved at: {}".format(model_save_path))
+    #print("Average test loss: {}".format(test_loss))
+    #print("\n")
 
     # Print elapsed time.
     print(str(datetime.datetime.now()) + " Success.")
