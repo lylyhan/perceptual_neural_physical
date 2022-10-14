@@ -24,6 +24,12 @@ print(str(datetime.datetime.now()) + " Start.")
 print(__doc__ + "\n")
 save_dir = sys.argv[1]  # /home/han/data/
 init_id = sys.argv[2]
+
+if len(sys.argv) < 4:
+    batch_size = 128
+else: 
+    batch_size = int(sys.argv[3])
+
 print("Command-line arguments:\n" + "\n".join(sys.argv[1:]) + "\n")
 
 for module in [joblib, nnAudio, np, pl, sklearn, torch]:
@@ -37,9 +43,8 @@ model_dir = os.path.join(save_dir, "f_W")
 cqt_dir = data_dir
 
 
-batch_size = 32  # should be smaller for spectral loss
 epoch_max = 30
-steps_per_epoch = 100
+steps_per_epoch = 50
 max_steps = steps_per_epoch * epoch_max
 # feature parameters
 Q = 12
