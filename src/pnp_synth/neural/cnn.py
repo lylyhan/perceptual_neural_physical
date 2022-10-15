@@ -181,7 +181,6 @@ class EffNet(pl.LightningModule):
         x = self.model(x)
         x = self.batchnorm2(x) * self.std
         x = self.act(x)
-        #x = x / torch.tensor(2.0) + torch.tensor(0.5) #to adapt to tanh activation
         return x
 
     def step(self, batch, fold):
