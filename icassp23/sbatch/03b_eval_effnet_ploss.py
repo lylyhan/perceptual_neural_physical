@@ -21,7 +21,7 @@ for init_id in range(n_inits):
     # Generate file.
     with open(file_path, "w") as f:
         cmd_args = [
-            "03_train_effnet_ploss.py",
+            os.path.abspath(os.path.join("..", "03_train_effnet_ploss.py")),
             save_dir, str(init_id), str(batch_size), ckpt_path]
 
         f.write("#!/bin/bash\n")
