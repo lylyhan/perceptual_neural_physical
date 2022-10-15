@@ -5,7 +5,7 @@ script_name = os.path.basename(__file__)[:-3] # remove .py
 script_path = os.path.abspath(os.path.join("..", script_name)) + ".py"
 save_dir = "/scratch/vl1019/icassp23_data"
 n_inits = 10
-batch_size = 512
+batch_size = 64
 ckpt_path = "best.ckpt"
 
 # Create folder.
@@ -21,7 +21,7 @@ for init_id in range(n_inits):
     # Generate file.
     with open(file_path, "w") as f:
         cmd_args = [
-            os.path.abspath(os.path.join("..", "03_train_effnet_ploss.py")),
+            os.path.abspath(os.path.join("..", "04_train_effnet_specloss.py")),
             save_dir, str(init_id), str(batch_size), ckpt_path]
 
         f.write("#!/bin/bash\n")
