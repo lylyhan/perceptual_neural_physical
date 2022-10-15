@@ -27,7 +27,7 @@ for init_id in range(n_inits):
         f.write("#SBATCH --nodes=1\n")
         f.write("#SBATCH --tasks-per-node=1\n")
         f.write("#SBATCH --cpus-per-task=4\n")
-        f.write("#SBATCH --time=6:00:00\n")
+        f.write("#SBATCH --time=8:00:00\n")
         f.write("#SBATCH --mem=32GB\n")
         f.write("#SBATCH --gres=gpu:1\n")
         f.write("#SBATCH --output=" + job_name + "_%j.out\n")
