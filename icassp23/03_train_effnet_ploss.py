@@ -26,10 +26,7 @@ print(str(datetime.datetime.now()) + " Start.")
 print(__doc__ + "\n")
 save_dir = sys.argv[1]  # /home/han/data/
 init_id = sys.argv[2]
-if len(sys.argv) < 4:
-    batch_size = 128
-else: 
-    batch_size = int(sys.argv[3])
+batch_size = int(sys.argv[3])
 if len(sys.argv) < 5:
     is_train = True
 else:
