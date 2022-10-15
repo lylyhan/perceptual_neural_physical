@@ -15,6 +15,7 @@ import sys
 import time
 import torch
 from pytorch_lightning import loggers as pl_loggers
+from datetime import timedelta
 
 import icassp23
 from pnp_synth.neural import cnn
@@ -51,7 +52,7 @@ max_steps = steps_per_epoch * epoch_max
 Q = 12
 J = 10
 outdim = 4
-bn_var = 1 #3 is optimal
+bn_var = 3 #3 is optimal
 cnn_type = "efficientnet"  # efficientnet / cnn.wav2shape
 loss_type = "spec"  # spec / weighted_p / ploss
 weight_type = "None"  # novol / pnp / None
@@ -69,6 +70,7 @@ if __name__ == "__main__":
                 str(J),
                 str(Q),
                 "batch_size" + str(batch_size),
+                "bn_var" + str(bn_var),
                 "init-" + str(init_id),
             ]
         ),
@@ -105,7 +107,7 @@ if __name__ == "__main__":
         dirpath=model_save_path,
         monitor="val_loss",
         save_last=True,
-        filename="ckpt-{epoch:02d}-{val_loss:.2f}",
+        filename="best", #"ckpt-{epoch:02d}-{val_loss:.2f}",
         save_weights_only=False,
     )
     tb_logger = pl_loggers.TensorBoardLogger(save_dir=os.path.join(model_save_path,"logs"))
@@ -122,6 +124,7 @@ if __name__ == "__main__":
         limit_test_batches=1.0,
         callbacks=[checkpoint_cb],
         logger=tb_logger,
+        max_time=timedelta(hours=6)
     )
     # train
     if is_train:
