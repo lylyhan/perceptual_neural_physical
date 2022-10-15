@@ -5,6 +5,7 @@ script_name = os.path.basename(__file__)[:-3] # remove .py
 script_path = os.path.abspath(os.path.join("..", script_name)) + ".py"
 save_dir = "/scratch/vl1019/icassp23_data"
 n_inits = 10
+batch_size = 512
 
 # Create folder.
 sbatch_dir = os.path.join(".", script_name)
@@ -18,7 +19,7 @@ for init_id in range(n_inits):
 
     # Generate file.
     with open(file_path, "w") as f:
-        cmd_args = [script_path, save_dir, str(init_id)]
+        cmd_args = [script_path, save_dir, str(init_id), batch_size]
 
         f.write("#!/bin/bash\n")
         f.write("\n")
