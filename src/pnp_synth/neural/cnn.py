@@ -133,7 +133,7 @@ class wav2shape(pl.LightningModule):
         avg_macro_metric = self.metric_macro.compute() #torch.stack(x['metric'] for x in outputs).mean()
         avg_micro_metric = self.metric_micro.compute()
         self.log('test_loss', avg_loss)
-        self.log('macro_metics', avg_macro_metric)
+        self.log('macro_metrics', avg_macro_metric)
         self.log('micro_metrics', avg_micro_metric)
         return avg_loss, avg_macro_metric, avg_micro_metric
 
@@ -156,7 +156,7 @@ class EffNet(pl.LightningModule):
         self.conv2d = nn.Conv2d(in_channels=1, out_channels=3,kernel_size=(3,3))
         self.model = torchvision.models.efficientnet_b0(in_channels=in_channels, num_classes=outdim)
         self.batchnorm2 = nn.BatchNorm1d(outdim, eps=1e-5, momentum=0.1, affine=False)
-        self.act = nn.Tanh()#nn.Sigmoid()
+        self.act = nn.Sigmoid()
         self.loss_type = loss
         self.metrics = forward.pnp_forward
         if self.loss_type == "ploss":
@@ -181,7 +181,7 @@ class EffNet(pl.LightningModule):
         x = self.model(x)
         x = self.batchnorm2(x) * self.std
         x = self.act(x)
-        x = x / torch.tensor(2.0) + torch.tensor(0.5) #to adapt to tanh activation
+        #x = x / torch.tensor(2.0) + torch.tensor(0.5) #to adapt to tanh activation
         return x
 
     def step(self, batch, fold):
@@ -201,10 +201,6 @@ class EffNet(pl.LightningModule):
         if self.loss_type == "spec":
             loss = self.loss(outputs, y, self.specloss, self.scaler)
         else:
-            #if self.outdim == 4:
-            #    y = y[:,1:] #exclude pitch when computing mse loss
-            #    if M is not None:
-            #        M = M[:,1:,1:]
             if self.loss_type == "weighted_p":
                 #apply relu on M to enforce positive semi-definiteness
                 loss = self.loss(weight[:,None] * outputs.double(), y.double(), M.double())
@@ -235,7 +231,7 @@ class EffNet(pl.LightningModule):
         avg_macro_metric = self.metric_macro.compute() #torch.stack(x['metric'] for x in outputs).mean()
         avg_micro_metric = self.metric_micro.compute()
         self.log('test_loss', avg_loss)
-        self.log('macro_metics', avg_macro_metric)
+        self.log('macro_metrics', avg_macro_metric)
         self.log('micro_metrics', avg_micro_metric)
         return avg_loss, avg_macro_metric, avg_micro_metric
 
