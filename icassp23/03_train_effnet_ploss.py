@@ -15,9 +15,11 @@ import sys
 import time
 import torch
 from pytorch_lightning import loggers as pl_loggers
+from datetime import timedelta
 
 import icassp23
 from pnp_synth.neural import cnn
+
 
 start_time = int(time.time())
 print(str(datetime.datetime.now()) + " Start.")
@@ -28,6 +30,12 @@ if len(sys.argv) < 4:
     batch_size = 128
 else: 
     batch_size = int(sys.argv[3])
+if len(sys.argv) < 5:
+    is_train = True
+else:
+    is_train = False
+    ckpt_path = sys.argv[4]
+
 print("Command-line arguments:\n" + "\n".join(sys.argv[1:]) + "\n")
 
 for module in [joblib, nnAudio, np, pl, sklearn, torch]:
@@ -48,6 +56,7 @@ max_steps = steps_per_epoch * epoch_max
 Q = 12
 J = 10
 outdim = 4
+bn_var = 1 #3 is optimal
 cnn_type = "efficientnet"  # efficientnet / cnn.wav2shape
 loss_type = "ploss"  # spec / weighted_p / ploss
 weight_type = "None"  # novol / pnp / None
@@ -93,7 +102,7 @@ if __name__ == "__main__":
             in_channels=1, bin_per_oct=Q, outdim=outdim, loss=loss_type, scaler=scaler
         )
     elif cnn_type == "efficientnet":
-        model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler)
+        model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, var=bn_var)
     print(str(datetime.datetime.now()) + " Finished initializing model")
 
     # initialize checkpoint methods
@@ -119,9 +128,16 @@ if __name__ == "__main__":
         callbacks=[checkpoint_cb],
         enable_progress_bar=True,
         logger=tb_logger,
+        max_time=timedelta(hours=6)
     )
     # train
-    trainer.fit(model, dataset)
+    if is_train:
+        print("Training ...")
+        trainer.fit(model, dataset)
+    else:
+        print("Skipped Training, loading model")
+        model = model.load_from_checkpoint(os.path.join(model_save_path, ckpt_path),in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, var=bn_var)
+
     test_loss = trainer.test(model, dataset, verbose=False)
     print("Model saved at: {}".format(model_save_path))
     print("Average test loss: {}".format(test_loss))

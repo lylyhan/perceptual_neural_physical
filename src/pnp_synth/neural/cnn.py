@@ -149,7 +149,7 @@ class wav2shape(pl.LightningModule):
 
 
 class EffNet(pl.LightningModule):
-    def __init__(self, in_channels,outdim,loss,scaler):
+    def __init__(self, in_channels,outdim,loss,scaler,var):
         super().__init__()
         self.batchnorm1 = nn.BatchNorm2d(1, eps=1e-05, momentum=0.1, affine=True,
                            track_running_stats=True)
@@ -171,6 +171,7 @@ class EffNet(pl.LightningModule):
         self.outdim = outdim
         self.metric_macro = metrics.JTFSloss(self.scaler, "macro")
         self.metric_micro = metrics.JTFSloss(self.scaler, "micro")
+        self.std = torch.sqrt(torch.tensor(var))
         #self.epoch = 0
 
     def forward(self, input_tensor):
@@ -178,7 +179,7 @@ class EffNet(pl.LightningModule):
         x = self.batchnorm1(input_tensor)
         x = self.conv2d(x) # adapt to efficientnet's mandatory 3 input channels
         x = self.model(x)
-        x = self.batchnorm2(x)
+        x = self.batchnorm2(x) * self.std
         x = self.act(x)
         x = x / torch.tensor(2.0) + torch.tensor(0.5) #to adapt to tanh activation
         return x
