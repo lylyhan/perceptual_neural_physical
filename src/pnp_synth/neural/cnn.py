@@ -175,9 +175,9 @@ class EffNet(pl.LightningModule):
         self.monitor_loss = torch.inf
         if LMA:
             self.LMA_lambda = LMA['lambda']
-            self.threshold = LMA['threshold']
-            self.accelerator = LMA['accelerator']
-            self.brake = LMA['brake']
+            self.LMA_threshold = LMA['threshold']
+            self.LMA_accelerator = LMA['accelerator']
+            self.LMA_brake = LMA['brake']
         else:
             self.LMA_lambda = 1e+15
             self.LMA_threshold = 1e+20
