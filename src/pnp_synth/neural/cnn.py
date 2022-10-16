@@ -149,7 +149,7 @@ class wav2shape(pl.LightningModule):
 
 
 class EffNet(pl.LightningModule):
-    def __init__(self, in_channels,outdim,loss,scaler,var):
+    def __init__(self, in_channels,outdim,loss,scaler,var,LMA=None):
         super().__init__()
         self.batchnorm1 = nn.BatchNorm2d(1, eps=1e-05, momentum=0.1, affine=True,
                            track_running_stats=True)
@@ -172,6 +172,17 @@ class EffNet(pl.LightningModule):
         self.metric_macro = metrics.JTFSloss(self.scaler, "macro")
         self.metric_micro = metrics.JTFSloss(self.scaler, "micro")
         self.std = torch.sqrt(torch.tensor(var))
+        self.monitor_loss = torch.inf
+        if LMA:
+            self.LMA_lambda = LMA['lambda']
+            self.threshold = LMA['threshold']
+            self.accelerator = LMA['accelerator']
+            self.brake = LMA['brake']
+        else:
+            self.LMA_lambda = 1e+15
+            self.LMA_threshold = 1e+20
+            self.LMA_accelerator = 0.1
+            self.LMA_brake = 10
         #self.epoch = 0
 
     def forward(self, input_tensor):
@@ -201,8 +212,7 @@ class EffNet(pl.LightningModule):
             loss = self.loss(outputs, y, self.specloss, self.scaler)
         else:
             if self.loss_type == "weighted_p":
-                #apply relu on M to enforce positive semi-definiteness
-                loss = self.loss(weight[:,None] * outputs.double(), y.double(), M.double())
+                loss = self.loss(weight[:,None] * outputs.double(), y.double(), M.double(), torch.tensor(self.LMA_lambda).double())
             else:
                 loss = self.loss(weight[:,None] * outputs, y)
         #compute metrics
@@ -223,7 +233,15 @@ class EffNet(pl.LightningModule):
 
     def training_epoch_end(self, outputs):
         loss = torch.stack([x['loss'] for x in outputs]).mean()
+        # Levenburg-Marquardt Algorithm, lambda decay heuristics
+        if loss < self.monitor_loss:
+            self.monitor_loss = loss
+            self.LMA_lambda = self.LMA_lambda * self.LMA_accelerator
+        else:
+            if self.LMA_lambda * self.LMA_brake > self.LMA_threshold:
+                self.LMA_lambda = self.LMA_lambda * self.LMA_brake
         self.log('train_loss', loss, prog_bar=False)
+        self.log('LMA_lambda', self.LMA_lambda)
 
     def test_epoch_end(self, outputs):
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
