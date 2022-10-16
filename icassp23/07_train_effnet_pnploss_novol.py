@@ -45,13 +45,13 @@ model_dir = os.path.join(save_dir, "f_W")
 cqt_dir = data_dir
 
 epoch_max = 30
-steps_per_epoch = 50
+steps_per_epoch = icassp23.SAMPLES_PER_EPOCH / batch_size
 max_steps = steps_per_epoch * epoch_max
 # feature parameters
 Q = 12
 J = 10
 outdim = 4
-bn_var = 2
+bn_var = 1
 cnn_type = "efficientnet"  # efficientnet / cnn.wav2shape
 loss_type = "weighted_p"  # spec / weighted_p / ploss
 weight_type = "novol"  # novol / pnp / None
