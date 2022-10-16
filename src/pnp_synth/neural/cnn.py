@@ -156,7 +156,7 @@ class EffNet(pl.LightningModule):
         self.conv2d = nn.Conv2d(in_channels=1, out_channels=3,kernel_size=(3,3))
         self.model = torchvision.models.efficientnet_b0(in_channels=in_channels, num_classes=outdim)
         self.batchnorm2 = nn.BatchNorm1d(outdim, eps=1e-5, momentum=0.1, affine=False)
-        self.act = nn.Tanh()
+        self.act = nn.Sigmoid()
         self.loss_type = loss
         self.metrics = forward.pnp_forward
         if self.loss_type == "ploss":
@@ -192,7 +192,6 @@ class EffNet(pl.LightningModule):
         x = self.model(x)
         x = self.batchnorm2(x) * self.std
         x = self.act(x)
-        x = x / torch.tensor(2.0) + torch.tensor(0.5)
         return x
 
     def step(self, batch, fold):
