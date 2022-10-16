@@ -240,6 +240,8 @@ class EffNet(pl.LightningModule):
         else:
             if self.LMA_lambda * self.LMA_brake > self.LMA_threshold:
                 self.LMA_lambda = self.LMA_lambda * self.LMA_brake
+            else:
+                self.LMA_lambda = self.LMA_threshold
         self.log('train_loss', loss, prog_bar=False)
         self.log('LMA_lambda', self.LMA_lambda)
 
