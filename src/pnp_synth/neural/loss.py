@@ -19,7 +19,7 @@ def loss_spec(outputs, y, specloss,scaler):
 
 def loss_bilinear(outputs, y, M, l):
     diff = outputs - y 
-    M = M / l + torch.eye(M.shape[1]).cuda()
+    M = M + l * torch.eye(M.shape[1]).cuda()
     loss = torch.bmm(torch.bmm(diff[:,None,:], M), diff[:,:,None])
     loss = torch.relu(loss) #/1e+5
     return 0.5*torch.mean(loss.squeeze())

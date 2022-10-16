@@ -212,7 +212,10 @@ class EffNet(pl.LightningModule):
             loss = self.loss(outputs, y, self.specloss, self.scaler)
         else:
             if self.loss_type == "weighted_p":
-                loss = self.loss(weight[:,None] * outputs.double(), y.double(), M.double(), torch.tensor(self.LMA_lambda).double())
+                if fold == "train":
+                    loss = self.loss(weight[:,None] * outputs.double(), y.double(), M.double(), torch.tensor(self.LMA_lambda).double())
+                elif fold == "val":
+                    loss = self.loss(weight[:,None] * outputs.double(), y.double(), M.double(), torch.tensor(0).double())
             else:
                 loss = self.loss(weight[:,None] * outputs, y)
         #compute metrics
