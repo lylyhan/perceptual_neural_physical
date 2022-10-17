@@ -126,7 +126,7 @@ if __name__ == "__main__":
         max_epochs=epoch_max,
         max_steps=max_steps,
         limit_train_batches=steps_per_epoch,  # if integer than it's #steps per epoch, if float then it's percentage
-        limit_val_batches=1.0,
+        limit_val_batches=10,#1.0,
         limit_test_batches=1.0,
         callbacks=[checkpoint_cb],
         logger=tb_logger,

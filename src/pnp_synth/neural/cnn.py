@@ -172,7 +172,8 @@ class EffNet(pl.LightningModule):
         self.metric_macro = metrics.JTFSloss(self.scaler, "macro")
         self.metric_micro = metrics.JTFSloss(self.scaler, "micro")
         self.std = torch.sqrt(torch.tensor(var))
-        self.monitor_loss = torch.inf
+        self.monitor_valloss = torch.inf
+        self.current_device = "cuda" if torch.cuda.is_available() else "cpu"
         if LMA:
             self.LMA_lambda = LMA['lambda']
             self.LMA_threshold = LMA['threshold']
@@ -183,6 +184,7 @@ class EffNet(pl.LightningModule):
             self.LMA_threshold = 1e+20
             self.LMA_accelerator = 0.1
             self.LMA_brake = 10
+        self.best_params = self.parameters
         #self.epoch = 0
 
     def forward(self, input_tensor):
@@ -195,11 +197,11 @@ class EffNet(pl.LightningModule):
         return x
 
     def step(self, batch, fold):
-        Sy = batch['feature']
-        y = batch['y']
-        weight = batch['weight']
-        M = batch['M']
-        metric_weight = batch['metric_weight']
+        Sy = batch['feature'].to(self.current_device)
+        y = batch['y'].to(self.current_device)
+        weight = batch['weight'].to(self.current_device)
+        M = batch['M'].to(self.current_device)
+        metric_weight = batch['metric_weight'].to(self.current_device)
         outputs = self(Sy)
 
         # match outputs and y dimension
@@ -213,9 +215,9 @@ class EffNet(pl.LightningModule):
         else:
             if self.loss_type == "weighted_p":
                 if fold == "train":
-                    loss = self.loss(weight[:,None] * outputs.double(), y.double(), M.double(), torch.tensor(self.LMA_lambda).double())
-                elif fold == "val":
-                    loss = self.loss(weight[:,None] * outputs.double(), y.double(), M.double(), torch.tensor(0).double())
+                    loss = self.loss(weight[:,None] * outputs.double(), y.double(), M.double(), torch.tensor(self.LMA_lambda).double().to(self.current_device))
+                elif fold == "val" or fold == "test":
+                    loss = self.loss(weight[:,None] * outputs.double(), y.double(), M.double(), torch.tensor(0).double().to(self.current_device))
             else:
                 loss = self.loss(weight[:,None] * outputs, y)
         #compute metrics
@@ -236,17 +238,7 @@ class EffNet(pl.LightningModule):
 
     def training_epoch_end(self, outputs):
         loss = torch.stack([x['loss'] for x in outputs]).mean()
-        # Levenburg-Marquardt Algorithm, lambda decay heuristics
-        if loss < self.monitor_loss:
-            self.monitor_loss = loss
-            self.LMA_lambda = self.LMA_lambda * self.LMA_accelerator
-        else:
-            if self.LMA_lambda * self.LMA_brake > self.LMA_threshold:
-                self.LMA_lambda = self.LMA_lambda * self.LMA_brake
-            else:
-                self.LMA_lambda = self.LMA_threshold
         self.log('train_loss', loss, prog_bar=False)
-        self.log('LMA_lambda', self.LMA_lambda)
 
     def test_epoch_end(self, outputs):
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
@@ -260,8 +252,24 @@ class EffNet(pl.LightningModule):
     def validation_epoch_end(self, outputs):
         # outputs = list of dictionaries
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
+    
+    
+        if self.loss_type == "weighted_p":
+            # Levenburg-Marquardt Algorithm, lambda decay heuristics
+            if avg_loss < self.monitor_valloss:
+                self.monitor_valloss = avg_loss
+                self.LMA_lambda = self.LMA_lambda * self.LMA_accelerator
+                self.best_params = self.parameters
+            else:
+                if self.LMA_lambda * self.LMA_brake < self.LMA_threshold:
+                    self.LMA_lambda = self.LMA_lambda * self.LMA_brake
+                else:
+                    self.LMA_lambda = self.LMA_threshold
+                self.parameters = self.best_params
+        self.log('LMA_lambda', self.LMA_lambda)
         self.log('val_loss', avg_loss, on_step=False,
                  prog_bar=False, on_epoch=True)
+                 
         return {'val_loss': avg_loss}
         
     def configure_optimizers(self):
