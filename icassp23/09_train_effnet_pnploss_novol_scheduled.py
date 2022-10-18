@@ -55,13 +55,14 @@ bn_var = 2
 cnn_type = "efficientnet"  # efficientnet / cnn.wav2shape
 loss_type = "weighted_p"  # spec / weighted_p / ploss
 weight_type = "novol"  # novol / pnp / None
+lambda0 = 1e+20
 n_epochs_before_lambda_equals_1 = 5 * (init_id + 1)
 LMA = {
     'mode': "scheduled", #scheduled / constant
-    'lambda': 1e+20,
+    'lambda': lambda0,
     'threshold': None,
     'accelerator': None,
-    'brake': None,
+    'brake': lambda0 ** (1/n_epochs_before_lambda_equals_1),
 }
 
 if __name__ == "__main__":
