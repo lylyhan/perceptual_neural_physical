@@ -259,7 +259,7 @@ class EffNet(pl.LightningModule):
     
     
         if self.loss_type == "weighted_p":
-            if self.mode == "adaptive":
+            if self.LMA_mode == "adaptive":
                 # Levenburg-Marquardt Algorithm, lambda decay heuristics
                 if avg_loss < self.monitor_valloss:
                     self.monitor_valloss = avg_loss
@@ -271,7 +271,7 @@ class EffNet(pl.LightningModule):
                     else:
                         self.LMA_lambda = self.LMA_threshold
                     self.parameters = self.best_params
-            elif self.mode == "scheduled":
+            elif self.LMA_mode == "scheduled":
                 self.epoch += 1
                 self.LMA_lambda = self.LMA_lambda0 / (1 + self.epoch)**2 
 
