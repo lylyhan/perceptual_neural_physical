@@ -273,7 +273,7 @@ class EffNet(pl.LightningModule):
                     self.parameters = self.best_params
             elif self.LMA_mode == "scheduled":
                 self.epoch += 1
-                self.LMA_lambda = self.LMA_lambda0 / (1 + self.epoch)**2 
+                self.LMA_lambda = self.LMA_lambda0 * brake
 
 
         self.log('LMA_lambda', self.LMA_lambda)

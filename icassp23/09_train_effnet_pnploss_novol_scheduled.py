@@ -55,6 +55,7 @@ bn_var = 2
 cnn_type = "efficientnet"  # efficientnet / cnn.wav2shape
 loss_type = "weighted_p"  # spec / weighted_p / ploss
 weight_type = "novol"  # novol / pnp / None
+n_epochs_before_lambda_equals_1 = 5 * (init_id + 1)
 LMA = {
     'mode': "scheduled", #scheduled / constant
     'lambda': 1e+20,
@@ -79,7 +80,7 @@ if __name__ == "__main__":
                 "batch_size" + str(batch_size),
                 "bn_var" + str(bn_var),
                 "init-" + str(init_id),
-                "LMA_" + str(np.log10(LMA['lambda'])) + "_" + LMA['mode'], 
+                "LMA_" + str(np.log10(LMA['lambda'])) + "_" + LMA['mode'],
                 "brake_"+str(LMA['brake']),
             ]
         ),
