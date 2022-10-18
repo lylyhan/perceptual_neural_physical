@@ -175,17 +175,21 @@ class EffNet(pl.LightningModule):
         self.monitor_valloss = torch.inf
         self.current_device = "cuda" if torch.cuda.is_available() else "cpu"
         if LMA:
+            self.LMA_lambda0 = LMA['lambda']
             self.LMA_lambda = LMA['lambda']
             self.LMA_threshold = LMA['threshold']
             self.LMA_accelerator = LMA['accelerator']
             self.LMA_brake = LMA['brake']
+            self.LMA_mode = LMA['mode']
         else:
+            self.LMA_lambda0 = 1e+15
             self.LMA_lambda = 1e+15
             self.LMA_threshold = 1e+20
             self.LMA_accelerator = 0.1
             self.LMA_brake = 10
+            self.LMA_mode = "adaptive"
         self.best_params = self.parameters
-        #self.epoch = 0
+        self.epoch = 0
 
     def forward(self, input_tensor):
         input_tensor = input_tensor.unsqueeze(1)
@@ -255,17 +259,23 @@ class EffNet(pl.LightningModule):
     
     
         if self.loss_type == "weighted_p":
-            # Levenburg-Marquardt Algorithm, lambda decay heuristics
-            if avg_loss < self.monitor_valloss:
-                self.monitor_valloss = avg_loss
-                self.LMA_lambda = self.LMA_lambda * self.LMA_accelerator
-                self.best_params = self.parameters
-            else:
-                if self.LMA_lambda * self.LMA_brake < self.LMA_threshold:
-                    self.LMA_lambda = self.LMA_lambda * self.LMA_brake
+            if self.mode == "adaptive":
+                # Levenburg-Marquardt Algorithm, lambda decay heuristics
+                if avg_loss < self.monitor_valloss:
+                    self.monitor_valloss = avg_loss
+                    self.LMA_lambda = self.LMA_lambda * self.LMA_accelerator
+                    self.best_params = self.parameters
                 else:
-                    self.LMA_lambda = self.LMA_threshold
-                self.parameters = self.best_params
+                    if self.LMA_lambda * self.LMA_brake < self.LMA_threshold:
+                        self.LMA_lambda = self.LMA_lambda * self.LMA_brake
+                    else:
+                        self.LMA_lambda = self.LMA_threshold
+                    self.parameters = self.best_params
+            elif self.mode == "scheduled":
+                self.epoch += 1
+                self.LMA_lambda = self.LMA_lambda0 / (1 + self.epoch)**2 
+
+
         self.log('LMA_lambda', self.LMA_lambda)
         self.log('val_loss', avg_loss, on_step=False,
                  prog_bar=False, on_epoch=True)
