@@ -6,7 +6,6 @@ script_path = os.path.abspath(os.path.join("..", script_name)) + ".py"
 save_dir = "/scratch/vl1019/icassp23_data"
 n_inits = 10
 batch_size = 256
-ckpt_path = "last.ckpt"
 
 # Create folder.
 sbatch_dir = os.path.join(".", script_name)
@@ -20,10 +19,7 @@ for init_id in range(n_inits):
 
     # Generate file.
     with open(file_path, "w") as f:
-        cmd_args = [
-            os.path.abspath(os.path.join("..",
-                "08_train_effnet_pnploss_novol_adaptive_brake1.py")),
-            save_dir, str(init_id), str(batch_size), ckpt_path]
+        cmd_args = [script_path, save_dir, str(init_id), str(batch_size)]
 
         f.write("#!/bin/bash\n")
         f.write("\n")
@@ -31,8 +27,8 @@ for init_id in range(n_inits):
         f.write("#SBATCH --nodes=1\n")
         f.write("#SBATCH --tasks-per-node=1\n")
         f.write("#SBATCH --cpus-per-task=4\n")
-        f.write("#SBATCH --time=6:00:00\n")
-        f.write("#SBATCH --mem=32GB\n")
+        f.write("#SBATCH --time=8:00:00\n")
+        f.write("#SBATCH --mem=16GB\n")
         f.write("#SBATCH --gres=gpu:1\n")
         f.write("#SBATCH --output=" + job_name + "_%j.out\n")
         f.write("\n")
@@ -58,7 +54,7 @@ file_path = os.path.join(sbatch_dir, script_name.split("_")[0] + ".sh")
 with open(file_path, "w") as f:
     # Print header.
     f.write(
-        "# This shell script evaluates EfficientNet on PNP loss with Id damping."
+        "# This shell script trains EfficientNet on PNP loss with diag(M) damping."
     )
     f.write("\n")
 
@@ -66,7 +62,7 @@ with open(file_path, "w") as f:
     for init_id in range(n_inits):
         # Define job name.
         job_name = "_".join(
-            [script_name[:2], "init-" + str(n_inits).zfill(len(str(init_id)))]
+            [script_name[:2], "init-" + str(init_id).zfill(len(str(n_inits)))]
         )
         sbatch_str = "sbatch " + job_name + ".sbatch"
         # Write SBATCH command to shell file.

@@ -63,6 +63,7 @@ LMA = {
     'threshold': None,
     'accelerator': None,
     'brake': lambda0 ** (1/n_epochs_before_lambda_equals_1),
+    'damping': "id"
 }
 
 if __name__ == "__main__":
@@ -82,7 +83,8 @@ if __name__ == "__main__":
                 "bn_var" + str(bn_var),
                 "init-" + str(init_id),
                 "LMA_" + str(np.log10(LMA['lambda'])) + "_" + LMA['mode'],
-                "brake_"+str(LMA['brake']),
+                "brake_"+"{:0.2f}".format(LMA['brake']),
+                "damping_"+str(LMA['damping']),
             ]
         ),
     )

@@ -54,7 +54,7 @@ file_path = os.path.join(sbatch_dir, script_name.split("_")[0] + ".sh")
 with open(file_path, "w") as f:
     # Print header.
     f.write(
-        "# This shell script trains EfficientNet on multiscale spectral loss."
+        "# This shell script trains EfficientNet on PNP loss with Id damping."
     )
     f.write("\n")
 

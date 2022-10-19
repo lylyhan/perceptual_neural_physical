@@ -110,7 +110,7 @@ class wav2shape(pl.LightningModule):
                 loss = self.loss(weight[:,None] * outputs, y)
         #compute metrics
         if fold == "test":
-            self.metric_macro.update(outputs, y, weight) 
+            self.metric_macro.update(outputs, y, weight)
             self.metric_micro.update(outputs, y, weight)
 
         return {'loss': loss}
@@ -181,6 +181,7 @@ class EffNet(pl.LightningModule):
             self.LMA_accelerator = LMA['accelerator']
             self.LMA_brake = LMA['brake']
             self.LMA_mode = LMA['mode']
+            self.LMA_damping = LMA['diag']
         else:
             self.LMA_lambda0 = 1e+15
             self.LMA_lambda = 1e+15
@@ -188,6 +189,7 @@ class EffNet(pl.LightningModule):
             self.LMA_accelerator = 0.1
             self.LMA_brake = 10
             self.LMA_mode = "adaptive"
+            self.LMA_damping = "identity"
         self.best_params = self.parameters
         self.epoch = 0
 
@@ -226,7 +228,7 @@ class EffNet(pl.LightningModule):
                 loss = self.loss(weight[:,None] * outputs, y)
         #compute metrics
         if fold == "test":
-            self.metric_macro.update(outputs, y, metric_weight) 
+            self.metric_macro.update(outputs, y, metric_weight)
             self.metric_micro.update(outputs, y, metric_weight)
 
         return {'loss': loss}
@@ -256,8 +258,8 @@ class EffNet(pl.LightningModule):
     def validation_epoch_end(self, outputs):
         # outputs = list of dictionaries
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
-    
-    
+
+
         if self.loss_type == "weighted_p":
             if self.LMA_mode == "adaptive":
                 # Levenburg-Marquardt Algorithm, lambda decay heuristics
@@ -279,9 +281,9 @@ class EffNet(pl.LightningModule):
         self.log('LMA_lambda', self.LMA_lambda)
         self.log('val_loss', avg_loss, on_step=False,
                  prog_bar=False, on_epoch=True)
-                 
+
         return {'val_loss': avg_loss}
-        
+
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=1e-3)
 
@@ -358,7 +360,7 @@ class DrumData(Dataset):
         #load from numpy files
         #i_prefix = "icassp23_" + str(id).zfill(len(self.ids))
         #return np.load(os.path.join(self.weights_dir, self.fold, i_prefix + "_grad_jtfs.py"))
-        
+
     def cqt_from_id(self, id, eps):
         with h5py.File(self.audio_dir, "r") as f:
             x = np.array(f['x'][str(id)])
@@ -394,9 +396,9 @@ class DrumDataModule(pl.LightningDataModule):
 
 
     def setup(self, stage=None):
-        
+
         y_norms_train, scaler= utils.scale_theta(self.full_df, "train") #sorted by id
-        y_norms_test, scaler = utils.scale_theta(self.full_df, "test") 
+        y_norms_test, scaler = utils.scale_theta(self.full_df, "test")
         y_norms_val, scaler = utils.scale_theta(self.full_df, "val")
 
         train_ids = self.full_df[self.full_df["fold"]=="train"]['ID'].values #sorted by id

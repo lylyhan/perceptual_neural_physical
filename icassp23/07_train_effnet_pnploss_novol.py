@@ -60,6 +60,7 @@ LMA = {
     'threshold': 1e+20,
     'accelerator': 0.1,
     'brake': 10,
+    'damping': "id"
 }
 
 if __name__ == "__main__":
@@ -78,7 +79,8 @@ if __name__ == "__main__":
                 "batch_size" + str(batch_size),
                 "bn_var" + str(bn_var),
                 "init-" + str(init_id),
-                "LMA_" + str(np.log10(LMA['lambda'])), 
+                "LMA_" + str(np.log10(LMA['lambda'])),
+                "damping_"+str(LMA['damping']),
             ]
         ),
     )
