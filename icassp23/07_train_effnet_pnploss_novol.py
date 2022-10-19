@@ -61,7 +61,7 @@ LMA = {
     'threshold': 1e+20,
     'accelerator': 0.1,
     'brake': 10,
-    'damping': "diag"
+    'damping': "id"
 }
 
 if __name__ == "__main__":
