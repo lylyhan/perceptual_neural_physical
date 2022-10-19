@@ -17,9 +17,8 @@ def loss_spec(outputs, y, specloss,scaler):
     loss = specloss(wav_pred, wav_gt)
     return loss
 
-def loss_bilinear(outputs, y, M, D):
+def loss_bilinear(outputs, y, M):
     diff = outputs - y
-    M = M + D
     loss = torch.bmm(torch.bmm(diff[:,None,:], M), diff[:,:,None])
     loss = torch.relu(loss) #/1e+5
     return 0.5*torch.mean(loss.squeeze())

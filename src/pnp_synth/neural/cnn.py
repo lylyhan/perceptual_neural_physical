@@ -227,11 +227,11 @@ class EffNet(pl.LightningModule):
                 elif self.LMA_damping == "diag":
                     D = torch.diagonal(M, dim1=-1, dim2=-2).double()[None, :, :]
                 D = self.LMA_lambda * D.to(self.current_device)
+                M = M.double() + D
                 loss = self.loss(
                     weight[:, None] * outputs.double(),
                     y.double(),
-                    M.double(),
-                    D,
+                    M.double()
                 )
             else:
                 loss = self.loss(weight[:,None] * outputs, y)
