@@ -56,7 +56,7 @@ cnn_type = "efficientnet"  # efficientnet / cnn.wav2shape
 loss_type = "weighted_p"  # spec / weighted_p / ploss
 weight_type = "novol"  # novol / pnp / None
 lambda0 = 1e+20
-n_epochs_before_lambda_equals_1 = 5 * (init_id + 1)
+n_epochs_before_lambda_equals_1 = 5 * (int(init_id) + 1)
 LMA = {
     'mode': "scheduled", #scheduled / constant
     'lambda': lambda0,
