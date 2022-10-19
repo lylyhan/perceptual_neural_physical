@@ -204,9 +204,9 @@ class EffNet(pl.LightningModule):
 
     def step(self, batch, fold):
         Sy = batch['feature'].to(self.current_device)
-        y = batch['y'].to(self.current_device)
+        y = batch['y'].to(self.current_device).double()
         weight = batch['weight'].to(self.current_device)
-        M = batch['M'].to(self.current_device)
+        M = batch['M'].to(self.current_device).double()
         metric_weight = batch['metric_weight'].to(self.current_device)
         outputs = self(Sy)
 
@@ -225,13 +225,13 @@ class EffNet(pl.LightningModule):
                 elif self.LMA_damping == "identity":
                     D = torch.eye(M.shape[1]).double()[None, :, :]
                 elif self.LMA_damping == "diag":
-                    D = torch.diagonal(M, dim1=-1, dim2=-2).double()[None, :, :]
+                    D = torch.diag_embed(M)
                 D = self.LMA_lambda * D.to(self.current_device)
-                M = M.double() + D
+                M = M + D
                 loss = self.loss(
                     weight[:, None] * outputs.double(),
                     y.double(),
-                    M.double()
+                    M
                 )
             else:
                 loss = self.loss(weight[:,None] * outputs, y)
