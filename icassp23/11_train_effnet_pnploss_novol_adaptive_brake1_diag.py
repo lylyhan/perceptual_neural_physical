@@ -57,7 +57,7 @@ loss_type = "weighted_p"  # spec / weighted_p / ploss
 weight_type = "novol"  # novol / pnp / None
 LMA = {
     'mode': "adaptive", #scheduled / constant
-    'lambda': 1e+10,
+    'lambda': 10**(6 + 3 * (int(init_id)-5)),
     'threshold': 1e+20,
     'accelerator': 0.2,
     'brake': 1,
