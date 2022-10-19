@@ -181,7 +181,7 @@ class EffNet(pl.LightningModule):
             self.LMA_accelerator = LMA['accelerator']
             self.LMA_brake = LMA['brake']
             self.LMA_mode = LMA['mode']
-            self.LMA_damping = LMA['diag']
+            self.LMA_damping = LMA['damping']
         else:
             self.LMA_lambda0 = 1e+15
             self.LMA_lambda = 1e+15
@@ -275,7 +275,7 @@ class EffNet(pl.LightningModule):
                     self.parameters = self.best_params
             elif self.LMA_mode == "scheduled":
                 self.epoch += 1
-                self.LMA_lambda = self.LMA_lambda * self.LMA_brake
+                self.LMA_lambda = self.LMA_lambda * self.LMA_accelerator
 
 
         self.log('LMA_lambda', self.LMA_lambda)
