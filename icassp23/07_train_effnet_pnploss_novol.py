@@ -45,7 +45,7 @@ model_dir = os.path.join(save_dir, "f_W")
 cqt_dir = data_dir
 
 epoch_max = 30
-steps_per_epoch = 10#icassp23.SAMPLES_PER_EPOCH / batch_size
+steps_per_epoch = icassp23.SAMPLES_PER_EPOCH / batch_size
 max_steps = steps_per_epoch * epoch_max
 # feature parameters
 Q = 12
