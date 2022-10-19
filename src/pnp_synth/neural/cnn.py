@@ -222,9 +222,9 @@ class EffNet(pl.LightningModule):
             if self.loss_type == "weighted_p":
                 if fold == "val" or fold == "test":
                     damping = torch.tensor(0) * torch.eye(M.shape[1]).double()
-                elif damping == "id":
+                elif self.LMA_damping == "identity":
                     damping = self.LMA_lambda * torch.eye(M.shape[1]).double()
-                elif damping == "diag":
+                elif self.LMA_damping == "diag":
                     damping = self.LMA_lambda * torch.diag(M).double()
                 damping = damping.to(self.current_device)
                 loss = self.loss(
