@@ -45,7 +45,7 @@ model_dir = os.path.join(save_dir, "f_W")
 cqt_dir = data_dir
 
 epoch_max = 30
-steps_per_epoch = icassp23.SAMPLES_PER_EPOCH / batch_size
+steps_per_epoch = 10#icassp23.SAMPLES_PER_EPOCH / batch_size
 max_steps = steps_per_epoch * epoch_max
 # feature parameters
 Q = 12
@@ -56,11 +56,12 @@ cnn_type = "efficientnet"  # efficientnet / cnn.wav2shape
 loss_type = "weighted_p"  # spec / weighted_p / ploss
 weight_type = "novol"  # novol / pnp / None
 LMA = {
+    'mode': "adaptive", #scheduled / constant
     'lambda': 1e+20,
     'threshold': 1e+20,
     'accelerator': 0.1,
     'brake': 10,
-    'damping': "id"
+    'damping': "diag"
 }
 
 if __name__ == "__main__":

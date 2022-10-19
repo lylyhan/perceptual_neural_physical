@@ -51,7 +51,7 @@ for fold in icassp23.FOLDS:
     n_batches = 1 + len(fold_df) // batch_size
 
     for i, row in row_iter:
-        i, row = irow
+        #i, row = irow
 
         # Physical audio synthesis (g). theta -> x
         theta = np.array([row[column] for column in icassp23.THETA_COLUMNS])
@@ -66,8 +66,8 @@ for fold in icassp23.FOLDS:
 
     # Print
     now = str(datetime.datetime.now())
-    batch_str = str(batch_id).zfill(len(str(n_batches)))
-    print(now + " Exported: {}, batch {}".format(fold, batch_str))
+    #batch_str = str(batch_id).zfill(len(str(n_batches)))
+    #print(now + " Exported: {}, batch {}".format(fold, batch_str))
     sys.stdout.flush()
 
     # Empty line between folds
