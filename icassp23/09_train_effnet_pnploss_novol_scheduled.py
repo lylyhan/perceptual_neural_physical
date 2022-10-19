@@ -61,8 +61,8 @@ LMA = {
     'mode': "scheduled", #scheduled / constant
     'lambda': lambda0,
     'threshold': None,
-    'accelerator': None,
-    'brake': lambda0 ** (1/n_epochs_before_lambda_equals_1),
+    'accelerator': lambda0 ** (-1/n_epochs_before_lambda_equals_1),
+    'brake': None,
     'damping': "id"
 }
 
@@ -83,7 +83,7 @@ if __name__ == "__main__":
                 "bn_var" + str(bn_var),
                 "init-" + str(init_id),
                 "LMA_" + str(np.log10(LMA['lambda'])) + "_" + LMA['mode'],
-                "brake_"+"{:0.2f}".format(LMA['brake']),
+                "acc_"+"{:0.2f}".format(LMA['accelerator']),
                 "damping_"+str(LMA['damping']),
             ]
         ),
