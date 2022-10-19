@@ -221,19 +221,17 @@ class EffNet(pl.LightningModule):
         else:
             if self.loss_type == "weighted_p":
                 if fold == "val" or fold == "test":
-                    damping = torch.tensor(0) * torch.eye(M.shape[1]).double()
+                    D = torch.zeros(M.shape[1]).double()
                 elif self.LMA_damping == "identity":
-                    damping = self.LMA_lambda * torch.eye(M.shape[1]).double()
+                    D = torch.eye(M.shape[1]).double()
                 elif self.LMA_damping == "diag":
-                    print(type(M))
-                    print(M.shape)
-                    damping = self.LMA_lambda * torch.diag(M).double()
-                damping = damping.to(self.current_device)
+                    D = torch.diagonal(M, dim1=-1, dim2=-2).double()
+                D = self.LMA_lambda * D.to(self.current_device)
                 loss = self.loss(
                     weight[:, None] * outputs.double(),
                     y.double(),
                     M.double(),
-                    damping,
+                    D,
                 )
             else:
                 loss = self.loss(weight[:,None] * outputs, y)
