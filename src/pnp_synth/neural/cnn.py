@@ -225,6 +225,8 @@ class EffNet(pl.LightningModule):
                 elif self.LMA_damping == "identity":
                     damping = self.LMA_lambda * torch.eye(M.shape[1]).double()
                 elif self.LMA_damping == "diag":
+                    print(type(M))
+                    print(M.shape)
                     damping = self.LMA_lambda * torch.diag(M).double()
                 damping = damping.to(self.current_device)
                 loss = self.loss(
