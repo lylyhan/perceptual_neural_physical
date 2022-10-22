@@ -99,6 +99,7 @@ if __name__ == "__main__":
         feature="cqt",
         J=J,
         Q=Q,
+        scaler=scaler,
         num_workers=0
     )
 

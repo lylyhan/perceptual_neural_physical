@@ -35,30 +35,23 @@ def load_fold(full_df, fold="full"):
         return full_df[full_df["fold"]==fold]
 
 
-def scale_theta(full_df, out_fold):
+def scale_theta(full_df, out_fold, scaler):
     """
     Scale training set to [0, 1], return values (NumPy array)
     and min-max scaler (sklearn object)
     """
-    # Load training set
-    train_df = load_fold(full_df, "train")
 
-    # Fit scaler according to training set only
-    scaler = sklearn.preprocessing.MinMaxScaler()
-    train_theta = np.stack([
-        train_df[column].values for column in THETA_COLUMNS
-    ], axis=1)
-    scaler.fit(train_theta)
-
-    # Load whole dataset
+    # Load partial dataset
     out_df = load_fold(full_df, out_fold)
 
-    # Transform whole dataset with scaler
+    # Transform partial dataset with scaler
     theta = np.stack([
         out_df[column].values for column in THETA_COLUMNS
     ], axis=1) 
+
     nus = scaler.transform(theta)
-    return nus, scaler 
+    
+    return nus 
 
 def pnp_forward_factory(scaler):
     """

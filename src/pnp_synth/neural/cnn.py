@@ -8,7 +8,6 @@ import soundfile as sf
 import torch
 from torch import nn
 from nnAudio.features import CQT
-from pnp_synth.neural import forward
 from pnp_synth.neural import loss as losses
 import torchvision
 import torchvision.transforms as transforms
@@ -157,7 +156,6 @@ class EffNet(pl.LightningModule):
         self.batchnorm2 = nn.BatchNorm1d(outdim, eps=1e-5, momentum=0.1, affine=False)
         self.act = nn.Sigmoid()
         self.loss_type = loss
-        self.metrics = forward.pnp_forward
         if self.loss_type == "ploss":
             self.loss = F.mse_loss
         elif self.loss_type == "weighted_p":
@@ -389,6 +387,7 @@ class DrumDataModule(pl.LightningDataModule):
                  batch_size,
                  J,
                  Q,
+                 scaler,
                  feature,
                  num_workers):
         super().__init__()
@@ -402,13 +401,15 @@ class DrumDataModule(pl.LightningDataModule):
         self.Q = Q
         self.full_df = df #sorted df
         self.cqt_dir = cqt_dir
+        self.scaler = scaler
 
 
     def setup(self, stage=None):
+        
 
-        y_norms_train, scaler= utils.scale_theta(self.full_df, "train") #sorted by id
-        y_norms_test, scaler = utils.scale_theta(self.full_df, "test")
-        y_norms_val, scaler = utils.scale_theta(self.full_df, "val")
+        y_norms_train= utils.scale_theta(self.full_df, "train", self.scaler) #sorted by id
+        y_norms_test = utils.scale_theta(self.full_df, "test", self.scaler)
+        y_norms_val = utils.scale_theta(self.full_df, "val", self.scaler)
 
         train_ids = self.full_df[self.full_df["fold"]=="train"]['ID'].values #sorted by id
         test_ids = self.full_df[self.full_df["fold"]=="test"]['ID'].values

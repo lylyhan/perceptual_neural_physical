@@ -69,7 +69,7 @@ def scale_theta():
     train_df = load_fold(fold="train")
 
     # Fit scaler according to training set only
-    scaler = sklearn.preprocessing.MinMaxScaler()
+    scaler = sklearn.preprocessing.MinMaxScaler(feature_range=(-1, 1))
     train_theta = np.stack([
         train_df[column].values for column in THETA_COLUMNS
     ], axis=1)
