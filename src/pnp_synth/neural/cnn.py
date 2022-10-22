@@ -158,7 +158,7 @@ class EffNet(pl.LightningModule):
             self.model.get_submodule('classifier')[1].bias.requires_grad = False
             assert torch.sum(self.model.get_submodule('classifier')[1].bias) == 0
         self.batchnorm2 = nn.BatchNorm1d(outdim, eps=1e-5, momentum=0.1, affine=False)
-        self.act = nn.Sigmoid()
+        self.act = nn.Tanh()
         self.loss_type = loss
         if self.loss_type == "ploss":
             self.loss = F.mse_loss
@@ -426,7 +426,7 @@ class DrumDataModule(pl.LightningDataModule):
 
         """
         #temporary: only keep 1 file in the dataset
-        temp_n = 64
+        temp_n = 256
         train_ids = np.array(train_ids[:temp_n])
         test_ids = np.array(test_ids[:temp_n])
         val_ids = np.array(val_ids[:temp_n])
