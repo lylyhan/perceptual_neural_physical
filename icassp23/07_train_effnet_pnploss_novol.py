@@ -51,7 +51,7 @@ max_steps = steps_per_epoch * epoch_max
 Q = 12
 J = 10
 outdim = 4
-bn_var = 2
+bn_var = 0.5
 cnn_type = "efficientnet"  # efficientnet / cnn.wav2shape
 loss_type = "weighted_p"  # spec / weighted_p / ploss
 weight_type = "novol"  # novol / pnp / None
@@ -130,8 +130,8 @@ if __name__ == "__main__":
         max_epochs=epoch_max,
         max_steps=max_steps,
         limit_train_batches=steps_per_epoch,  # if integer than it's #steps per epoch, if float then it's percentage
-        limit_val_batches=1.0,
-        limit_test_batches=1.0,
+        limit_val_batches=0.01,
+        limit_test_batches=0.01,
         callbacks=[checkpoint_cb],
         logger=tb_logger,
         max_time=timedelta(hours=6)
