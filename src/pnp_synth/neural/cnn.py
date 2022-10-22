@@ -153,6 +153,10 @@ class EffNet(pl.LightningModule):
                            track_running_stats=True)
         self.conv2d = nn.Conv2d(in_channels=1, out_channels=3,kernel_size=(3,3))
         self.model = torchvision.models.efficientnet_b0(in_channels=in_channels, num_classes=outdim)
+        #disable efficientnet last linear layer's bias
+        if self.model.get_submodule('classifier')[1].bias.requires_grad:
+            self.model.get_submodule('classifier')[1].bias.requires_grad = False
+            assert torch.sum(self.model.get_submodule('classifier')[1].bias) == 0
         self.batchnorm2 = nn.BatchNorm1d(outdim, eps=1e-5, momentum=0.1, affine=False)
         self.act = nn.Sigmoid()
         self.loss_type = loss
@@ -168,6 +172,7 @@ class EffNet(pl.LightningModule):
         self.outdim = outdim
         self.metric_macro = metrics.JTFSloss(self.scaler, "macro")
         self.metric_micro = metrics.JTFSloss(self.scaler, "micro")
+        self.metric_mss = metrics.MSSloss(self.scaler)
         self.std = torch.sqrt(torch.tensor(var))
         self.monitor_valloss = torch.inf
         self.current_device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -237,6 +242,7 @@ class EffNet(pl.LightningModule):
         if fold == "test":
             self.metric_macro.update(outputs, y, metric_weight)
             self.metric_micro.update(outputs, y, metric_weight)
+            self.metric_mss.update(outputs, y)
 
         return {'loss': loss}
 
@@ -252,15 +258,18 @@ class EffNet(pl.LightningModule):
     def training_epoch_end(self, outputs):
         loss = torch.stack([x['loss'] for x in outputs]).mean()
         self.log('train_loss', loss, prog_bar=False)
+        self.epoch += 1
 
     def test_epoch_end(self, outputs):
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
         avg_macro_metric = self.metric_macro.compute() #torch.stack(x['metric'] for x in outputs).mean()
         avg_micro_metric = self.metric_micro.compute()
+        avg_mss_metric = self.metric_mss.compute()
         self.log('test_loss', avg_loss)
         self.log('macro_metrics', avg_macro_metric)
         self.log('micro_metrics', avg_micro_metric)
-        return avg_loss, avg_macro_metric, avg_micro_metric
+        self.log('mss metrics', avg_mss_metric)
+        return avg_loss, avg_macro_metric, avg_micro_metric, avg_mss_metric
 
     def validation_epoch_end(self, outputs):
         # outputs = list of dictionaries
