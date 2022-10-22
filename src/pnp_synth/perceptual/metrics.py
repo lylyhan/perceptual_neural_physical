@@ -18,7 +18,6 @@ class JTFSloss(Metric):
         self.mode = mode
 
     def update(self, preds: torch.Tensor, target: torch.Tensor, weights: torch.Tensor): #update at each step
-
         assert preds.shape == target.shape
 
         jtfs_operator = TimeFrequencyScattering1D(**utils.jtfs_params, out_type="list").to(self.curr_device)
@@ -63,12 +62,11 @@ class MSSloss(Metric):
     def update(self, preds: torch.Tensor, target: torch.Tensor): #update at each step
 
         assert preds.shape == target.shape
-
         #put through synth ##TODO: need the batch processing!!! or make a loop
         #temporary loop
         wav_gt = []
         wav_pred = []
-        for i in range(y.shape[0]):
+        for i in range(preds.shape[0]):
             wav_gt.append(forward.pnp_forward(target[i,:], 
                         Phi=nn.Identity(), 
                         g=utils.x_from_theta, 
@@ -77,10 +75,10 @@ class MSSloss(Metric):
                         Phi=nn.Identity(), 
                         g=utils.x_from_theta, 
                         scaler=self.scaler))
-
+        
         wav_gt = torch.stack(wav_gt)
         wav_pred = torch.stack(wav_pred)
-        self.dist += auraloss.freq.MultiResolutionSTFTLoss(wav_pred, wav_gt)
+        self.dist += auraloss.freq.MultiResolutionSTFTLoss()(wav_pred, wav_gt)
         self.total += 1 #accumulate number of steps (number of batches)
 
     def compute(self):
