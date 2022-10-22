@@ -188,7 +188,7 @@ class EffNet(pl.LightningModule):
             self.LMA_accelerator = 0.1
             self.LMA_brake = 10
             self.LMA_mode = "adaptive"
-            self.LMA_damping = "identity"
+            self.LMA_damping = "id"
         self.best_params = self.parameters
         self.epoch = 0
 
@@ -221,7 +221,7 @@ class EffNet(pl.LightningModule):
             if self.loss_type == "weighted_p":
                 if fold == "val" or fold == "test":
                     D = torch.zeros(M.shape).double()
-                elif self.LMA_damping == "identity":
+                elif self.LMA_damping == "id":
                     D = torch.eye(M.shape[1]).double()[None, :, :]
                 elif self.LMA_damping == "diag":
                     diags = torch.diagonal(M, dim1=-1, dim2=-2) #(bs, 5)
