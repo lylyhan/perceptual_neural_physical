@@ -65,8 +65,7 @@ class wav2shape(pl.LightningModule):
                            track_running_stats=True),
             nn.ReLU(),
             nn.Linear(64,outdim),#add nonneg kernel regulation
-            nn.Sigmoid()
-            #LINEAR ACTIVATION??
+            nn.Tanh()
         )
         self.loss_type = loss
         if self.loss_type == "ploss":

@@ -4,12 +4,12 @@ from sklearn.preprocessing import MinMaxScaler
 
 def scale_theta(full_df):
     """
-    Take DataFrame, scale training set to [0, 1], return values (NumPy array)
+    Take DataFrame, scale training set to [-1, 1], return values (NumPy array)
     and min-max scaler (sklearn object)
     """
     # Fit scaler according to training set only
     train_df = full_df.loc[full_df["set"] == "train"]
-    scaler = MinMaxScaler()
+    scaler = MinMaxScaler(feature_range=(-1, 1))
     train_thetas = train_df.values[:, 3:-1]
     scaler.fit(train_thetas)
 
