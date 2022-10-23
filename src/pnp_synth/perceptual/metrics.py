@@ -82,5 +82,5 @@ class MSSloss(Metric):
         self.total += 1 #accumulate number of steps (number of batches)
 
     def compute(self):
-        return self.dist / self.total #mean over batches
+        return self.dist / self.total #mean over batches 
        

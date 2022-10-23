@@ -9,7 +9,7 @@ def inverse_scale(nu, scaler):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     theta_max = torch.tensor(scaler.data_max_).to(device)
     theta_min = torch.tensor(scaler.data_min_).to(device)
-    theta = nu * (theta_max - theta_min) + theta_min
+    theta = (nu + 1) / 2 * (theta_max - theta_min) + theta_min
     return theta
 
 
@@ -25,7 +25,6 @@ def pnp_forward(nu, Phi, g, scaler):
 
     # Synthesis
     x = g(theta)
-
     # Spectral analysis
     S = Phi(x)
     return S
