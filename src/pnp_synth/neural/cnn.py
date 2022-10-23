@@ -157,7 +157,7 @@ class EffNet(pl.LightningModule):
         if self.model.get_submodule('classifier')[1].bias.requires_grad:
             self.model.get_submodule('classifier')[1].bias.requires_grad = False
             assert torch.sum(self.model.get_submodule('classifier')[1].bias) == 0
-        self.batchnorm2 = nn.BatchNorm1d(outdim, eps=1e-5, momentum=0.1, affine=False)
+        self.batchnorm2 = nn.BatchNorm1d(outdim, eps=1e-5, momentum=0.1, affine=True)
         self.act = nn.Tanh()
         self.loss_type = loss
         if self.loss_type == "ploss":
@@ -194,7 +194,6 @@ class EffNet(pl.LightningModule):
             self.LMA_damping = "id"
         self.best_params = self.parameters
         self.epoch = 0
-        self.ep = 0
 
     def forward(self, input_tensor):
         input_tensor = input_tensor.unsqueeze(1)
@@ -259,9 +258,6 @@ class EffNet(pl.LightningModule):
     def training_epoch_end(self, outputs):
         loss = torch.stack([x['loss'] for x in outputs]).mean()
         self.log('train_loss', loss, prog_bar=False)
-        self.ep += 1        
-        if self.ep > 10:
-            self.batchnorm2.training = False
 
     def test_epoch_end(self, outputs):
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
