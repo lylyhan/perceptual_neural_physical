@@ -194,6 +194,7 @@ class EffNet(pl.LightningModule):
             self.LMA_damping = "id"
         self.best_params = self.parameters
         self.epoch = 0
+        self.ep = 0
 
     def forward(self, input_tensor):
         input_tensor = input_tensor.unsqueeze(1)
@@ -258,7 +259,9 @@ class EffNet(pl.LightningModule):
     def training_epoch_end(self, outputs):
         loss = torch.stack([x['loss'] for x in outputs]).mean()
         self.log('train_loss', loss, prog_bar=False)
-        self.epoch += 1
+        self.ep += 1        
+        if self.ep > 10:
+            self.batchnorm2.training = False
 
     def test_epoch_end(self, outputs):
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
