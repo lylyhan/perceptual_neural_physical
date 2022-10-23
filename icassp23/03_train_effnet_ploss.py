@@ -46,7 +46,7 @@ model_dir = os.path.join(save_dir, "f_W")
 cqt_dir = data_dir
 
 
-epoch_max = 30
+epoch_max = 70
 steps_per_epoch = icassp23.SAMPLES_PER_EPOCH / batch_size
 max_steps = steps_per_epoch * epoch_max
 # feature parameters
@@ -127,7 +127,7 @@ if __name__ == "__main__":
         callbacks=[checkpoint_cb],
         enable_progress_bar=True,
         logger=tb_logger,
-        max_time=timedelta(hours=6)
+        max_time=timedelta(hours=12)
     )
     # train
     if is_train:
