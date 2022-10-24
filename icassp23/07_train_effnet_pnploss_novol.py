@@ -50,7 +50,7 @@ max_steps = steps_per_epoch * epoch_max
 # feature parameters
 Q = 12
 J = 10
-outdim = 4
+outdim = 5
 bn_var = 0.5
 cnn_type = "efficientnet"  # efficientnet / cnn.wav2shape
 loss_type = "weighted_p"  # spec / weighted_p / ploss
@@ -82,10 +82,12 @@ if __name__ == "__main__":
                 "init-" + str(init_id),
                 "LMA_" + str(np.log10(LMA['lambda'])),
                 "damping_"+str(LMA['damping']),
+                "outdim-" + str(outdim),
             ]
         ),
     )
     os.makedirs(model_save_path, exist_ok=True)
+    pred_path = os.path.join(model_save_path, "test_predictions.npy")
     y_norms, scaler = icassp23.scale_theta()
     full_df = icassp23.load_fold(fold="full")
     # initialize dataset
@@ -110,7 +112,7 @@ if __name__ == "__main__":
             in_channels=1, bin_per_oct=Q, outdim=outdim, loss=loss_type, scaler=scaler
         )
     elif cnn_type == "efficientnet":
-        model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, var=bn_var, LMA=LMA)
+        model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, var=bn_var, LMA=LMA, save_path=pred_path)
     print(str(datetime.datetime.now()) + " Finished initializing model")
 
     # initialize checkpoint methods
@@ -142,7 +144,7 @@ if __name__ == "__main__":
         trainer.fit(model, dataset)
     else:
         print("Skipped Training, loading model")
-        model = model.load_from_checkpoint(os.path.join(model_save_path, ckpt_path),in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, var=bn_var, LMA=LMA)
+        model = model.load_from_checkpoint(os.path.join(model_save_path, ckpt_path),in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, var=bn_var, LMA=LMA, save_path=pred_path)
 
 
     test_loss = trainer.test(model, dataset, verbose=False)

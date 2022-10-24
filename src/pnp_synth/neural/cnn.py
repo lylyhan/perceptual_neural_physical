@@ -147,7 +147,7 @@ class wav2shape(pl.LightningModule):
 
 
 class EffNet(pl.LightningModule):
-    def __init__(self, in_channels,outdim,loss,scaler,var,LMA=None):
+    def __init__(self, in_channels,outdim,loss,scaler,var,save_path,LMA=None):
         super().__init__()
         self.batchnorm1 = nn.BatchNorm2d(1, eps=1e-05, momentum=0.1, affine=True,
                            track_running_stats=True)
@@ -158,7 +158,7 @@ class EffNet(pl.LightningModule):
             self.model.get_submodule('classifier')[1].bias.requires_grad = False
             assert torch.sum(self.model.get_submodule('classifier')[1].bias) == 0
         self.batchnorm2 = nn.BatchNorm1d(outdim, eps=1e-5, momentum=0.1, affine=False)
-        self.act = nn.Linear(outdim,outdim)
+        self.act = nn.Tanh()
         self.loss_type = loss
         if self.loss_type == "ploss":
             self.loss = F.mse_loss
@@ -167,6 +167,7 @@ class EffNet(pl.LightningModule):
         elif self.loss_type == "spec":
             self.loss = losses.loss_spec
             self.specloss = auraloss.freq.MultiResolutionSTFTLoss()
+        self.save_path = save_path
         self.val_loss = None
         self.scaler = scaler
         self.outdim = outdim
@@ -194,6 +195,8 @@ class EffNet(pl.LightningModule):
             self.LMA_damping = "id"
         self.best_params = self.parameters
         self.epoch = 0
+        self.test_preds = []
+        self.test_gts = []
 
     def forward(self, input_tensor):
         input_tensor = input_tensor.unsqueeze(1)
@@ -202,7 +205,6 @@ class EffNet(pl.LightningModule):
         x = self.model(x)
         x = self.batchnorm2(x) * self.std
         x = self.act(x)
-        x = torch.clamp(x, min=-1, max=1)
         return x
 
     def step(self, batch, fold):
@@ -244,6 +246,8 @@ class EffNet(pl.LightningModule):
             self.metric_macro.update(outputs, y, metric_weight)
             self.metric_micro.update(outputs, y, metric_weight)
             self.metric_mss.update(outputs, y)
+            self.test_preds.append(outputs)
+            self.test_gts.append(y)
 
         return {'loss': loss}
 
@@ -269,8 +273,12 @@ class EffNet(pl.LightningModule):
         self.log('macro_metrics', avg_macro_metric)
         self.log('micro_metrics', avg_micro_metric)
         self.log('mss metrics', avg_mss_metric)
+        self.test_gts = torch.stack(self.test_gts)
+        self.test_preds = torch.stack(self.test_preds)
+        np.save(self.save_path, [self.test_gts.detach().cpu().numpy(), 
+                                self.test_preds.detach().cpu().numpy()])
         return avg_loss, avg_macro_metric, avg_micro_metric, avg_mss_metric
-
+    
     def validation_epoch_end(self, outputs):
         # outputs = list of dictionaries
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
