@@ -157,8 +157,8 @@ class EffNet(pl.LightningModule):
         if self.model.get_submodule('classifier')[1].bias.requires_grad:
             self.model.get_submodule('classifier')[1].bias.requires_grad = False
             assert torch.sum(self.model.get_submodule('classifier')[1].bias) == 0
-        self.batchnorm2 = nn.BatchNorm1d(outdim, eps=1e-5, momentum=0.1, affine=True)
-        self.act = nn.Tanh()
+        self.batchnorm2 = nn.BatchNorm1d(outdim, eps=1e-5, momentum=0.1, affine=False)
+        self.act = nn.Linear(outdim,outdim)
         self.loss_type = loss
         if self.loss_type == "ploss":
             self.loss = F.mse_loss
@@ -202,6 +202,7 @@ class EffNet(pl.LightningModule):
         x = self.model(x)
         x = self.batchnorm2(x) * self.std
         x = self.act(x)
+        x = torch.clamp(x, min=-1, max=1)
         return x
 
     def step(self, batch, fold):
