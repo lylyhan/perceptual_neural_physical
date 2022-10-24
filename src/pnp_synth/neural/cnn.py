@@ -240,7 +240,7 @@ class EffNet(pl.LightningModule):
                     M
                 )
             else:
-                loss = self.loss(weight[:,None] * outputs, y)
+                loss = self.loss(weight[:,None].double() * outputs.double(), y.double())
         #compute metrics
         if fold == "test":
             self.metric_macro.update(outputs, y, metric_weight)
