@@ -83,7 +83,7 @@ if __name__ == "__main__":
                 "LMA_" + str(np.log10(LMA['lambda'])) + "_" + LMA['mode'],
                 "brake_"+"{:0.2f}".format(LMA['brake']),
                 "damping_"+str(LMA['damping']),
-                "outdim-" + str(outdim),
+                #"outdim-" + str(outdim),
             ]
         ),
     )

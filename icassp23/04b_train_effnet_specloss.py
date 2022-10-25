@@ -72,7 +72,7 @@ if __name__ == "__main__":
                 "batch_size" + str(batch_size),
                 "bn_var" + str(bn_var),
                 "init-" + str(init_id),
-                "outdim-" + str(outdim),
+               # "outdim-" + str(outdim),
             ]
         ),
     )
