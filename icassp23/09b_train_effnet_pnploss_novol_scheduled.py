@@ -1,6 +1,6 @@
 """
 This script trains an EfficientNet for sound matching of drum sounds
-with Multi-Scale Spectral Loss (MSS) as its objective.
+with PNP loss without Riemmanian volume weights as its objective.
 """
 from ast import Mod
 import datetime
@@ -44,7 +44,6 @@ weight_dir = os.path.join(save_dir, "M")
 model_dir = os.path.join(save_dir, "f_W")
 cqt_dir = data_dir
 
-
 epoch_max = 70
 steps_per_epoch = icassp23.SAMPLES_PER_EPOCH / batch_size
 max_steps = steps_per_epoch * epoch_max
@@ -54,10 +53,21 @@ J = 10
 outdim = 4
 bn_var = 0.5
 cnn_type = "efficientnet"  # efficientnet / cnn.wav2shape
-loss_type = "spec"  # spec / weighted_p / ploss
-weight_type = "None"  # novol / pnp / None
+loss_type = "weighted_p"  # spec / weighted_p / ploss
+weight_type = "novol"  # novol / pnp / None
+lambda0 = 1e+20
+n_epochs_before_lambda_equals_1 = 5 * (int(init_id) + 1)
+LMA = {
+    'mode': "scheduled", #scheduled / constant
+    'lambda': lambda0,
+    'threshold': None,
+    'accelerator': lambda0 ** (-1/n_epochs_before_lambda_equals_1),
+    'brake': None,
+    'damping': "id"
+}
 
 if __name__ == "__main__":
+    #os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     print("Current device: ", torch.cuda.get_device_name(0))
     torch.multiprocessing.set_start_method('spawn')
     model_save_path = os.path.join(
@@ -72,7 +82,10 @@ if __name__ == "__main__":
                 "batch_size" + str(batch_size),
                 "bn_var" + str(bn_var),
                 "init-" + str(init_id),
-               # "outdim-" + str(outdim),
+                "LMA_" + str(np.log10(LMA['lambda'])) + "_" + LMA['mode'],
+                "acc_"+"{:0.2f}".format(LMA['accelerator']),
+                "damping_"+str(LMA['damping']),
+                #"outdim-" + str(outdim),
             ]
         ),
     )
@@ -102,7 +115,7 @@ if __name__ == "__main__":
             in_channels=1, bin_per_oct=Q, outdim=outdim, loss=loss_type, scaler=scaler
         )
     elif cnn_type == "efficientnet":
-        model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, var=bn_var, save_path=pred_path)
+        model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, var=bn_var, LMA=LMA, save_path=pred_path)
     print(str(datetime.datetime.now()) + " Finished initializing model")
 
     # initialize checkpoint methods
@@ -110,11 +123,10 @@ if __name__ == "__main__":
         dirpath=model_save_path,
         monitor="val_loss",
         save_last=True,
-        filename="best", #"ckpt-{epoch:02d}-{val_loss:.2f}",
+        filename= "best",#"ckpt-{epoch:02d}-{val_loss:.2f}",
         save_weights_only=False,
     )
     tb_logger = pl_loggers.TensorBoardLogger(save_dir=os.path.join(model_save_path,"logs"))
-
     # initialize trainer, declare training parameters, possiibly in neural/cnn.py
     trainer = pl.Trainer(
         accelerator="gpu",
@@ -135,7 +147,8 @@ if __name__ == "__main__":
         trainer.fit(model, dataset)
     else:
         print("Skipped Training, loading model")
-        model = model.load_from_checkpoint(os.path.join(model_save_path, ckpt_path),in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, var=bn_var, save_path=pred_path)
+        model = model.load_from_checkpoint(os.path.join(model_save_path, ckpt_path),in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, var=bn_var, LMA=LMA, save_path=pred_path)
+
 
     test_loss = trainer.test(model, dataset, verbose=False)
     print("Model saved at: {}".format(model_save_path))
