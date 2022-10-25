@@ -197,6 +197,7 @@ class EffNet(pl.LightningModule):
         self.epoch = 0
         self.test_preds = []
         self.test_gts = []
+        self.Ms = []
 
     def forward(self, input_tensor):
         input_tensor = input_tensor.unsqueeze(1)
@@ -248,6 +249,7 @@ class EffNet(pl.LightningModule):
             self.metric_mss.update(outputs, y)
             self.test_preds.append(outputs)
             self.test_gts.append(y)
+            self.Ms.append(M)
 
         return {'loss': loss}
 
@@ -275,8 +277,10 @@ class EffNet(pl.LightningModule):
         self.log('mss metrics', avg_mss_metric)
         self.test_gts = torch.stack(self.test_gts)
         self.test_preds = torch.stack(self.test_preds)
-        np.save(self.save_path, [self.test_gts.detach().cpu().numpy(), 
-                                self.test_preds.detach().cpu().numpy()])
+        self.Ms = torch.stack(self.Ms)
+        np.save(self.save_path, [[self.test_gts.detach().cpu().numpy(), 
+                                self.test_preds.detach().cpu().numpy()],
+                                self.Ms.detach().cpu().numpy()],allow_pickle=True)
         return avg_loss, avg_macro_metric, avg_micro_metric, avg_mss_metric
     
     def validation_epoch_end(self, outputs):
