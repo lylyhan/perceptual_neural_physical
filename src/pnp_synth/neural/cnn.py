@@ -157,7 +157,7 @@ class EffNet(pl.LightningModule):
         if self.model.get_submodule('classifier')[1].bias.requires_grad:
             self.model.get_submodule('classifier')[1].bias.requires_grad = False
             assert torch.sum(self.model.get_submodule('classifier')[1].bias) == 0
-        self.batchnorm2 = nn.BatchNorm1d(outdim, eps=1e-5, momentum=0.1, affine=True)
+        self.batchnorm2 = nn.BatchNorm1d(outdim, eps=1e-5, momentum=0.1, affine=False)
         self.act = nn.Tanh()
         self.loss_type = loss
         if self.loss_type == "ploss":
