@@ -22,7 +22,7 @@ for init_id in range(n_inits):
     with open(file_path, "w") as f:
         cmd_args = [
             os.path.abspath(os.path.join("..",
-                "08_train_effnet_pnploss_novol_adaptive_brake1.py")),
+                "08b_train_effnet_pnploss_novol_adaptive_brake1.py")),
             save_dir, str(init_id), str(batch_size), ckpt_path]
 
         f.write("#!/bin/bash\n")
