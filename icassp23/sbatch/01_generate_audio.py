@@ -25,6 +25,7 @@ with open(file_path, "w") as f:
     f.write("#SBATCH --cpus-per-task=4\n")
     f.write("#SBATCH --time=1:00:00\n")
     f.write("#SBATCH --mem=8GB\n")
+    f.write("#SBTACH -A rwb@v100")
     f.write("#SBATCH --gres=gpu:1\n")
     f.write("#SBATCH --output=" + job_name + "_%j.out\n")
     f.write("\n")
