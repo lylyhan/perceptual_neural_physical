@@ -3,7 +3,7 @@ import os
 # Define constants.
 script_name = os.path.basename(__file__)
 script_path = os.path.abspath(os.path.join("..", script_name))
-save_dir = "/scratch/vl1019/icassp23_data"
+save_dir = "/gpfswork/rech/rwb/ufg99no/data/icassp23_data"
 
 # Create folder.
 job_name = os.path.basename(__file__)[:-3]
@@ -21,7 +21,7 @@ with open(file_path, "w") as f:
     f.write("\n")
     f.write("#BATCH --job-name=" + script_name + "\n")
     f.write("#SBATCH --nodes=1\n")
-    f.write("#SBATCH --tasks-per-node=1\n")
+    f.write("#SBATCH --ntasks-per-node=1\n")
     f.write("#SBATCH --cpus-per-task=4\n")
     f.write("#SBATCH --time=1:00:00\n")
     f.write("#SBATCH --mem=8GB\n")
@@ -32,13 +32,5 @@ with open(file_path, "w") as f:
     f.write("module load cuda/11.6.2\n")
     f.write("module load ffmpeg/4.2.4\n")
     f.write("\n")
-    f.write(" ".join([
-        "singularity exec",
-        "--overlay /scratch/vl1019/overlay-50G-10M.ext3:ro",
-        "/scratch/work/public/singularity/cuda11.0-cudnn8-devel-ubuntu18.04.sif",
-        "/bin/bash",
-        "-c",
-        "\"source",
-            "/scratch/vl1019/env.sh;",
-            "python"] + cmd_args) + "\"\n")
+    f.write(" ".join(["python"] + cmd_args) + "\"\n")
     f.write("\n")
