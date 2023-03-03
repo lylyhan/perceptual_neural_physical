@@ -1,5 +1,9 @@
 from torchmetrics import Metric
 from pnp_synth.neural import forward
+# kymatio dev0.4.0
+#from kymatio.torch import TimeFrequencyScattering as TimeFrequencyScattering1D
+#from kymatio.scattering1d.frontend.torch_frontend import TimeFrequencyScatteringTorch as TimeFrequencyScattering1D
+# kymatio 0.3.0 (wavespin)
 from kymatio.torch import TimeFrequencyScattering1D
 from pnp_synth import utils
 import torch
@@ -39,10 +43,14 @@ class JTFSloss(Metric):
                                             scaler=self.scaler))
         jtfs_targets = torch.stack(wav_gt)
         jtfs_preds = torch.stack(wav_pred) #(bs, #path)
+
+        #check if any output is nan
+        if weights is None:
+            weights = 1
         if self.mode == "macro":
-            self.dist += torch.mean(torch.norm(jtfs_preds - jtfs_targets, p=2, dim=1)) #mean over each batch
+            self.dist += torch.nanmean(torch.norm(jtfs_preds - jtfs_targets, p=2, dim=1)) #mean over each batch
         elif self.mode == "micro":
-            self.dist += torch.mean(weights * torch.norm(jtfs_preds - jtfs_targets, p=2, dim=1)).squeeze()
+            self.dist += torch.nanmean(weights * torch.norm(jtfs_preds - jtfs_targets, p=2, dim=1)).squeeze()
         self.total += 1 #accumulate number of steps (number of batches)
         #return self.dist
 

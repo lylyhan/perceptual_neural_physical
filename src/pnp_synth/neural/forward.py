@@ -21,10 +21,12 @@ def pnp_forward(nu, Phi, g, scaler):
     3. a perceptual representation Phi
     """
     # Inverse parameter scaling
-    theta = inverse_scale(nu, scaler)
-
+    if scaler:
+        theta = inverse_scale(nu, scaler)
+    else:
+        theta = nu
     # Synthesis
     x = g(theta)
     # Spectral analysis
     S = Phi(x)
-    return S
+    return S.flatten()
