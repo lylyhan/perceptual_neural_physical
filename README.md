@@ -1,9 +1,8 @@
-<div align="center">
 
 # Perceptual Neural Physical Sound Matching
 Han Han, Vincent Lostanlen, Mathieu Lagrange
 
-[![arXiv]](https://arxiv.org/abs/2301.02886)
+Paper on arxiv: (https://arxiv.org/abs/2301.02886)
 
 ## Installation:
 
