@@ -13,13 +13,11 @@ import torchvision
 import torchvision.transforms as transforms
 import torch.nn.functional as F
 import numpy as np
-from pnp_synth.physical import ftm
 from pnp_synth.perceptual import metrics
 import auraloss
 from pnp_synth import utils
 import h5py
 import joblib
-
 
 #logscale param
 eps = 1e-3
@@ -96,7 +94,7 @@ class wav2shape(pl.LightningModule):
          # match outputs and y dimension
         if outputs.shape[1] == 4 and y.shape[1] == 5:
             outputs = torch.cat((y[:,0][:,None], outputs),dim=1)
-        assert outputs.shape[1] == 5
+        assert outputs.shape[1] == self.outdim
 
         #compute loss function
         if self.loss_type == "spec":
@@ -149,6 +147,7 @@ class wav2shape(pl.LightningModule):
 class EffNet(pl.LightningModule):
     def __init__(self, in_channels,outdim,loss,scaler,var,save_path,LMA=None):
         super().__init__()
+        self.scaler = scaler
         self.batchnorm1 = nn.BatchNorm2d(1, eps=1e-05, momentum=0.1, affine=True,
                            track_running_stats=True)
         self.conv2d = nn.Conv2d(in_channels=1, out_channels=3,kernel_size=(3,3))
@@ -167,9 +166,10 @@ class EffNet(pl.LightningModule):
         elif self.loss_type == "spec":
             self.loss = losses.loss_spec
             self.specloss = auraloss.freq.MultiResolutionSTFTLoss()
+        elif self.loss_type == "LMA":
+            self.loss = losses.TimeFrequencyScatteringLoss(self.scaler)
         self.save_path = save_path
         self.val_loss = None
-        self.scaler = scaler
         self.outdim = outdim
         self.metric_macro = metrics.JTFSloss(self.scaler, "macro")
         self.metric_micro = metrics.JTFSloss(self.scaler, "micro")
@@ -212,18 +212,26 @@ class EffNet(pl.LightningModule):
         Sy = batch['feature'].to(self.current_device)
         y = batch['y'].to(self.current_device).double()
         weight = batch['weight'].to(self.current_device)
-        M = batch['M'].to(self.current_device).double()
-        metric_weight = batch['metric_weight'].to(self.current_device)
+        try:
+            M = batch['M'].to(self.current_device).double()
+            metric_weight = batch['metric_weight'].to(self.current_device)
+            M_mean = batch['M_mean'].to(self.current_device)
+            JdagJ = batch['JdagJ'].to(self.current_device)
+        except:
+            M, metric_weight, M_mean, JdagJ = None, None, None, None
+        
         outputs = self(Sy)
 
+        assert outputs.shape[1] == self.outdim
         # match outputs and y dimension
         if outputs.shape[1] == 4 and y.shape[1] == 5:
             outputs = torch.cat((y[:,0][:,None], outputs),dim=1)
-        assert outputs.shape[1] == 5
-
+        
         #compute loss function
         if self.loss_type == "spec":
             loss = self.loss(outputs, y, self.specloss, self.scaler)
+        elif self.loss_type == "LMA":
+            loss = self.loss(outputs, y, JdagJ)
         else:
             if self.loss_type == "weighted_p":
                 if fold == "val" or fold == "test":
@@ -233,6 +241,9 @@ class EffNet(pl.LightningModule):
                 elif self.LMA_damping == "diag":
                     diags = torch.diagonal(M, dim1=-1, dim2=-2) #(bs, 5)
                     D = torch.diag_embed(diags)
+                elif self.LMA_damping == "mean": #mean sigma is in ascending order
+                    D = M_mean
+                    
                 D = self.LMA_lambda * D.to(self.current_device)
                 M = M + D
                 loss = self.loss(
@@ -240,7 +251,7 @@ class EffNet(pl.LightningModule):
                     y.double(),
                     M
                 )
-            else:
+            else: #ploss
                 loss = self.loss(weight[:,None].double() * outputs.double(), y.double())
         #compute metrics
         if fold == "test":
@@ -277,10 +288,17 @@ class EffNet(pl.LightningModule):
         self.log('mss metrics', avg_mss_metric)
         self.test_gts = torch.stack(self.test_gts)
         self.test_preds = torch.stack(self.test_preds)
-        self.Ms = torch.stack(self.Ms)
-        np.save(self.save_path, [[self.test_gts.detach().cpu().numpy(), 
+        try:
+            self.Ms = torch.stack(self.Ms)
+            np.save(self.save_path, [[self.test_gts.detach().cpu().numpy(), 
                                 self.test_preds.detach().cpu().numpy()],
                                 self.Ms.detach().cpu().numpy()],allow_pickle=True)
+        except:
+            self.Ms = None
+            np.save(self.save_path, [self.test_gts.detach().cpu().numpy(), 
+                                    self.test_preds.detach().cpu().numpy()],
+                                    allow_pickle=True)
+
         return avg_loss, avg_macro_metric, avg_micro_metric, avg_mss_metric
     
     def validation_epoch_end(self, outputs):
@@ -327,7 +345,8 @@ class DrumData(Dataset):
                  fold,
                  feature,
                  J,
-                 Q):
+                 Q,
+                 sr):
         super().__init__()
 
         self.fold = fold
@@ -341,7 +360,7 @@ class DrumData(Dataset):
         self.J = J
         self.Q = Q
         self.fold = fold
-        self.sr = ftm.constants['sr']
+        self.sr = sr
         if feature == 'cqt':
             cqt_params = {
                     'sr': self.sr,
@@ -354,7 +373,10 @@ class DrumData(Dataset):
             else:
                 fmin = 32.7
             self.cqt_from_x = CQT(**cqt_params,fmin=fmin).cuda()
-
+        try:
+            self.M_mean, self.sigma_mean = self.M_mean()
+        except:
+            self.M_mean, self.sigma_mean = None, None
         # Initialize joblib Memory object
         # self.cqt_memory = joblib.Memory(cqt_dir, verbose=0)
         # self.cqt_from_id = self.cqt_memory.cache(self.cqt_from_id)
@@ -366,28 +388,58 @@ class DrumData(Dataset):
         M = None
         weight = torch.tensor(1)
         #load JTJ
-        M, sigma = self.M_from_id(id)
-        metric_weight = torch.sqrt((sorted(sigma)[-1]*sorted(sigma)[-2]))
+        M, sigma, JdagJ = self.M_from_id(id)
+        try:
+            metric_weight = torch.sqrt((sorted(sigma)[-1]*sorted(sigma)[-2]))
+        except:
+            metric_weight = None
         if self.weight_type != "None" and self.weight_type == "pnp":
             weight = metric_weight
         if self.feature == "cqt":
             Sy = self.cqt_from_id(id, eps)
             return {'feature': torch.abs(Sy), 'y': y_norm, 'weight': weight, 'M': M,
-                    'metric_weight': metric_weight}
+                    'metric_weight': metric_weight, 'M_mean': self.M_mean, 'JdagJ': JdagJ}
 
     def __len__(self):
         return len(self.ids)
 
     def M_from_id(self,id):
         #load from h5
-        with h5py.File(self.weights_dir, "r") as f:
-            M = torch.tensor(np.array(f['M'][str(id)]))
-            sigma = torch.tensor(f['sigma'][str(id)])
-        return M, sigma
+        if os.path.exists(self.weights_dir):
+            with h5py.File(self.weights_dir, "r") as f:
+                try:
+                    M = torch.tensor(np.array(f['M'][str(id)]))
+                    sigma = torch.abs(torch.tensor(f['sigma'][str(id)]))
+                except:
+                    M = None
+                    sigma = None
+                try:
+                    JdagJ = torch.tensor(np.array(f['JdagJ'][str(id)]))
+                except:
+                    JdagJ = None
+            return M, sigma, JdagJ
+        else:
+            return None, None, None
 
         #load from numpy files
         #i_prefix = "icassp23_" + str(id).zfill(len(self.ids))
         #return np.load(os.path.join(self.weights_dir, self.fold, i_prefix + "_grad_jtfs.py"))
+
+    def M_mean(self):
+        #load from h5
+        M_mean = None
+        sigma_mean = None
+        with h5py.File(self.weights_dir, "r") as f:
+            ids = f['M'].keys()
+            count = 0
+            for id in ids:
+                M = torch.tensor(np.array(f['M'][str(id)]))
+                sigma,_ = torch.sort(torch.abs(torch.tensor(f['sigma'][str(id)])), descending=False)
+                M_mean = M if M_mean is None else M_mean + M
+                sigma_mean = sigma if sigma_mean is None else sigma_mean + sigma
+                count += 1
+            
+        return M_mean / count, sigma_mean / count
 
     def cqt_from_id(self, id, eps):
         with h5py.File(self.audio_dir, "r") as f:
@@ -408,6 +460,7 @@ class DrumDataModule(pl.LightningDataModule):
                  batch_size,
                  J,
                  Q,
+                 sr,
                  scaler,
                  feature,
                  num_workers):
@@ -420,10 +473,14 @@ class DrumDataModule(pl.LightningDataModule):
         self.feature = feature
         self.J = J
         self.Q = Q
+        self.sr = sr
         self.full_df = df #sorted df
         self.cqt_dir = cqt_dir
         self.scaler = scaler
-
+        if "am" in weight_dir:
+            self.synth_type = "amchirp"
+        elif "ftm" in weight_dir:
+            self.synth_type = "icassp23"
 
     def setup(self, stage=None):
         
@@ -447,51 +504,56 @@ class DrumDataModule(pl.LightningDataModule):
         y_norms_val = y_norms_val[:temp_n,:]
         """
 
-
         self.train_ds = DrumData(y_norms_train, #partial dataframe
                                 train_ids,
-                                os.path.join(self.data_dir,"icassp23_train_audio.h5"),
+                                os.path.join(self.data_dir, self.synth_type + "_train_audio.h5"),
                                 self.cqt_dir,
-                                os.path.join(self.weight_dir,"icassp23_train_M.h5"),
+                                os.path.join(self.weight_dir, self.synth_type + "_train_J.h5"), 
                                 self.weight_type,
                                 fold='train',
                                 feature='cqt',
                                 J = self.J,
-                                Q = self.Q)
+                                Q = self.Q,
+                                sr = self.sr)
 
         self.val_ds = DrumData(y_norms_val, #partial dataframe
                                 val_ids,
-                                os.path.join(self.data_dir,"icassp23_val_audio.h5"),
+                                os.path.join(self.data_dir, self.synth_type + "_val_audio.h5"),
                                 self.cqt_dir,
-                                os.path.join(self.weight_dir,"icassp23_val_M.h5"),
+                                os.path.join(self.weight_dir, self.synth_type + "_val_J.h5"),
                                 self.weight_type,
                                 fold='val',
                                 feature='cqt',
                                 J = self.J,
-                                Q = self.Q)
+                                Q = self.Q,
+                                sr = self.sr)
 
         self.test_ds = DrumData(y_norms_test, #partial dataframe
                                 test_ids,
-                                os.path.join(self.data_dir,"icassp23_test_audio.h5"),
+                                os.path.join(self.data_dir, self.synth_type + "_test_audio.h5"),
                                 self.cqt_dir,
-                                os.path.join(self.weight_dir,"icassp23_test_M.h5"),
+                                os.path.join(self.weight_dir, self.synth_type + "_test_J.h5"),
                                 self.weight_type,
                                 fold='test',
                                 feature='cqt',
                                 J = self.J,
-                                Q = self.Q)
+                                Q = self.Q,
+                                sr = self.sr)
 
 
     def collate_batch(self, batch):
         Sy = torch.stack([s['feature'] for s in batch]) #(64,120,257)x
         y = torch.tensor(np.array([s['y'].astype(np.float32) for s in batch]))
         weight = torch.stack([s['weight'] for s in batch])
-        metric_weight = torch.stack([s['metric_weight'] for s in batch])
-        if type(batch[0]['M']) != type(None):
+        try:
+            metric_weight = torch.stack([s['metric_weight'] for s in batch])
+            M_mean = torch.stack([s['M_mean'] for s in batch])
+            JdagJ = torch.stack([s['JdagJ'] for s in batch])
             M = torch.stack([s['M'] for s in batch])
-        else:
-            M = None
-        return {'feature': Sy, 'y': y, 'weight': weight, 'M': M, 'metric_weight': metric_weight}
+        except: 
+            metric_weight, M_mean, JdagJ, M = None, None, None, None
+
+        return {'feature': Sy, 'y': y, 'weight': weight, 'M': M, 'metric_weight': metric_weight, 'M_mean': M_mean, 'JdagJ': JdagJ}
 
     def train_dataloader(self):
         return DataLoader(self.train_ds,
