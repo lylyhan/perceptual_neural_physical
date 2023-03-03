@@ -51,6 +51,7 @@ max_steps = steps_per_epoch * epoch_max
 # feature parameters
 Q = 12
 J = 10
+sr = 22050
 outdim = 4
 bn_var = 0.5
 cnn_type = "efficientnet"  # efficientnet / cnn.wav2shape
@@ -91,6 +92,7 @@ if __name__ == "__main__":
         feature="cqt",
         J=J,
         Q=Q,
+        sr=sr,
         scaler=scaler,
         num_workers=0
     )

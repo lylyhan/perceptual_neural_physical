@@ -50,6 +50,7 @@ max_steps = steps_per_epoch * epoch_max
 # feature parameters
 Q = 12
 J = 10
+sr = 22050
 outdim = 5
 bn_var = 0.5
 cnn_type = "efficientnet"  # efficientnet / cnn.wav2shape
@@ -83,7 +84,7 @@ if __name__ == "__main__":
                 "LMA_" + str(np.log10(LMA['lambda'])) + "_" + LMA['mode'],
                 "brake_"+"{:0.2f}".format(LMA['brake']),
                 "damping_"+str(LMA['damping']),
-                "outdim-" + str(outdim),
+                #"outdim-" + str(outdim),
             ]
         ),
     )
@@ -102,6 +103,7 @@ if __name__ == "__main__":
         feature="cqt",
         J=J,
         Q=Q,
+        sr=sr,
         scaler=scaler,
         num_workers=0
     )

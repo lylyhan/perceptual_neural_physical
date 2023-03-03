@@ -1,6 +1,7 @@
 """
 This script trains an EfficientNet for sound matching of drum sounds
 with PNP loss without Riemmanian volume weights as its objective.
+This script trains on only one example 
 """
 from ast import Mod
 import datetime
@@ -15,7 +16,6 @@ import sys
 import time
 import torch
 from pytorch_lightning import loggers as pl_loggers
-from datetime import timedelta
 
 import icassp23
 from pnp_synth.neural import cnn
@@ -25,13 +25,6 @@ print(str(datetime.datetime.now()) + " Start.")
 print(__doc__ + "\n")
 save_dir = sys.argv[1]  # /home/han/data/
 init_id = sys.argv[2]
-batch_size = int(sys.argv[3])
-if len(sys.argv) < 5:
-    is_train = True
-else:
-    is_train = False
-    ckpt_path = sys.argv[4]
-
 print("Command-line arguments:\n" + "\n".join(sys.argv[1:]) + "\n")
 
 for module in [joblib, nnAudio, np, pl, sklearn, torch]:
@@ -44,29 +37,21 @@ weight_dir = os.path.join(save_dir, "M")
 model_dir = os.path.join(save_dir, "f_W")
 cqt_dir = data_dir
 
-epoch_max = 70
-steps_per_epoch = icassp23.SAMPLES_PER_EPOCH / batch_size
+
+batch_size = 1  # should be smaller for spectral loss
+epoch_max = 30
+steps_per_epoch = 50
 max_steps = steps_per_epoch * epoch_max
 # feature parameters
 Q = 12
 J = 10
 sr = 22050
-outdim = 5
-bn_var = 0.5
+outdim = 4
 cnn_type = "efficientnet"  # efficientnet / cnn.wav2shape
 loss_type = "weighted_p"  # spec / weighted_p / ploss
 weight_type = "novol"  # novol / pnp / None
-LMA = {
-    'mode': "adaptive", #scheduled / constant
-    'lambda': 10**(6 + 3 * (int(init_id)-5)),
-    'threshold': 1e+20,
-    'accelerator': 0.2,
-    'brake': 1,
-    'damping': "diag"
-}
 
 if __name__ == "__main__":
-    #os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     print("Current device: ", torch.cuda.get_device_name(0))
     torch.multiprocessing.set_start_method('spawn')
     model_save_path = os.path.join(
@@ -79,17 +64,11 @@ if __name__ == "__main__":
                 str(J),
                 str(Q),
                 "batch_size" + str(batch_size),
-                "bn_var" + str(bn_var),
                 "init-" + str(init_id),
-                "LMA_" + str(np.log10(LMA['lambda'])) + "_" + LMA['mode'],
-                "brake_"+"{:0.2f}".format(LMA['brake']),
-                "damping_"+str(LMA['damping']),
-                "outdim-" + str(outdim),
             ]
         ),
     )
     os.makedirs(model_save_path, exist_ok=True)
-    pred_path = os.path.join(model_save_path, "test_predictions.npy")
     y_norms, scaler = icassp23.scale_theta()
     full_df = icassp23.load_fold(fold="full")
     # initialize dataset
@@ -104,7 +83,6 @@ if __name__ == "__main__":
         J=J,
         Q=Q,
         sr=sr,
-        scaler=scaler,
         num_workers=0
     )
 
@@ -115,7 +93,7 @@ if __name__ == "__main__":
             in_channels=1, bin_per_oct=Q, outdim=outdim, loss=loss_type, scaler=scaler
         )
     elif cnn_type == "efficientnet":
-        model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, var=bn_var, LMA=LMA, save_path=pred_path)
+        model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler)
     print(str(datetime.datetime.now()) + " Finished initializing model")
 
     # initialize checkpoint methods
@@ -123,7 +101,7 @@ if __name__ == "__main__":
         dirpath=model_save_path,
         monitor="val_loss",
         save_last=True,
-        filename= "best",#"ckpt-{epoch:02d}-{val_loss:.2f}",
+        filename="ckpt-{epoch:02d}-{val_loss:.2f}",
         save_weights_only=False,
     )
     tb_logger = pl_loggers.TensorBoardLogger(save_dir=os.path.join(model_save_path,"logs"))
@@ -139,16 +117,9 @@ if __name__ == "__main__":
         limit_test_batches=1.0,
         callbacks=[checkpoint_cb],
         logger=tb_logger,
-        max_time=timedelta(hours=12)
     )
     # train
-    if is_train:
-        print("Training ...")
-        trainer.fit(model, dataset)
-    else:
-        print("Skipped Training, loading model")
-        model = model.load_from_checkpoint(os.path.join(model_save_path, ckpt_path),in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, var=bn_var, LMA=LMA, save_path=pred_path)
-
+    trainer.fit(model, dataset)
 
     test_loss = trainer.test(model, dataset, verbose=False)
     print("Model saved at: {}".format(model_save_path))
