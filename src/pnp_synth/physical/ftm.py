@@ -17,14 +17,13 @@ constants = {
 }
 
 
-def rectangular_drum(theta, **constants):
+def rectangular_drum(theta, logscale, **constants):
     device = "cuda" if torch.cuda.is_available() else "cpu"
-
+    w11 = 10 ** theta[0] if logscale else theta[0]
+    p = 10 ** theta[2] if logscale else theta[2]
+    D = 10 ** theta[3] if logscale else theta[3]
     #theta
-    w11 = 10 ** theta[0]
     tau11 = theta[1]
-    p = 10 ** theta[2]
-    D = 10 ** theta[3]
     alpha_side = theta[4]
     l0 = torch.tensor(constants['l0'])
 

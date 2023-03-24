@@ -13,6 +13,8 @@ import numpy as np
 FOLDS = ["train", "test", "val"]
 THETA_COLUMNS = ["omega", "tau", "p", "D", "alpha"]
 SAMPLES_PER_EPOCH = 512*50
+logscale = False
+synth_type = "ftm"
 
 jtfs_params = dict(
     J=13,  # scattering scale ~ 1000 ms
@@ -70,18 +72,32 @@ def scale_theta():
 
     # Fit scaler according to training set only
     scaler = sklearn.preprocessing.MinMaxScaler(feature_range=(-1, 1))
-    train_theta = np.stack([
-        train_df[column].values for column in THETA_COLUMNS
-    ], axis=1)
+    train_theta = []
+    for column in THETA_COLUMNS:
+        if not logscale and column in ["omega", "p", "D"]:
+            train_theta.append(10 ** train_df[column].values)
+        else:
+            train_theta.append(train_df[column].values)
+    train_theta = np.stack(train_theta, axis=1)
+    #train_theta = np.stack([
+    #    10 ** train_df[column].values for column in THETA_COLUMNS if not logscale and column in ["omega", "p", "D"] else train_df[column].values
+    #    ], axis=1)
     scaler.fit(train_theta)
 
     # Load whole dataset
     full_df = load_fold(fold="full")
 
     # Transform whole dataset with scaler
-    theta = np.stack([
-        full_df[column].values for column in THETA_COLUMNS
-    ], axis=1)
+    theta = []
+    for column in THETA_COLUMNS:
+        if not logscale and column in ["omega", "p", "D"]:
+            theta.append(10 ** full_df[column].values)
+        else:
+            train_theta.append(full_df[column].values)
+    theta = np.stack(theta, axis=1)
+    #theta = np.stack([
+    #    full_df[column].values for column in THETA_COLUMNS
+    #], axis=1)
     nus = scaler.transform(theta)
     return nus, scaler
 
@@ -104,5 +120,5 @@ def S_from_x(x, jtfs_operator):
 
 def x_from_theta(theta):
     """Drum synthesizer, based on the Functional Transformation Method (FTM)."""
-    x = ftm.rectangular_drum(theta, **ftm.constants)
+    x = ftm.rectangular_drum(theta, logscale, **ftm.constants)
     return x
