@@ -31,6 +31,7 @@ sys.stdout.flush()
 # Create directory for audio files.
 audio_dir = os.path.join(save_dir, "x")
 os.makedirs(audio_dir, exist_ok=True)
+logscale = True #the csv files are storing logscaled parameters
 
 for fold in icassp23.FOLDS:
     # Define path to HDF5 file
@@ -55,7 +56,7 @@ for fold in icassp23.FOLDS:
 
         # Physical audio synthesis (g). theta -> x
         theta = np.array([row[column] for column in icassp23.THETA_COLUMNS])
-        x = ftm.rectangular_drum(theta, **ftm.constants)
+        x = ftm.rectangular_drum(theta, logscale, **ftm.constants)
         key = str(row["ID"])
 
         # Append to HDF5 file
