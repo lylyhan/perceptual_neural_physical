@@ -23,6 +23,8 @@ start_time = int(time.time())
 print(str(datetime.datetime.now()) + " Start.")
 print(__doc__ + "\n")
 save_dir = sys.argv[1]
+id_start = int(sys.argv[2])
+id_end = int(sys.argv[3])
 print("Command-line arguments:\n" + "\n".join(sys.argv[1:]) + "\n")
 
 for module in [kymatio, np, pd, sklearn, torch]:
@@ -83,24 +85,25 @@ for fold in icassp23.FOLDS:
     n_batches = 1 + len(fold_df) // batch_size
 
     for i, row in row_iter: # sorted in terms of each fold
-        #theta = torch.tensor([row[column] for column in setups.THETA_COLUMNS])
-        key = int(row["ID"]) # index in the full dataframe
-        nu = torch.tensor(nus[key, :], requires_grad=True).to("cuda")
-        #print(key, i, (nu.detach().numpy() + 1) / 2 * (scaler.data_max_ - scaler.data_min_) + scaler.data_min_, theta)
-        #assert nu.detach().numpy() * (scaler.data_max_ - scaler.data_min_) + scaler.data_min_ == theta
+        if i >= id_start and i <= id_end:
+            #theta = torch.tensor([row[column] for column in setups.THETA_COLUMNS])
+            key = int(row["ID"]) # index in the full dataframe
+            nu = torch.tensor(nus[key, :], requires_grad=True).to("cuda")
+            #print(key, i, (nu.detach().numpy() + 1) / 2 * (scaler.data_max_ - scaler.data_min_) + scaler.data_min_, theta)
+            #assert nu.detach().numpy() * (scaler.data_max_ - scaler.data_min_) + scaler.data_min_ == theta
 
-        # Compute Jacobian: d(S) / d(nu)
-        J = dS_over_dnu(nu).detach()
-        M = torch.matmul(J.T, J)
-        JdagJ = torch.matmul(torch.inverse(M),J.T)
-        assert M.shape[0] == 5 and M.shape[1] == 5
+            # Compute Jacobian: d(S) / d(nu)
+            J = dS_over_dnu(nu).detach()
+            M = torch.matmul(J.T, J)
+            JdagJ = torch.matmul(torch.inverse(M),J.T)
+            assert M.shape[0] == 5 and M.shape[1] == 5
 
-        # Append to HDF5 file
-        with h5py.File(h5_path, "a") as h5_file:
-            h5_file['J'][str(i)] = J.cpu()
-            h5_file['JdagJ'][str(i)] = JdagJ.cpu()
-            h5_file['M'][str(i)] = M.cpu()
-            h5_file['sigma'][str(i)] = torch.linalg.eigvals(M).cpu()
+            # Append to HDF5 file
+            with h5py.File(h5_path, "a") as h5_file:
+                h5_file['J'][str(i)] = J.cpu()
+                h5_file['JdagJ'][str(i)] = JdagJ.cpu()
+                h5_file['M'][str(i)] = M.cpu()
+                h5_file['sigma'][str(i)] = torch.linalg.eigvals(M).cpu()
 
     # Print
     now = str(datetime.datetime.now())
