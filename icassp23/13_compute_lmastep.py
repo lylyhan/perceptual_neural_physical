@@ -68,7 +68,7 @@ torch.autograd.set_detect_anomaly(True)
 # Make h5 files for M
 for fold in icassp23.FOLDS:
     fold_df = icassp23.load_fold(fold)
-    h5_name = "ftm_{}_J.h5".format(fold)
+    h5_name = "ftm_{}_J_{}.h5".format(fold, id_start)
     h5_path = os.path.join(save_dir, dir_name, h5_name)
     if not os.path.exists(h5_path):
         with h5py.File(h5_path, "w") as h5_file:
@@ -83,7 +83,7 @@ for i in range(id_start, id_end):
     #theta = torch.tensor([row[column] for column in setups.THETA_COLUMNS])
     key = int(row["ID"]) # index in the full dataframe
     fold = row['fold']
-    h5_name = "ftm_{}_J.h5".format(fold)
+    h5_name = "ftm_{}_J_{}.h5".format(fold, id_start)
     h5_path = os.path.join(save_dir, dir_name, h5_name)
     nu = torch.tensor(nus[key, :], requires_grad=True).to("cuda")
     #print(key, i, (nu.detach().numpy() + 1) / 2 * (scaler.data_max_ - scaler.data_min_) + scaler.data_min_, theta)
