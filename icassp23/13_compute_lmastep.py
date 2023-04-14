@@ -63,55 +63,51 @@ S_from_nu = icassp23.pnp_forward_factory(scaler)
 # is low-dimensional (5) whereas the output is high-dimensional (~1e4)
 dS_over_dnu = functorch.jacfwd(S_from_nu)
 
+if not os.exists(os.path.join(save_dir, dir_name)):
+    os.makedirs(os.path.join(save_dir, dir_name), exist_ok=True)
+    torch.autograd.set_detect_anomaly(True)
+    # Make h5 files for M
+    for fold in icassp23.FOLDS:
+        fold_df = icassp23.load_fold(fold)
+        h5_name = "ftm_{}_J.h5".format(fold)
+        h5_path = os.path.join(save_dir, dir_name, h5_name)
+        with h5py.File(h5_path, "w") as h5_file:
+            J_group = h5_file.create_group("J")
+            JdagJ_group = h5_file.create_group("JdagJ")
+            M_group = h5_file.create_group("M")
+            evals_group = h5_file.create_group("sigma")
 
-os.makedirs(os.path.join(save_dir, dir_name), exist_ok=False)
-torch.autograd.set_detect_anomaly(True)
-# Make h5 files for M
-for fold in icassp23.FOLDS:
-    fold_df = icassp23.load_fold(fold)
+fold_df = icassp23.load_fold()
+for i in range(id_start, id_end):
+    row = fold_df.iloc[i]
+    #theta = torch.tensor([row[column] for column in setups.THETA_COLUMNS])
+    key = int(row["ID"]) # index in the full dataframe
+    fold = row['fold']
     h5_name = "ftm_{}_J.h5".format(fold)
     h5_path = os.path.join(save_dir, dir_name, h5_name)
-    with h5py.File(h5_path, "w") as h5_file:
-        J_group = h5_file.create_group("J")
-        JdagJ_group = h5_file.create_group("JdagJ")
-        M_group = h5_file.create_group("M")
-        evals_group = h5_file.create_group("sigma")
+    nu = torch.tensor(nus[key, :], requires_grad=True).to("cuda")
+    #print(key, i, (nu.detach().numpy() + 1) / 2 * (scaler.data_max_ - scaler.data_min_) + scaler.data_min_, theta)
+    #assert nu.detach().numpy() * (scaler.data_max_ - scaler.data_min_) + scaler.data_min_ == theta
 
+    # Compute Jacobian: d(S) / d(nu)
+    J = dS_over_dnu(nu).detach()
+    M = torch.matmul(J.T, J)
+    JdagJ = torch.matmul(torch.inverse(M),J.T)
+    assert M.shape[0] == 5 and M.shape[1] == 5
 
-    # Define row iterator
-    row_iter = fold_df.iterrows()
-    # Loop over batches.
-    batch_size = len(fold_df)
-    n_batches = 1 + len(fold_df) // batch_size
-    
-    for i in range(id_start, id_end):
-    #for i, row in row_iter: # sorted in terms of each fold
-        row = fold_df.iloc[i]
-        #theta = torch.tensor([row[column] for column in setups.THETA_COLUMNS])
-        key = int(row["ID"]) # index in the full dataframe
-        nu = torch.tensor(nus[key, :], requires_grad=True).to("cuda")
-        #print(key, i, (nu.detach().numpy() + 1) / 2 * (scaler.data_max_ - scaler.data_min_) + scaler.data_min_, theta)
-        #assert nu.detach().numpy() * (scaler.data_max_ - scaler.data_min_) + scaler.data_min_ == theta
+    # Append to HDF5 file
+    with h5py.File(h5_path, "a") as h5_file:
+        h5_file['J'][str(i)] = J.cpu()
+        h5_file['JdagJ'][str(i)] = JdagJ.cpu()
+        h5_file['M'][str(i)] = M.cpu()
+        h5_file['sigma'][str(i)] = torch.linalg.eigvals(M).cpu()
 
-        # Compute Jacobian: d(S) / d(nu)
-        J = dS_over_dnu(nu).detach()
-        M = torch.matmul(J.T, J)
-        JdagJ = torch.matmul(torch.inverse(M),J.T)
-        assert M.shape[0] == 5 and M.shape[1] == 5
+# Print
+now = str(datetime.datetime.now())
+sys.stdout.flush()
 
-        # Append to HDF5 file
-        with h5py.File(h5_path, "a") as h5_file:
-            h5_file['J'][str(i)] = J.cpu()
-            h5_file['JdagJ'][str(i)] = JdagJ.cpu()
-            h5_file['M'][str(i)] = M.cpu()
-            h5_file['sigma'][str(i)] = torch.linalg.eigvals(M).cpu()
-
-    # Print
-    now = str(datetime.datetime.now())
-    sys.stdout.flush()
-
-    # Empty line between folds
-    print("")
+# Empty line between folds
+print("")
 
 
 # Print elapsed time.
