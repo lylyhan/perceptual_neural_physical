@@ -63,14 +63,14 @@ S_from_nu = icassp23.pnp_forward_factory(scaler)
 # is low-dimensional (5) whereas the output is high-dimensional (~1e4)
 dS_over_dnu = functorch.jacfwd(S_from_nu)
 
-if not os.exists(os.path.join(save_dir, dir_name)):
-    os.makedirs(os.path.join(save_dir, dir_name), exist_ok=True)
-    torch.autograd.set_detect_anomaly(True)
-    # Make h5 files for M
-    for fold in icassp23.FOLDS:
-        fold_df = icassp23.load_fold(fold)
-        h5_name = "ftm_{}_J.h5".format(fold)
-        h5_path = os.path.join(save_dir, dir_name, h5_name)
+os.makedirs(os.path.join(save_dir, dir_name), exist_ok=True)
+torch.autograd.set_detect_anomaly(True)
+# Make h5 files for M
+for fold in icassp23.FOLDS:
+    fold_df = icassp23.load_fold(fold)
+    h5_name = "ftm_{}_J.h5".format(fold)
+    h5_path = os.path.join(save_dir, dir_name, h5_name)
+    if not os.path.exists(h5_path):
         with h5py.File(h5_path, "w") as h5_file:
             J_group = h5_file.create_group("J")
             JdagJ_group = h5_file.create_group("JdagJ")
