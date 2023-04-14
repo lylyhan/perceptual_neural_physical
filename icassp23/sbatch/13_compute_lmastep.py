@@ -10,7 +10,7 @@ n_threads = 50
 n_per_th = id_max // n_threads
 script_name = os.path.basename(__file__)
 script_path = os.path.abspath(os.path.join("..", script_name))
-save_dir = "/gpfsstore/rech/rwb/ufg99no/pnp_data"
+save_dir = "/gpfswork/rech/rwb/ufg99no/data/icassp_data"
 
 # Create folder.
 sbatch_dir = os.path.join(".", script_name[:-3])
@@ -48,7 +48,7 @@ for n_thread in range(n_threads):
         f.write("module purge\n")
         f.write("\n")
         f.write("module load pytorch-gpu/py3/1.12.1\n")
-        f.write(" ".join(["python"] + cmd_args) + "\"\n")
+        f.write(" ".join(["python"] + cmd_args) + "\n")
         f.write("\n")
 
 
