@@ -88,19 +88,25 @@ for i in range(id_start, id_end):
     nu = torch.tensor(nus[key, :], requires_grad=True).to("cuda")
     #print(key, i, (nu.detach().numpy() + 1) / 2 * (scaler.data_max_ - scaler.data_min_) + scaler.data_min_, theta)
     #assert nu.detach().numpy() * (scaler.data_max_ - scaler.data_min_) + scaler.data_min_ == theta
+    with h5py.File(h5_path, "r") as h5_file:
+        if str(i) not in h5_file['sigma'].keys():
+            # Compute Jacobian: d(S) / d(nu)
+            ismake = True
+        else:
+            ismake = False
+    
+    if ismake:
+        J = dS_over_dnu(nu).detach()
+        M = torch.matmul(J.T, J)
+        JdagJ = torch.matmul(torch.inverse(M),J.T)
+        assert M.shape[0] == 5 and M.shape[1] == 5
 
-    # Compute Jacobian: d(S) / d(nu)
-    J = dS_over_dnu(nu).detach()
-    M = torch.matmul(J.T, J)
-    JdagJ = torch.matmul(torch.inverse(M),J.T)
-    assert M.shape[0] == 5 and M.shape[1] == 5
-
-    # Append to HDF5 file
-    with h5py.File(h5_path, "a") as h5_file:
-        h5_file['J'][str(i)] = J.cpu()
-        h5_file['JdagJ'][str(i)] = JdagJ.cpu()
-        h5_file['M'][str(i)] = M.cpu()
-        h5_file['sigma'][str(i)] = torch.linalg.eigvals(M).cpu()
+        # Append to HDF5 file
+        with h5py.File(h5_path, "a") as h5_file:
+            h5_file['J'][str(i)] = J.cpu()
+            h5_file['JdagJ'][str(i)] = JdagJ.cpu()
+            h5_file['M'][str(i)] = M.cpu()
+            h5_file['sigma'][str(i)] = torch.linalg.eigvals(M).cpu()
 
 # Print
 now = str(datetime.datetime.now())
