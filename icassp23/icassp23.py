@@ -13,7 +13,7 @@ import numpy as np
 FOLDS = ["train", "test", "val"]
 THETA_COLUMNS = ["omega", "tau", "p", "D", "alpha"]
 SAMPLES_PER_EPOCH = 512*50
-logscale = False
+logscale = True
 synth_type = "ftm"
 
 jtfs_params = dict(
@@ -93,7 +93,7 @@ def scale_theta():
         if not logscale and column in ["omega", "p", "D"]:
             theta.append(10 ** full_df[column].values)
         else:
-            train_theta.append(full_df[column].values)
+            theta.append(full_df[column].values)
     theta = np.stack(theta, axis=1)
     #theta = np.stack([
     #    full_df[column].values for column in THETA_COLUMNS

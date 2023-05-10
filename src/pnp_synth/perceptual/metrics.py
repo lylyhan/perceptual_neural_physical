@@ -86,7 +86,7 @@ class MSSloss(Metric):
         
         wav_gt = torch.stack(wav_gt)
         wav_pred = torch.stack(wav_pred)
-        self.dist += auraloss.freq.MultiResolutionSTFTLoss()(wav_pred, wav_gt)
+        self.dist += auraloss.freq.MultiResolutionSTFTLoss()(wav_pred.unsqueeze(1), wav_gt.unsqueeze(1))
         self.total += 1 #accumulate number of steps (number of batches)
 
     def compute(self):

@@ -19,7 +19,7 @@ from datetime import timedelta
 
 import icassp23
 from pnp_synth.neural import cnn
-
+from pnp_synth import utils
 
 start_time = int(time.time())
 print(str(datetime.datetime.now()) + " Start.")
@@ -46,17 +46,36 @@ model_dir = os.path.join(save_dir, "f_W")
 cqt_dir = data_dir
 
 
-epoch_max = 70
+epoch_max = 35
 steps_per_epoch = icassp23.SAMPLES_PER_EPOCH / batch_size
 max_steps = steps_per_epoch * epoch_max
 # feature parameters
 Q = 12
 J = 10
-outdim = 4
+outdim = 5
 bn_var = 0.5
+sr = 22050
 cnn_type = "efficientnet"  # efficientnet / cnn.wav2shape
 loss_type = "ploss"  # spec / weighted_p / ploss
 weight_type = "None"  # novol / pnp / None
+LMA = {
+    'mode': "constant", #scheduled / constant
+    'lambda': 1,
+    'threshold': 1e+8,
+    'accelerator': 0.5,
+    'brake': 1,
+    'damping': "mean"
+}
+logscale_theta = True
+synth_type = "ftm"
+lr = 1e-3
+minmax = True
+utils.logscale = logscale_theta 
+icassp23.logscale = logscale_theta
+utils.synth_type = synth_type
+assert utils.logscale == logscale_theta
+assert icassp23.logscale == logscale_theta
+
 
 if __name__ == "__main__":
     print("Current device: ", torch.cuda.get_device_name(0))
@@ -73,14 +92,26 @@ if __name__ == "__main__":
                 "batch_size" + str(batch_size),
                 "bn_var" + str(bn_var),
                 "init-" + str(init_id),
+                "LMA_" + str(np.log10(LMA['lambda'])) + "_" + LMA['mode'],
+                "brake_"+"{:0.2f}".format(LMA['brake']),
+                "damping_"+str(LMA['damping']),
                 "outdim-" + str(outdim),
+                "log-" + str(logscale_theta),
+                "minmax-" + str(minmax),
+                "lr-"+ str(lr)
             ]
         ),
     )
     os.makedirs(model_save_path, exist_ok=True)
     pred_path = os.path.join(model_save_path, "test_predictions.npy")
-    y_norms, scaler = icassp23.scale_theta()
+
+    if minmax:
+        nus, scaler = icassp23.scale_theta()
+    else:
+        scaler = None
+    #no min max scaling
     full_df = icassp23.load_fold(fold="full")
+
     # initialize dataset
     dataset = cnn.DrumDataModule(
         batch_size=batch_size,
@@ -92,6 +123,7 @@ if __name__ == "__main__":
         feature="cqt",
         J=J,
         Q=Q,
+        sr=sr,
         scaler=scaler,
         num_workers=0
     )
@@ -103,7 +135,7 @@ if __name__ == "__main__":
             in_channels=1, bin_per_oct=Q, outdim=outdim, loss=loss_type, scaler=scaler
         )
     elif cnn_type == "efficientnet":
-        model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, var=bn_var, save_path=pred_path)
+        model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, LMA=LMA, var=bn_var, save_path=pred_path, lr=lr, minmax=minmax)
     print(str(datetime.datetime.now()) + " Finished initializing model")
 
     # initialize checkpoint methods
@@ -120,7 +152,6 @@ if __name__ == "__main__":
     trainer = pl.Trainer(
         accelerator="gpu",
         devices=-1,
-        auto_select_gpus=True,
         max_epochs=epoch_max,
         max_steps=max_steps,
         limit_train_batches=steps_per_epoch,  # if integer than it's #steps per epoch, if float then it's percentage
@@ -137,7 +168,7 @@ if __name__ == "__main__":
         trainer.fit(model, dataset)
     else:
         print("Skipped Training, loading model")
-        model = model.load_from_checkpoint(os.path.join(model_save_path, ckpt_path),in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, var=bn_var, save_path=pred_path)
+        model = model.load_from_checkpoint(os.path.join(model_save_path, ckpt_path),in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, var=bn_var, save_path=pred_path, lr=lr, LMA=LMA, minmax=minmax)
 
     test_loss = trainer.test(model, dataset, verbose=False)
     print("Model saved at: {}".format(model_save_path))
