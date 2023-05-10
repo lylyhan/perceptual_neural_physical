@@ -53,9 +53,7 @@ with open(file_path, "w") as f:
     # Loop over folds: training and validation.
     for init_id in range(n_inits):
         # Define job name.
-        job_name = "_".join(
-            [script_name[:2], "init-" + str(n_inits).zfill(len(str(init_id)))]
-        )
+        job_name = "_".join([script_name, "init-" + str(init_id)])
         sbatch_str = "sbatch " + job_name + ".sbatch"
         # Write SBATCH command to shell file.
         f.write(sbatch_str + "\n")
