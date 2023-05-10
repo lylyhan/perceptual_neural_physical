@@ -12,5 +12,5 @@
 module purge
 module load pytorch-gpu/py3/1.12.1
 
-#python /gpfsdswork/projects/rech/rwb/ufg99no/perceptual_neural_physical/icassp23/14_merge_h5file.py
+python /gpfsdswork/projects/rech/rwb/ufg99no/perceptual_neural_physical/icassp23/14_merge_h5file.py
 

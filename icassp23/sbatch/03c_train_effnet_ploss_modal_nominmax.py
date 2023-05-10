@@ -32,7 +32,7 @@ for init_id in range(n_inits):
         f.write("module purge\n")
         f.write("module load pytorch-gpu/py3/1.12.1\n")
         f.write("\n")
-        f.write(" ".join(["python"] + cmd_args) + "\"\n")
+        f.write(" ".join(["python"] + cmd_args) + "\n")
         f.write("\n")
 
 

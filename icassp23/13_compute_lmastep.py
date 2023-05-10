@@ -32,7 +32,8 @@ for module in [kymatio, np, pd, sklearn, torch]:
 print("")
 sys.stdout.flush()
 
-dir_name = "J_modal_nominmax"
+dir_name = "J_modal_nominmax_log"
+eps = 1e-3
 
 if "nominmax" in dir_name:
     scaler = None
@@ -98,7 +99,10 @@ for i in range(id_start, id_end):
     if ismake:
         J = dS_over_dnu(nu).detach()
         M = torch.matmul(J.T, J)
-        JdagJ = torch.matmul(torch.inverse(M),J.T)
+        try:
+            JdagJ = torch.matmul(torch.inverse(M),J.T)
+        except:
+            JdagJ = torch.matmul(torch.inverse(M + eps * torch.eye(5)),J.T)
         assert M.shape[0] == 5 and M.shape[1] == 5
 
         # Append to HDF5 file
