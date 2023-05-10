@@ -10,7 +10,7 @@ n_threads = 50
 n_per_th = id_max // n_threads
 script_name = os.path.basename(__file__)
 script_path = os.path.abspath(os.path.join("..", script_name))
-save_dir = "/gpfswork/rech/rwb/ufg99no/data/icassp_data"
+save_dir = "/gpfswork/rech/rwb/ufg99no/data/icassp23_data"
 
 # Create folder.
 sbatch_dir = os.path.join(".", script_name[:-3])
@@ -41,7 +41,7 @@ for n_thread in range(n_threads):
         f.write("#SBATCH --gres=gpu:1\n")
         f.write("#SBATCH --cpus-per-task=10\n")
 
-        f.write("#SBATCH --time=6:00:00\n")
+        f.write("#SBATCH --time=20:00:00\n")
         f.write("#SBATCH -A aej@v100\n")
         f.write("#SBATCH --output=" + job_name + "_%j.out\n")
         f.write("\n")
