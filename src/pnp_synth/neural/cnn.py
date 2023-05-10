@@ -21,6 +21,8 @@ import joblib
 
 #logscale param
 eps = 1e-3
+#relu epsilon
+eps_relu = torch.tensor(1e-5)
 
 
 class ConvNormActivation2d(nn.Module):
@@ -145,19 +147,32 @@ class wav2shape(pl.LightningModule):
 
 
 class EffNet(pl.LightningModule):
-    def __init__(self, in_channels,outdim,loss,scaler,var,save_path,LMA=None):
+    def __init__(self, in_channels,outdim,loss,scaler,var,save_path, lr=1e-3, minmax=True, LMA=None):
         super().__init__()
         self.scaler = scaler
+        self.lr = lr
         self.batchnorm1 = nn.BatchNorm2d(1, eps=1e-05, momentum=0.1, affine=True,
                            track_running_stats=True)
         self.conv2d = nn.Conv2d(in_channels=1, out_channels=3,kernel_size=(3,3))
-        self.model = torchvision.models.efficientnet_b0(in_channels=in_channels, num_classes=outdim)
-        #disable efficientnet last linear layer's bias
-        if self.model.get_submodule('classifier')[1].bias.requires_grad:
-            self.model.get_submodule('classifier')[1].bias.requires_grad = False
-            assert torch.sum(self.model.get_submodule('classifier')[1].bias) == 0
-        self.batchnorm2 = nn.BatchNorm1d(outdim, eps=1e-5, momentum=0.1, affine=True)
-        self.act = nn.Tanh()
+        self.model = torchvision.models.efficientnet_b0(num_classes=outdim)#,in_channels=in_channels)
+        self.minmax = minmax
+        if self.minmax:
+            #disable efficientnet last linear layer's bias
+            if self.model.get_submodule('classifier')[1].bias.requires_grad:
+                self.model.get_submodule('classifier')[1].bias.requires_grad = False
+                assert torch.sum(self.model.get_submodule('classifier')[1].bias) == 0
+            self.batchnorm2 = nn.BatchNorm1d(outdim, eps=1e-5, momentum=0.1, affine=True)
+            self.act = nn.Tanh()
+        else:
+            if utils.logscale:
+                self.act = nn.Linear(in_features=outdim, out_features=outdim)
+            else:
+                if loss == "spec":
+                    self.act = nn.Softplus() #guarantees nonzero and improves gradient
+                else:
+                    self.act = nn.Softplus()#nn.LeakyReLU() #nn.Softplus()
+                
+            
         self.loss_type = loss
         if self.loss_type == "ploss":
             self.loss = F.mse_loss
@@ -168,6 +183,8 @@ class EffNet(pl.LightningModule):
             self.specloss = auraloss.freq.MultiResolutionSTFTLoss()
         elif self.loss_type == "LMA":
             self.loss = losses.TimeFrequencyScatteringLoss(self.scaler)
+        elif self.loss_type == "fid":
+            self.loss = losses.loss_fid
         self.save_path = save_path
         self.val_loss = None
         self.outdim = outdim
@@ -198,14 +215,20 @@ class EffNet(pl.LightningModule):
         self.test_preds = []
         self.test_gts = []
         self.Ms = []
+        self.train_outputs = []
+        self.test_outputs = []
+        self.val_outputs = []
 
     def forward(self, input_tensor):
         input_tensor = input_tensor.unsqueeze(1)
         x = self.batchnorm1(input_tensor)
         x = self.conv2d(x) # adapt to efficientnet's mandatory 3 input channels
         x = self.model(x)
-        x = self.batchnorm2(x) * self.std
-        x = self.act(x)
+        if self.minmax:
+            x = self.batchnorm2(x) * self.std
+        x = self.act(x) 
+        if not self.minmax and not utils.logscale and self.loss_type == "spec":
+            x = torch.abs(x) + eps_relu
         return x
 
     def step(self, batch, fold):
@@ -214,14 +237,15 @@ class EffNet(pl.LightningModule):
         weight = batch['weight'].to(self.current_device)
         try:
             M = batch['M'].to(self.current_device).double()
+        except:
+            M = None
+        M_mean = batch['M_mean'].to(self.current_device)
+        try:
             metric_weight = batch['metric_weight'].to(self.current_device)
-            M_mean = batch['M_mean'].to(self.current_device)
             JdagJ = batch['JdagJ'].to(self.current_device)
         except:
-            M, metric_weight, M_mean, JdagJ = None, None, None, None
-        
-        outputs = self(Sy)
-
+            metric_weight, JdagJ = None, None
+        outputs = self(Sy) 
         assert outputs.shape[1] == self.outdim
         # match outputs and y dimension
         if outputs.shape[1] == 4 and y.shape[1] == 5:
@@ -232,6 +256,8 @@ class EffNet(pl.LightningModule):
             loss = self.loss(outputs, y, self.specloss, self.scaler)
         elif self.loss_type == "LMA":
             loss = self.loss(outputs, y, JdagJ)
+        elif self.loss_type == "fid":
+            loss = self.loss(outputs, y)
         else:
             if self.loss_type == "weighted_p":
                 if fold == "val" or fold == "test":
@@ -261,10 +287,16 @@ class EffNet(pl.LightningModule):
             self.test_preds.append(outputs)
             self.test_gts.append(y)
             self.Ms.append(M)
-
+        
+        if fold == "train":
+            self.train_outputs.append(loss)
+        elif fold == "test":
+            self.test_outputs.append(loss)
+        elif fold == "val":
+            self.val_outputs.append(loss)
         return {'loss': loss}
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch):
         return self.step(batch, "train")
 
     def validation_step(self, batch, batch_idx):
@@ -273,13 +305,18 @@ class EffNet(pl.LightningModule):
     def test_step(self, batch, batch_idx):
         return self.step(batch, "test")
 
-    def training_epoch_end(self, outputs):
-        loss = torch.stack([x['loss'] for x in outputs]).mean()
-        self.log('train_loss', loss, prog_bar=False)
+    def on_train_epoch_start(self):
+        self.train_outputs = []
+        self.test_outputs = []
+        self.val_outputs = []
 
-    def test_epoch_end(self, outputs):
-        avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
-        avg_macro_metric = self.metric_macro.compute() #torch.stack(x['metric'] for x in outputs).mean()
+    def on_train_epoch_end(self):
+        avg_loss = torch.tensor(self.train_outputs).mean()
+        self.log('train_loss', avg_loss, prog_bar=False)
+    
+    def on_test_epoch_end(self):
+        avg_loss = torch.tensor(self.test_outputs).mean()
+        avg_macro_metric = self.metric_macro.compute() 
         avg_micro_metric = self.metric_micro.compute()
         avg_mss_metric = self.metric_mss.compute()
         self.log('test_loss', avg_loss)
@@ -300,12 +337,9 @@ class EffNet(pl.LightningModule):
                                     allow_pickle=True)
 
         return avg_loss, avg_macro_metric, avg_micro_metric, avg_mss_metric
-    
-    def validation_epoch_end(self, outputs):
-        # outputs = list of dictionaries
-        avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
 
-
+    def on_validation_epoch_end(self):
+        avg_loss = torch.tensor(self.val_outputs).mean()
         if self.loss_type == "weighted_p":
             if self.LMA_mode == "adaptive":
                 # Levenburg-Marquardt Algorithm, lambda decay heuristics
@@ -331,7 +365,7 @@ class EffNet(pl.LightningModule):
         return {'val_loss': avg_loss}
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=1e-3)
+        return torch.optim.Adam(self.parameters(), lr=self.lr)
 
 
 class DrumData(Dataset):
@@ -373,10 +407,7 @@ class DrumData(Dataset):
             else:
                 fmin = 32.7
             self.cqt_from_x = CQT(**cqt_params,fmin=fmin).cuda()
-        try:
-            self.M_mean, self.sigma_mean = self.M_mean()
-        except:
-            self.M_mean, self.sigma_mean = None, None
+        self.M_mean, self.sigma_mean = self.make_M_mean()
         # Initialize joblib Memory object
         # self.cqt_memory = joblib.Memory(cqt_dir, verbose=0)
         # self.cqt_from_id = self.cqt_memory.cache(self.cqt_from_id)
@@ -407,12 +438,8 @@ class DrumData(Dataset):
         #load from h5
         if os.path.exists(self.weights_dir):
             with h5py.File(self.weights_dir, "r") as f:
-                try:
-                    M = torch.tensor(np.array(f['M'][str(id)]))
-                    sigma = torch.abs(torch.tensor(f['sigma'][str(id)]))
-                except:
-                    M = None
-                    sigma = None
+                M = torch.tensor(np.array(f['M'][str(id)]))
+                sigma = torch.abs(torch.tensor(f['sigma'][str(id)]))
                 try:
                     JdagJ = torch.tensor(np.array(f['JdagJ'][str(id)]))
                 except:
@@ -421,11 +448,8 @@ class DrumData(Dataset):
         else:
             return None, None, None
 
-        #load from numpy files
-        #i_prefix = "icassp23_" + str(id).zfill(len(self.ids))
-        #return np.load(os.path.join(self.weights_dir, self.fold, i_prefix + "_grad_jtfs.py"))
 
-    def M_mean(self):
+    def make_M_mean(self):
         #load from h5
         M_mean = None
         sigma_mean = None
@@ -438,7 +462,6 @@ class DrumData(Dataset):
                 M_mean = M if M_mean is None else M_mean + M
                 sigma_mean = sigma if sigma_mean is None else sigma_mean + sigma
                 count += 1
-            
         return M_mean / count, sigma_mean / count
 
     def cqt_from_id(self, id, eps):
@@ -493,17 +516,6 @@ class DrumDataModule(pl.LightningDataModule):
         test_ids = self.full_df[self.full_df["fold"]=="test"]['ID'].values
         val_ids = self.full_df[self.full_df["fold"]=="val"]['ID'].values
 
-        """
-        #temporary: only keep 1 file in the dataset
-        temp_n = 256
-        train_ids = np.array(train_ids[:temp_n])
-        test_ids = np.array(test_ids[:temp_n])
-        val_ids = np.array(val_ids[:temp_n])
-        y_norms_train = y_norms_train[:temp_n,:]
-        y_norms_test = y_norms_test[:temp_n,:]
-        y_norms_val = y_norms_val[:temp_n,:]
-        """
-
         self.train_ds = DrumData(y_norms_train, #partial dataframe
                                 train_ids,
                                 os.path.join(self.data_dir, self.synth_type + "_train_audio.h5"),
@@ -546,12 +558,18 @@ class DrumDataModule(pl.LightningDataModule):
         y = torch.tensor(np.array([s['y'].astype(np.float32) for s in batch]))
         weight = torch.stack([s['weight'] for s in batch])
         try:
-            metric_weight = torch.stack([s['metric_weight'] for s in batch])
-            M_mean = torch.stack([s['M_mean'] for s in batch])
-            JdagJ = torch.stack([s['JdagJ'] for s in batch])
             M = torch.stack([s['M'] for s in batch])
+        except:
+            M = None
+        try:
+            M_mean = torch.stack([s['M_mean'] for s in batch])
+        except:
+            M_mean = None
+        try:
+            metric_weight = torch.stack([s['metric_weight'] for s in batch])           
+            JdagJ = torch.stack([s['JdagJ'] for s in batch])
         except: 
-            metric_weight, M_mean, JdagJ, M = None, None, None, None
+            metric_weight, JdagJ = None, None
 
         return {'feature': Sy, 'y': y, 'weight': weight, 'M': M, 'metric_weight': metric_weight, 'M_mean': M_mean, 'JdagJ': JdagJ}
 

@@ -15,7 +15,7 @@ folds = ["train", "test", "val"]
 synth_type = "ftm"
 if synth_type == "ftm":
     THETA_COLUMNS = ["omega", "tau", "p", "D", "alpha"]
-    logscale = False
+    logscale = True
 
     jtfs_params = dict(
         J=13,  # scattering scale ~ 1000 ms

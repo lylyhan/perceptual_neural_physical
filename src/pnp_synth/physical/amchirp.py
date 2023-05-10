@@ -26,9 +26,13 @@ def generate_am_chirp(theta, logscale, bw=2, duration=4, sr=2**13):
     gamma = 10 ** theta[2] if logscale else theta[2]
     sigma0 = 0.1
     t = torch.arange(-duration/2, duration/2, 1/sr).to(theta.device)
-    carrier = torch.sin(2*np.pi*f_c / (gamma*np.log(2)) * (2 ** (gamma*t) - 1))
+    carrier = torch.sin(2*np.pi*f_c / (gamma*np.log(2)) * (2 ** (gamma*t) - 1)) 
     modulator = torch.sin(2 * torch.pi * f_m * t)
     window_std = sigma0 * bw / gamma
     window = gaussian(duration*sr, std=window_std*sr,device=theta.device)
     x = carrier * modulator * window * float(gamma)
+    if gamma == 0 or torch.sum(carrier == torch.nan)>0: #gamma=0 will break it entirely
+        carrier = torch.sin(2*np.pi*f_c * (2 ** (gamma*t) - 1))
+        modulator = torch.sin(2 * torch.pi * f_m * t)
+        x = carrier * modulator * float(gamma)
     return x

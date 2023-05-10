@@ -122,7 +122,7 @@ def Phicircg(y, jtfs_operator, scaler):
     Ss = torch.stack(Ss)
     return Ss
 
-def loss_spec(outputs, y, specloss,scaler):
+def loss_spec(outputs, y, specloss, scaler):
     #put through synth ##TODO: need the batch processing!!! or make a loop
     #temporary loop
     wav_gt = []
@@ -132,6 +132,7 @@ def loss_spec(outputs, y, specloss,scaler):
         wav_pred.append(forward.pnp_forward(outputs[i,:], Phi=nn.Identity(), g=utils.x_from_theta, scaler=scaler))
     wav_gt = torch.stack(wav_gt)
     wav_pred = torch.stack(wav_pred)
+    #print("is there any sound", torch.norm(wav_gt), torch.norm(wav_pred), outputs)
     loss = specloss(wav_pred, wav_gt)
     return loss
 
@@ -140,3 +141,14 @@ def loss_bilinear(outputs, y, M):
     loss = torch.bmm(torch.bmm(diff[:,None,:], M), diff[:,:,None])
     loss = torch.relu(loss) #/1e+5
     return 0.5*torch.mean(loss.squeeze())
+
+def loss_fid(outputs, y):
+    mu_pred = torch.mean(outputs,axis=0)
+    mu_gt = torch.mean(outputs, axis=0)
+    cov_pred = torch.cov(outputs.T)
+    cov_gt = torch.cov(y.T)
+    CC = torch.matmul(cov_gt.double(), cov_pred.double())
+    eigenvals = torch.linalg.eigvals(CC)
+    trace_sqrt_CC = eigenvals.real.clamp(min=0).sqrt().sum()
+    fid = ((mu_pred - mu_gt) ** 2).sum() + cov_pred.trace() + cov_gt.trace() - 2 * trace_sqrt_CC
+    return fid
