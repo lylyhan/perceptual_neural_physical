@@ -13,7 +13,6 @@ sbatch_dir = os.path.join(".", script_name)
 os.makedirs(sbatch_dir, exist_ok=True)
 
 for init_id in range(n_inits):
-    script_name = script_name.replace("eval", "train")
     job_name = "_".join([script_name, "init-" + str(init_id)])
 
     file_name = job_name + ".sbatch"
@@ -22,7 +21,7 @@ for init_id in range(n_inits):
     ckpt_path = os.path.join(save_dir, "f_W", model_path, ckpt_path)
     # Generate file.
     with open(file_path, "w") as f:
-        cmd_args = [script_path, save_dir, str(init_id), str(batch_size), ckpt_path]
+        cmd_args = [script_path.replace("eval", "train"), save_dir, str(init_id), str(batch_size), ckpt_path]
 
         f.write("#!/bin/bash\n")
         f.write("\n")
