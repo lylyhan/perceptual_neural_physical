@@ -68,7 +68,7 @@ LMA = {
 }
 logscale_theta = True
 synth_type = "ftm"
-lr = 1e-3
+lr = 1e-5
 minmax = True
 utils.logscale = logscale_theta 
 icassp23.logscale = logscale_theta
@@ -165,6 +165,7 @@ if __name__ == "__main__":
     else:
         print("Skipped Training, loading model")
         model = model.load_from_checkpoint(os.path.join(model_save_path, ckpt_path),in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, var=bn_var, save_path=pred_path, lr=lr, LMA=LMA, minmax=minmax)
+        model.fit(model, dataset)
 
     test_loss = trainer.test(model, dataset, verbose=False)
     print("Model saved at: {}".format(model_save_path))
