@@ -4,7 +4,8 @@ import numpy as np
 import os
 import pandas as pd
 import pnp_synth
-from pnp_synth.neural import forward
+from pnp_synth.neural import forward, loss
+import torch.nn as nn
 from pnp_synth.physical import ftm
 import sklearn.preprocessing
 import torch
@@ -28,6 +29,14 @@ jtfs_params = dict(
     pad_mode_fr='zero'
 )
 
+mss_param = dict(
+    max_n_fft=2048,
+    num_scales=6,
+    hop_lengths=None,
+    mag_w=1.0,
+    logmag_w=0.0,
+    p=1.0,
+)
 
 def load_fold(fold="full"):
     """Load DataFrame."""
@@ -122,3 +131,65 @@ def x_from_theta(theta):
     """Drum synthesizer, based on the Functional Transformation Method (FTM)."""
     x = ftm.rectangular_drum(theta, logscale, **ftm.constants)
     return x
+
+def pnp_forward_factory_mss(scaler):
+    """
+    Computes S = (Phi o g o h^{-1})(nu) = (Phi o g)(theta) = Phi(x), given:
+    1. a MinMax scaler h
+    2. an FTM synthesizer g
+    3. a JTFS representation Phi
+    """
+
+    return functools.partial(
+        forward.pnp_forward, Phi=MultiScaleSpectralLoss(), g=x_from_theta, scaler=scaler
+    )
+
+class MultiScaleSpectralLoss(nn.Module):
+    def __init__(
+        self,
+        max_n_fft=2048,
+        num_scales=6,
+        hop_lengths=None,
+        mag_w=1.0,
+        logmag_w=0.0,
+    ):
+        super().__init__()
+        assert max_n_fft // 2 ** (num_scales - 1) > 1
+        self.max_n_fft = 2048
+        self.n_ffts = [max_n_fft // (2**i) for i in range(num_scales)]
+        self.hop_lengths = (
+            [n // 4 for n in self.n_ffts] if not hop_lengths else hop_lengths
+        )
+        self.mag_w = mag_w
+        self.logmag_w = logmag_w
+
+        self.create_ops()
+
+    def create_ops(self):
+        self.ops = [
+            MagnitudeSTFT(n_fft, self.hop_lengths[i])
+            for i, n_fft in enumerate(self.n_ffts)
+        ]
+
+    def forward(self, x):
+        S = []
+        for op in self.ops:
+            S.append(op(x).flatten())
+        S = torch.cat(S)
+        return S
+
+class MagnitudeSTFT(nn.Module):
+    def __init__(self, n_fft, hop_length):
+        super().__init__()
+
+        self.n_fft = n_fft
+        self.hop_length = hop_length
+
+    def forward(self, x):
+        return torch.stft(
+            x,
+            n_fft=self.n_fft,
+            hop_length=self.hop_length,
+            window=torch.hann_window(self.n_fft).type_as(x),
+            return_complex=True,
+        ).abs()
