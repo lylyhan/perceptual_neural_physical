@@ -32,7 +32,7 @@ for module in [kymatio, np, pd, sklearn, torch]:
 print("")
 sys.stdout.flush()
 
-dir_name = "J_modal_nominmax_log"
+dir_name = "J_modal_log"
 eps = 1e-3
 
 if "nominmax" in dir_name:
@@ -53,11 +53,23 @@ if "nominmax" in dir_name:
     nus = np.stack(nus, axis=1)        
 
 else:
-    # Rescale shape parameters ("theta") to the interval [0, 1].
-    nus, scaler = icassp23.scale_theta() #sorted in terms of id
+    _, scaler = icassp23.scale_theta() #sorted in terms of id
+    if "log" in dir_name:
+        logscale = True
+    else:
+        logscale = False
+
+    full_df = icassp23.load_fold()
+    nus = []
+    for column in icassp23.THETA_COLUMNS:
+        if not logscale and column in ["omega", "p", "D"]:
+            nus.append(10 ** full_df[column].values)
+        else:
+            nus.append(full_df[column].values)
+    nus = np.stack(nus, axis=1)   
 
 # Define the forward PNP operator.
-S_from_nu = icassp23.pnp_forward_factory(scaler)
+S_from_nu = icassp23.pnp_forward_factory_mss(scaler)
 
 # Define the associated Jacobian operator.
 # NB: jacfwd is faster than reverse-mode autodiff here because the input
