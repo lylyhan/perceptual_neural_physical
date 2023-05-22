@@ -8,6 +8,7 @@ from kymatio.torch import TimeFrequencyScattering1D
 #from kymatio.torch import TimeFrequencyScattering as TimeFrequencyScattering1D
 #from kymatio.scattering1d.frontend.torch_frontend import TimeFrequencyScatteringTorch as TimeFrequencyScattering1D
 import functools
+import torch.nn.functional as F
 
 
 class DistanceLoss(nn.Module):
@@ -141,6 +142,17 @@ def loss_bilinear(outputs, y, M):
     loss = torch.bmm(torch.bmm(diff[:,None,:], M), diff[:,:,None])
     loss = torch.relu(loss) #/1e+5
     return 0.5*torch.mean(loss.squeeze())
+
+def loss_interpolate(outputs, y, M):
+    diff = outputs - y
+    ploss = F.mse_loss(outputs, y)
+    #print("ratio", ploss / torch.norm(y)) 
+    if ploss / torch.norm(y) > 0.01:
+        return ploss
+    else:
+        loss = torch.bmm(torch.bmm(diff[:,None,:], M), diff[:,:,None])
+        loss = torch.relu(loss) #/1e+5
+        return 0.5*torch.mean(loss.squeeze())
 
 def loss_fid(outputs, y):
     mu_pred = torch.mean(outputs,axis=0)

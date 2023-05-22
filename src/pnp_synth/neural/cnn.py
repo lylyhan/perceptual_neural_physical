@@ -74,6 +74,8 @@ class wav2shape(pl.LightningModule):
         elif self.loss_type == "spec":
             self.loss = losses.loss_spec
             self.specloss = auraloss.freq.MultiResolutionSTFTLoss()
+        elif self.loss_type == "interp_pnp":
+            self.loss = losses.loss_interpolate
         self.scaler = scaler
         self.outdim = outdim
         self.metric_macro = metrics.JTFSloss(self.scaler, "macro")
@@ -102,9 +104,9 @@ class wav2shape(pl.LightningModule):
         if self.loss_type == "spec":
             loss = self.loss(outputs, y, self.specloss, self.scaler)
         else:
-            if self.loss_type == "weighted_p":
+            if self.loss_type == "weighted_p" or self.loss_type == "interp_pnp":
                 loss = self.loss(weight[:,None] * outputs, y, M)
-            else:
+            else: #ploss
                 loss = self.loss(weight[:,None] * outputs, y)
         #compute metrics
         if fold == "test":
@@ -181,10 +183,15 @@ class EffNet(pl.LightningModule):
         elif self.loss_type == "spec":
             self.loss = losses.loss_spec
             self.specloss = auraloss.freq.MultiResolutionSTFTLoss()
+        elif self.loss_type == "specl2":
+            self.loss = losses.loss_spec
+            self.specloss = losses.MultiScaleSpectralLoss(p=2)
         elif self.loss_type == "LMA":
             self.loss = losses.TimeFrequencyScatteringLoss(self.scaler)
         elif self.loss_type == "fid":
             self.loss = losses.loss_fid
+        elif self.loss_type == "interp_pnp":
+            self.loss = losses.loss_interpolate
         self.save_path = save_path
         self.val_loss = None
         self.outdim = outdim
@@ -252,14 +259,14 @@ class EffNet(pl.LightningModule):
             outputs = torch.cat((y[:,0][:,None], outputs),dim=1)
         
         #compute loss function
-        if self.loss_type == "spec":
+        if self.loss_type == "spec" or self.loss_type == "specl2":
             loss = self.loss(outputs, y, self.specloss, self.scaler)
         elif self.loss_type == "LMA":
             loss = self.loss(outputs, y, JdagJ)
         elif self.loss_type == "fid":
             loss = self.loss(outputs, y)
         else:
-            if self.loss_type == "weighted_p":
+            if self.loss_type == "weighted_p" or self.loss_type == "interp_pnp":
                 if fold == "val" or fold == "test":
                     D = torch.zeros(M.shape).double()
                 elif self.LMA_damping == "id":
@@ -269,7 +276,6 @@ class EffNet(pl.LightningModule):
                     D = torch.diag_embed(diags)
                 elif self.LMA_damping == "mean": #mean sigma is in ascending order
                     D = M_mean
-                    
                 D = self.LMA_lambda * D.to(self.current_device)
                 M = M + D
                 loss = self.loss(
@@ -279,6 +285,7 @@ class EffNet(pl.LightningModule):
                 )
             else: #ploss
                 loss = self.loss(weight[:,None].double() * outputs.double(), y.double())
+
         #compute metrics
         if fold == "test":
             self.metric_macro.update(outputs, y, metric_weight)
@@ -290,10 +297,13 @@ class EffNet(pl.LightningModule):
         
         if fold == "train":
             self.train_outputs.append(loss)
+            self.log("train loss step", loss, prog_bar=True)
         elif fold == "test":
             self.test_outputs.append(loss)
         elif fold == "val":
             self.val_outputs.append(loss)
+            #compute comparable validation loss
+            self.log("everyone's val loss step", F.mse_loss(outputs.double(), y.double()))
         return {'loss': loss}
 
     def training_step(self, batch):
@@ -312,7 +322,7 @@ class EffNet(pl.LightningModule):
 
     def on_train_epoch_end(self):
         avg_loss = torch.tensor(self.train_outputs).mean()
-        self.log('train_loss', avg_loss, prog_bar=False)
+        self.log('train_loss', avg_loss, prog_bar=True)
     
     def on_test_epoch_end(self):
         avg_loss = torch.tensor(self.test_outputs).mean()
@@ -360,7 +370,7 @@ class EffNet(pl.LightningModule):
 
         self.log('LMA_lambda', self.LMA_lambda)
         self.log('val_loss', avg_loss, on_step=False,
-                 prog_bar=False, on_epoch=True)
+                 prog_bar=True, on_epoch=True)
 
         return {'val_loss': avg_loss}
 

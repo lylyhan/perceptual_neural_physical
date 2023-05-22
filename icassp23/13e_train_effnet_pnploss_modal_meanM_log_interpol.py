@@ -1,6 +1,6 @@
 """
 This script trains an EfficientNet for sound matching of drum sounds
-with PNP loss without Riemmanian volume weights as its objective.
+with Parametric Loss (P-Loss) as its objective.
 """
 from ast import Mod
 import datetime
@@ -20,6 +20,7 @@ from datetime import timedelta
 import icassp23
 from pnp_synth.neural import cnn
 from pnp_synth import utils
+
 
 start_time = int(time.time())
 print(str(datetime.datetime.now()) + " Start.")
@@ -45,25 +46,26 @@ weight_dir = os.path.join(save_dir, "M")
 model_dir = os.path.join(save_dir, "f_W")
 cqt_dir = data_dir
 
+
 epoch_max = 70
-steps_per_epoch = icassp23.SAMPLES_PER_EPOCH / batch_size
+steps_per_epoch = icassp23.SAMPLES_PER_EPOCH / batch_size / 2
 max_steps = steps_per_epoch * epoch_max
 # feature parameters
 Q = 12
 J = 10
-sr = 22050
 outdim = 5
 bn_var = 0.5
+sr = 22050
 cnn_type = "efficientnet"  # efficientnet / cnn.wav2shape
-loss_type = "weighted_p"  # spec / weighted_p / ploss
-weight_type = "novol"  # novol / pnp / None
+loss_type = "interp_pnp"  # spec / weighted_p / ploss
+weight_type = "None"  # novol / pnp / None
 LMA = {
-    'mode': "adaptive", #scheduled / constant
-    'lambda': 1e+20,
-    'threshold': 1e+20,
-    'accelerator': 0.2,
+    'mode': "constant", #scheduled / constant
+    'lambda': 1,
+    'threshold': 1e+8,
+    'accelerator': 0.5,
     'brake': 1,
-    'damping': "id"
+    'damping': "mean"
 }
 logscale_theta = True
 synth_type = "ftm"
@@ -76,8 +78,8 @@ assert utils.logscale == logscale_theta
 assert icassp23.logscale == logscale_theta
 
 
+
 if __name__ == "__main__":
-    #os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     print("Current device: ", torch.cuda.get_device_name(0))
     torch.multiprocessing.set_start_method('spawn')
     model_save_path = os.path.join(
@@ -112,6 +114,7 @@ if __name__ == "__main__":
     #no min max scaling
     full_df = icassp23.load_fold(fold="full")
 
+   
     # initialize dataset
     dataset = cnn.DrumDataModule(
         batch_size=batch_size,
@@ -143,22 +146,26 @@ if __name__ == "__main__":
         dirpath=model_save_path,
         monitor="val_loss",
         save_last=True,
-        filename= "best",#"ckpt-{epoch:02d}-{val_loss:.2f}",
+        filename= "best", #"ckpt-{epoch:02d}-{val_loss:.2f}",
         save_weights_only=False,
     )
     tb_logger = pl_loggers.TensorBoardLogger(save_dir=os.path.join(model_save_path,"logs"))
+
+    #strategy=pl.strategies.DDPStrategy(find_unused_parameters=False)
     # initialize trainer, declare training parameters, possiibly in neural/cnn.py
     trainer = pl.Trainer(
+        #strategy="ddp_spawn_find_unused_parameters_false",
         accelerator="gpu",
         devices=-1,
+        #auto_select_gpus=True,
         max_epochs=epoch_max,
         max_steps=max_steps,
         limit_train_batches=steps_per_epoch,  # if integer than it's #steps per epoch, if float then it's percentage
         limit_val_batches=1.0,
         limit_test_batches=1.0,
         callbacks=[checkpoint_cb],
-        logger=tb_logger,
         enable_progress_bar=True,
+        logger=tb_logger,
         max_time=timedelta(hours=12)
     )
     # train
@@ -168,7 +175,7 @@ if __name__ == "__main__":
     else:
         print("Skipped Training, loading model")
         model = model.load_from_checkpoint(os.path.join(model_save_path, ckpt_path),in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, var=bn_var, save_path=pred_path, lr=lr, LMA=LMA, minmax=minmax)
-
+        #trainer.fit(model, dataset)
 
     test_loss = trainer.test(model, dataset, verbose=False)
     print("Model saved at: {}".format(model_save_path))
