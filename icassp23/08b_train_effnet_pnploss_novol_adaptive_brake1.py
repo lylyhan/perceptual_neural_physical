@@ -16,6 +16,7 @@ import time
 import torch
 from pytorch_lightning import loggers as pl_loggers
 from datetime import timedelta
+from pytorch_lightning.tuner.tuning import Tuner
 
 import icassp23
 from pnp_synth.neural import cnn
@@ -69,6 +70,7 @@ logscale_theta = True
 synth_type = "ftm"
 lr = 1e-3
 minmax = True
+opt = "sophia"
 utils.logscale = logscale_theta 
 icassp23.logscale = logscale_theta
 utils.synth_type = synth_type
@@ -77,7 +79,7 @@ assert icassp23.logscale == logscale_theta
 
 
 if __name__ == "__main__":
-    #os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    #os.environ["CUDA_VISIBLE_DEVICES"] = "0" #restrict machine
     print("Current device: ", torch.cuda.get_device_name(0))
     torch.multiprocessing.set_start_method('spawn')
     model_save_path = os.path.join(
@@ -98,7 +100,8 @@ if __name__ == "__main__":
                 "outdim-" + str(outdim),
                 "log-" + str(logscale_theta),
                 "minmax-" + str(minmax),
-                "lr-"+ str(lr)
+                "lr-"+ str(lr),
+                "opt-" + opt,
             ]
         ),
     )
@@ -135,7 +138,7 @@ if __name__ == "__main__":
             in_channels=1, bin_per_oct=Q, outdim=outdim, loss=loss_type, scaler=scaler
         )
     elif cnn_type == "efficientnet":
-        model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, LMA=LMA, var=bn_var, save_path=pred_path, lr=lr, minmax=minmax)
+        model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, LMA=LMA, steps_per_epoch=steps_per_epoch, var=bn_var, save_path=pred_path, lr=lr, minmax=minmax, opt=opt)
     print(str(datetime.datetime.now()) + " Finished initializing model")
 
     # initialize checkpoint methods
@@ -161,6 +164,12 @@ if __name__ == "__main__":
         enable_progress_bar=True,
         max_time=timedelta(hours=12)
     )
+    #learning rate finder
+    #tuner = Tuner(trainer)
+    #lr_finder = tuner.lr_find(model, dataset) #need to pass in loss to use it
+
+    #print("found learning rate, ", lr_finder.results)
+
     # train
     if is_train:
         print("Training ...")

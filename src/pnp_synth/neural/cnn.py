@@ -9,6 +9,7 @@ import torch
 from torch import nn
 from nnAudio.features import CQT
 from pnp_synth.neural import loss as losses
+from pnp_synth.neural import optimizer
 import torchvision
 import torchvision.transforms as transforms
 import torch.nn.functional as F
@@ -18,6 +19,7 @@ import auraloss
 from pnp_synth import utils
 import h5py
 import joblib
+#from Sophia import SophiaG 
 
 #logscale param
 eps = 1e-3
@@ -149,15 +151,19 @@ class wav2shape(pl.LightningModule):
 
 
 class EffNet(pl.LightningModule):
-    def __init__(self, in_channels,outdim,loss,scaler,var,save_path, lr=1e-3, minmax=True, LMA=None):
+    def __init__(self, in_channels,outdim,loss,scaler,var,save_path, steps_per_epoch, lr=1e-3, minmax=True, LMA=None, opt="adam"):
         super().__init__()
         self.scaler = scaler
         self.lr = lr
         self.batchnorm1 = nn.BatchNorm2d(1, eps=1e-05, momentum=0.1, affine=True,
                            track_running_stats=True)
         self.conv2d = nn.Conv2d(in_channels=1, out_channels=3,kernel_size=(3,3))
+        self.opt = opt
+        if self.opt == "adamW":
+            self.automatic_optimization=False
         self.model = torchvision.models.efficientnet_b0(num_classes=outdim)#,in_channels=in_channels)
         self.minmax = minmax
+        self.n_batches_train = steps_per_epoch
         if self.minmax:
             #disable efficientnet last linear layer's bias
             if self.model.get_submodule('classifier')[1].bias.requires_grad:
@@ -238,7 +244,7 @@ class EffNet(pl.LightningModule):
             x = torch.abs(x) + eps_relu
         return x
 
-    def step(self, batch, fold):
+    def step(self, batch, fold, batch_idx):
         Sy = batch['feature'].to(self.current_device)
         y = batch['y'].to(self.current_device).double()
         weight = batch['weight'].to(self.current_device)
@@ -298,6 +304,15 @@ class EffNet(pl.LightningModule):
         if fold == "train":
             self.train_outputs.append(loss)
             self.log("train loss step", loss, prog_bar=True)
+            if self.opt == "adamW":
+                opt = self.optimizers()
+                def closure():
+                    opt.zero_grad()
+                    self.manual_backward(loss)
+                    return loss
+                self.update_lr(batch_idx)
+                opt.step(closure=closure)
+
         elif fold == "test":
             self.test_outputs.append(loss)
         elif fold == "val":
@@ -306,14 +321,14 @@ class EffNet(pl.LightningModule):
             self.log("everyone's val loss step", F.mse_loss(outputs.double(), y.double()))
         return {'loss': loss}
 
-    def training_step(self, batch):
-        return self.step(batch, "train")
+    def training_step(self, batch, batch_idx):
+        return self.step(batch, "train", batch_idx)
 
     def validation_step(self, batch, batch_idx):
-        return self.step(batch, "val")
+        return self.step(batch, "val", batch_idx)
 
     def test_step(self, batch, batch_idx):
-        return self.step(batch, "test")
+        return self.step(batch, "test", batch_idx)
 
     def on_train_epoch_start(self):
         self.train_outputs = []
@@ -375,8 +390,47 @@ class EffNet(pl.LightningModule):
         return {'val_loss': avg_loss}
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=self.lr)
+        if self.opt == "adamW":
+            #self.model.automatic_optimization = False
+            opt = torch.optim.AdamW(self.parameters(), lr=self.lr,
+                                weight_decay=1e-1) #decoupled weight decay regularization 
+            lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+                opt, T_0=1, T_mult=1, eta_min=1e-8,
+                last_epoch=-1, verbose=0)
 
+            return {
+                'optimizer': opt,
+                'lr_scheduler': {
+                    'scheduler': lr_scheduler,
+                    },
+                }
+
+        elif self.opt == "sophia":
+            return optimizer.SophiaG(params=self.parameters(), lr=self.lr, betas=(0.965, 0.99), rho = 0.01, weight_decay=1e-1)
+        elif self.opt == "adam":
+            return torch.optim.Adam(self.parameters(), lr=self.lr)
+    
+    def update_lr(self, batch_idx):
+        sch = self.lr_schedulers()
+
+        warmup_epochs = 3
+        warmup_len = self.n_batches_train * warmup_epochs
+        total_step = self.trainer.current_epoch * self.n_batches_train + batch_idx
+        if total_step >= warmup_len:
+            epoch_frac = total_step / self.n_batches_train
+        else:
+            # LR warmup for first epoch
+            # `batch_idx + 1` to not start with `1` when `batch_idx == 0`
+            epoch_frac = 1 - (total_step + 1) / warmup_len
+        sch.step(epoch_frac)
+        return sch
+
+    def on_before_optimizer_step(self, optimizer, optimizer_idx):
+        self.clip_gradients(
+            optimizer,
+            gradient_clip_val=3,
+            gradient_clip_algorithm='norm',
+        )
 
 class DrumData(Dataset):
     def __init__(self,
