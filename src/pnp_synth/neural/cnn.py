@@ -416,9 +416,10 @@ class EffNet(pl.LightningModule):
                 'optimizer': self.optimizer,
                 'lr_scheduler':{
                     'scheduler': lr_scheduler,
+                    'monitor': 'val_loss',
                 }
             }
-            
+
         elif self.opt == "adam":
             self.optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
             lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -427,6 +428,7 @@ class EffNet(pl.LightningModule):
                 'optimizer': self.optimizer,
                 'lr_scheduler':{
                     'scheduler': lr_scheduler,
+                    'monitor': 'val_loss',
                 },
             }
 
