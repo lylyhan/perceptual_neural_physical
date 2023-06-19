@@ -164,6 +164,7 @@ class EffNet(pl.LightningModule):
         self.model = torchvision.models.efficientnet_b0(num_classes=outdim)#,in_channels=in_channels)
         self.minmax = minmax
         self.n_batches_train = steps_per_epoch
+        #self.optimizer = self.configure_optimizers()
         if self.minmax:
             #disable efficientnet last linear layer's bias
             if self.model.get_submodule('classifier')[1].bias.requires_grad:
@@ -334,6 +335,7 @@ class EffNet(pl.LightningModule):
         self.train_outputs = []
         self.test_outputs = []
         self.val_outputs = []
+        self.log("lr", self.optimizer.param_groups[-1]['lr'])
 
     def on_train_epoch_end(self):
         avg_loss = torch.tensor(self.train_outputs).mean()
@@ -378,6 +380,7 @@ class EffNet(pl.LightningModule):
                     else:
                         self.LMA_lambda = self.LMA_threshold
                     self.parameters = self.best_params
+                #print("changed????", self.LMA_lambda)
             elif self.LMA_mode == "scheduled":
                 self.epoch += 1
                 self.LMA_lambda = self.LMA_lambda * self.LMA_accelerator
@@ -392,23 +395,25 @@ class EffNet(pl.LightningModule):
     def configure_optimizers(self):
         if self.opt == "adamW":
             #self.model.automatic_optimization = False
-            opt = torch.optim.AdamW(self.parameters(), lr=self.lr,
+            optim = torch.optim.AdamW(self.parameters(), lr=self.lr,
                                 weight_decay=1e-1) #decoupled weight decay regularization 
             lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-                opt, T_0=1, T_mult=1, eta_min=1e-8,
+                optim, T_0=1, T_mult=1, eta_min=1e-8,
                 last_epoch=-1, verbose=0)
-
+            self.optimizer = optim
             return {
-                'optimizer': opt,
+                'optimizer': self.optim,
                 'lr_scheduler': {
                     'scheduler': lr_scheduler,
                     },
                 }
 
         elif self.opt == "sophia":
-            return optimizer.SophiaG(params=self.parameters(), lr=self.lr, betas=(0.965, 0.99), rho = 0.01, weight_decay=1e-1)
+            self.optimizer = optimizer.SophiaG(params=self.parameters(), lr=self.lr, betas=(0.965, 0.99), rho = 0.01, weight_decay=1e-1)
+            return self.optimizer #optimizer.SophiaG(params=self.parameters(), lr=self.lr, betas=(0.965, 0.99), rho = 0.01, weight_decay=1e-1)
         elif self.opt == "adam":
-            return torch.optim.Adam(self.parameters(), lr=self.lr)
+            self.optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
+            return #torch.optim.Adam(self.parameters(), lr=self.lr)
     
     def update_lr(self, batch_idx):
         sch = self.lr_schedulers()
@@ -425,12 +430,12 @@ class EffNet(pl.LightningModule):
         sch.step(epoch_frac)
         return sch
 
-    def on_before_optimizer_step(self, optimizer, optimizer_idx):
-        self.clip_gradients(
-            optimizer,
-            gradient_clip_val=3,
-            gradient_clip_algorithm='norm',
-        )
+    #def on_before_optimizer_step(self, optimizer):
+    #    self.clip_gradients(
+    #        optimizer,
+    #        gradient_clip_val=3,
+    #        gradient_clip_algorithm='norm',
+    #    )
 
 class DrumData(Dataset):
     def __init__(self,

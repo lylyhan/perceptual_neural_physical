@@ -9,7 +9,7 @@ import nnAudio
 import numpy as np
 import os
 import pytorch_lightning as pl
-from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 import sklearn
 import sys
 import time
@@ -150,6 +150,7 @@ if __name__ == "__main__":
         save_weights_only=False,
     )
     tb_logger = pl_loggers.TensorBoardLogger(save_dir=os.path.join(model_save_path,"logs"))
+    lr_monitor = LearningRateMonitor(logging_interval='step')
     # initialize trainer, declare training parameters, possiibly in neural/cnn.py
     trainer = pl.Trainer(
         accelerator="gpu",
@@ -159,7 +160,7 @@ if __name__ == "__main__":
         limit_train_batches=steps_per_epoch,  # if integer than it's #steps per epoch, if float then it's percentage
         limit_val_batches=1.0,
         limit_test_batches=1.0,
-        callbacks=[checkpoint_cb],
+        callbacks=[checkpoint_cb, lr_monitor],
         logger=tb_logger,
         enable_progress_bar=True,
         max_time=timedelta(hours=12)
