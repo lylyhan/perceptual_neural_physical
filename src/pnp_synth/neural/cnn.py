@@ -402,7 +402,7 @@ class EffNet(pl.LightningModule):
                 last_epoch=-1, verbose=0)
             self.optimizer = optim
             return {
-                'optimizer': self.optim,
+                'optimizer': self.optimizer,
                 'lr_scheduler': {
                     'scheduler': lr_scheduler,
                     },
@@ -410,11 +410,26 @@ class EffNet(pl.LightningModule):
 
         elif self.opt == "sophia":
             self.optimizer = optimizer.SophiaG(params=self.parameters(), lr=self.lr, betas=(0.965, 0.99), rho = 0.01, weight_decay=1e-1)
-            return self.optimizer #optimizer.SophiaG(params=self.parameters(), lr=self.lr, betas=(0.965, 0.99), rho = 0.01, weight_decay=1e-1)
+            lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            self.optimizer, patience=3)
+            return{
+                'optimizer': self.optimizer,
+                'lr_scheduler':{
+                    'scheduler': lr_scheduler,
+                }
+            }
+            
         elif self.opt == "adam":
             self.optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
-            return #torch.optim.Adam(self.parameters(), lr=self.lr)
-    
+            lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                self.optimizer, patience=3)
+            return{
+                'optimizer': self.optimizer,
+                'lr_scheduler':{
+                    'scheduler': lr_scheduler,
+                },
+            }
+
     def update_lr(self, batch_idx):
         sch = self.lr_schedulers()
 
