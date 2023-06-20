@@ -159,8 +159,8 @@ class EffNet(pl.LightningModule):
                            track_running_stats=True)
         self.conv2d = nn.Conv2d(in_channels=1, out_channels=3,kernel_size=(3,3))
         self.opt = opt
-        if self.opt == "adamW":
-            self.automatic_optimization=False
+        #if self.opt == "adamW":
+        #    self.automatic_optimization=False
         self.model = torchvision.models.efficientnet_b0(num_classes=outdim)#,in_channels=in_channels)
         self.minmax = minmax
         self.n_batches_train = steps_per_epoch
@@ -305,7 +305,7 @@ class EffNet(pl.LightningModule):
         if fold == "train":
             self.train_outputs.append(loss)
             self.log("train loss step", loss, prog_bar=True)
-            if self.opt == "adamW":
+            if self.opt == None:
                 opt = self.optimizers()
                 def closure():
                     opt.zero_grad()
@@ -397,10 +397,13 @@ class EffNet(pl.LightningModule):
             #self.model.automatic_optimization = False
             optim = torch.optim.AdamW(self.parameters(), lr=self.lr,
                                 weight_decay=1e-1) #decoupled weight decay regularization 
-            lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-                optim, T_0=1, T_mult=1, eta_min=1e-8,
-                last_epoch=-1, verbose=0)
             self.optimizer = optim
+            #lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+            #    optim, T_0=1, T_mult=1, eta_min=1e-8,
+            #    last_epoch=-1, verbose=0)
+            lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                self.optimizer, patience=3)
+            
             return {
                 'optimizer': self.optimizer,
                 'lr_scheduler': {
