@@ -9,7 +9,7 @@ import nnAudio
 import numpy as np
 import os
 import pytorch_lightning as pl
-from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 import sklearn
 import sys
 import time
@@ -70,6 +70,7 @@ logscale_theta = True
 synth_type = "ftm"
 lr = 1e-3
 minmax = True
+opt = "sophia"
 utils.logscale = logscale_theta 
 icassp23.logscale = logscale_theta
 utils.synth_type = synth_type
@@ -98,7 +99,8 @@ if __name__ == "__main__":
                 "outdim-" + str(outdim),
                 "log-" + str(logscale_theta),
                 "minmax-" + str(minmax),
-                "lr-"+ str(lr)
+                "lr-"+ str(lr),
+                "opt-" + opt,
             ]
         ),
     )
@@ -135,7 +137,7 @@ if __name__ == "__main__":
             in_channels=1, bin_per_oct=Q, outdim=outdim, loss=loss_type, scaler=scaler
         )
     elif cnn_type == "efficientnet":
-        model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, LMA=LMA, var=bn_var, save_path=pred_path, lr=lr, minmax=minmax)
+        model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, LMA=LMA, var=bn_var, save_path=pred_path, lr=lr, minmax=minmax, opt=opt)
     print(str(datetime.datetime.now()) + " Finished initializing model")
 
     # initialize checkpoint methods
@@ -147,7 +149,8 @@ if __name__ == "__main__":
         save_weights_only=False,
     )
     tb_logger = pl_loggers.TensorBoardLogger(save_dir=os.path.join(model_save_path,"logs"))
-
+    lr_monitor = LearningRateMonitor(logging_interval='step')
+    
     # initialize trainer, declare training parameters, possiibly in neural/cnn.py
     trainer = pl.Trainer(
         accelerator="gpu",
@@ -157,7 +160,7 @@ if __name__ == "__main__":
         limit_train_batches=steps_per_epoch,  # if integer than it's #steps per epoch, if float then it's percentage
         limit_val_batches=1.0,
         limit_test_batches=1.0,
-        callbacks=[checkpoint_cb],
+        callbacks=[checkpoint_cb, lr_monitor],
         enable_progress_bar=True,
         logger=tb_logger,
         max_time=timedelta(hours=12)
@@ -168,7 +171,7 @@ if __name__ == "__main__":
         trainer.fit(model, dataset)
     else:
         print("Skipped Training, loading model")
-        model = model.load_from_checkpoint(os.path.join(model_save_path, ckpt_path),in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, var=bn_var, save_path=pred_path, lr=lr, LMA=LMA, minmax=minmax)
+        model = model.load_from_checkpoint(os.path.join(model_save_path, ckpt_path),in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, var=bn_var, save_path=pred_path, lr=lr, LMA=LMA, minmax=minmax, opt=opt)
 
     test_loss = trainer.test(model, dataset, verbose=False)
     print("Model saved at: {}".format(model_save_path))

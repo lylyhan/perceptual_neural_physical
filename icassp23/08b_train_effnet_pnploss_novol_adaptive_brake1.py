@@ -177,7 +177,7 @@ if __name__ == "__main__":
         trainer.fit(model, dataset)
     else:
         print("Skipped Training, loading model")
-        model = model.load_from_checkpoint(os.path.join(model_save_path, ckpt_path),in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, var=bn_var, save_path=pred_path, lr=lr, LMA=LMA, minmax=minmax)
+        model = model.load_from_checkpoint(os.path.join(model_save_path, ckpt_path),in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, var=bn_var, save_path=pred_path, lr=lr, LMA=LMA, minmax=minmax, opt=opt)
 
 
     test_loss = trainer.test(model, dataset, verbose=False)
