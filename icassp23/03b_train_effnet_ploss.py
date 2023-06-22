@@ -137,7 +137,7 @@ if __name__ == "__main__":
             in_channels=1, bin_per_oct=Q, outdim=outdim, loss=loss_type, scaler=scaler
         )
     elif cnn_type == "efficientnet":
-        model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, LMA=LMA, var=bn_var, save_path=pred_path, lr=lr, minmax=minmax, opt=opt)
+        model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, LMA=LMA, steps_per_epoch=steps_per_epoch, var=bn_var, save_path=pred_path, lr=lr, minmax=minmax, opt=opt)
     print(str(datetime.datetime.now()) + " Finished initializing model")
 
     # initialize checkpoint methods
@@ -150,7 +150,7 @@ if __name__ == "__main__":
     )
     tb_logger = pl_loggers.TensorBoardLogger(save_dir=os.path.join(model_save_path,"logs"))
     lr_monitor = LearningRateMonitor(logging_interval='step')
-    
+
     # initialize trainer, declare training parameters, possiibly in neural/cnn.py
     trainer = pl.Trainer(
         accelerator="gpu",
