@@ -574,6 +574,7 @@ class DrumDataModule(pl.LightningDataModule):
                  Q,
                  sr,
                  scaler,
+                 logscale,
                  feature,
                  num_workers):
         super().__init__()
@@ -586,20 +587,23 @@ class DrumDataModule(pl.LightningDataModule):
         self.J = J
         self.Q = Q
         self.sr = sr
+        self.logscale = logscale
         self.full_df = df #sorted df
         self.cqt_dir = cqt_dir
         self.scaler = scaler
         if "am" in weight_dir:
             self.synth_type = "amchirp"
+            self.h5name = "amchirp"
         elif "ftm" in weight_dir:
-            self.synth_type = "icassp23"
+            self.synth_type = "ftm"
+            self.h5name = "icassp23"
 
     def setup(self, stage=None):
         
 
-        y_norms_train= utils.scale_theta(self.full_df, "train", self.scaler) #sorted by id
-        y_norms_test = utils.scale_theta(self.full_df, "test", self.scaler)
-        y_norms_val = utils.scale_theta(self.full_df, "val", self.scaler)
+        y_norms_train= utils.scale_theta(self.full_df, "train", self.scaler, self.logscale, self.synth_type) #sorted by id
+        y_norms_test = utils.scale_theta(self.full_df, "test", self.scaler, self.logscale, self.synth_type)
+        y_norms_val = utils.scale_theta(self.full_df, "val", self.scaler, self.logscale, self.synth_type)
 
         train_ids = self.full_df[self.full_df["fold"]=="train"]['ID'].values #sorted by id
         test_ids = self.full_df[self.full_df["fold"]=="test"]['ID'].values
@@ -607,9 +611,9 @@ class DrumDataModule(pl.LightningDataModule):
 
         self.train_ds = DrumData(y_norms_train, #partial dataframe
                                 train_ids,
-                                os.path.join(self.data_dir, self.synth_type + "_train_audio.h5"),
+                                os.path.join(self.data_dir, self.h5name + "_train_audio.h5"),
                                 self.cqt_dir,
-                                os.path.join(self.weight_dir, self.synth_type + "_train_J.h5"), 
+                                os.path.join(self.weight_dir, self.h5name + "_train_J.h5"), 
                                 self.weight_type,
                                 fold='train',
                                 feature='cqt',

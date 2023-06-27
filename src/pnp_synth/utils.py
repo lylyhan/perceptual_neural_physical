@@ -12,47 +12,7 @@ import numpy as np
 #from kymatio.torch import TimeFrequencyScattering as TimeFrequencyScattering1D
 
 folds = ["train", "test", "val"]
-synth_type = "ftm"
-if synth_type == "ftm":
-    THETA_COLUMNS = ["omega", "tau", "p", "D", "alpha"]
-    logscale = True
 
-    jtfs_params = dict(
-        J=13,  # scattering scale ~ 1000 ms
-        shape=(2**16,), # input duration ~ 3 seconds
-        Q=(12, 1),  # number of filters per octave in time at 1st, 2nd order
-        Q_fr=1, # number of fiters per octave in frequency
-        F=2,  # local frequential averaging
-        max_pad_factor=1,  # temporal padding cannot be greater than 1x support
-        max_pad_factor_fr=1,  # frequential padding cannot be greater than 1x support
-        pad_mode='zero',
-        pad_mode_fr='zero'
-    )
-elif synth_type == "amchirp":
-    THETA_COLUMNS = ["f0", "fm", "gamma"]
-    logscale = True
-
-    jtfs_params = dict(
-        J=13,  # scattering scale ~ 1000 ms
-        shape=(2**13*4,), # input duration ~ 3 seconds
-        Q=(12, 1),  # number of filters per octave in time at 1st, 2nd order
-        Q_fr=1, # number of fiters per octave in frequency
-        F=2,  # local frequential averaging
-        max_pad_factor=1,  # temporal padding cannot be greater than 1x support
-        max_pad_factor_fr=1,  # frequential padding cannot be greater than 1x support
-        pad_mode='zero',
-        pad_mode_fr='zero'
-    )
-    #kymatio 0.4.0
-    #jtfs_params = dict(
-    #    J=13,
-    #    shape=(2**13*4,),
-    #    Q=(12,1),
-    #    Q_fr=1,
-    #    F=2,
-    #    J_fr=3,
-    #    format='time',
-    #)
 
 def load_fold(full_df, fold="full"): 
     """Load DataFrame."""
@@ -64,11 +24,16 @@ def load_fold(full_df, fold="full"):
         return full_df[full_df["fold"]==fold]
 
 
-def scale_theta(full_df, out_fold, scaler):
+def scale_theta(full_df, out_fold, scaler, logscale, synth_type):
     """
-    Scale training set to [0, 1], return values (NumPy array)
+    Scale training set to [-1, 1], return values (NumPy array)
     and min-max scaler (sklearn object)
     """
+
+    if synth_type == "ftm":
+        THETA_COLUMNS = ["omega", "tau", "p", "D", "alpha"]
+    elif synth_type == "amchirp":
+        THETA_COLUMNS = ["f0", "fm", "gamma"]
 
     # Load partial dataset
     out_df = load_fold(full_df, out_fold)
@@ -83,7 +48,7 @@ def scale_theta(full_df, out_fold, scaler):
     else:
         return theta
 
-def pnp_forward_factory(scaler):
+def pnp_forward_factory(scaler, synth_type, logscale):
     """
     Computes S = (Phi o g o h^{-1})(nu) = (Phi o g)(theta) = Phi(x), given:
     1. a MinMax scaler h
@@ -91,14 +56,51 @@ def pnp_forward_factory(scaler):
     3. a JTFS representation Phi
     """
     device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    if synth_type == "ftm":
+        jtfs_params = dict(
+            J=13,  # scattering scale ~ 1000 ms
+            shape=(2**16,), # input duration ~ 3 seconds
+            Q=(12, 1),  # number of filters per octave in time at 1st, 2nd order
+            Q_fr=1, # number of fiters per octave in frequency
+            F=2,  # local frequential averaging
+            max_pad_factor=1,  # temporal padding cannot be greater than 1x support
+            max_pad_factor_fr=1,  # frequential padding cannot be greater than 1x support
+            pad_mode='zero',
+            pad_mode_fr='zero'
+        )
+    elif synth_type == "amchirp":
+        jtfs_params = dict(
+            J=13,  # scattering scale ~ 1000 ms
+            shape=(2**13*4,), # input duration ~ 3 seconds
+            Q=(12, 1),  # number of filters per octave in time at 1st, 2nd order
+            Q_fr=1, # number of fiters per octave in frequency
+            F=2,  # local frequential averaging
+            max_pad_factor=1,  # temporal padding cannot be greater than 1x support
+            max_pad_factor_fr=1,  # frequential padding cannot be greater than 1x support
+            pad_mode='zero',
+            pad_mode_fr='zero'
+        )
+        #kymatio 0.4.0
+        #jtfs_params = dict(
+        #    J=13,
+        #    shape=(2**13*4,),
+        #    Q=(12,1),
+        #    Q_fr=1,
+        #    F=2,
+        #    J_fr=3,
+        #    format='time',
+        #)
+
+
     # Instantiate Joint-Time Frequency Scattering (JTFS) operator
     jtfs_operator = TimeFrequencyScattering1D(**jtfs_params, out_type="list").to(device)
     jtfs_operator.average_global = True
 
     Phi = functools.partial(S_from_x, jtfs_operator=jtfs_operator)
-
+    g = functools.partial(x_from_theta, synth_type=synth_type, logscale=logscale)
     return functools.partial(
-        forward.pnp_forward, Phi=Phi, g=x_from_theta, scaler=scaler
+        forward.pnp_forward, Phi=Phi, g=g, scaler=scaler
     )
 
 
@@ -117,7 +119,7 @@ def S_from_x(x, jtfs_operator):
     return log1p_Sx
 
 
-def x_from_theta(theta):
+def x_from_theta(theta, synth_type, logscale):
     """Drum synthesizer, based on the Functional Transformation Method (FTM)."""
     if synth_type == "ftm":
         x = ftm.rectangular_drum(theta, logscale=logscale, **ftm.constants)
