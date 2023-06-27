@@ -43,12 +43,17 @@ for module in [joblib, nnAudio, np, pl, sklearn, torch]:
 print("")
 sys.stdout.flush()
 
-names = ["J", "modal"]
+if synth_type == "ftm":
+    names = ["J", "modal"]
+elif synth_type == "amchirp":
+    names = ["J"]
+    
 if minmax == False:
     names.append("nominmax")
 if logscale_theta == True:
     names.append("log")
 J_foldname = "_".join(names)
+
 
 data_dir = os.path.join(save_dir, "x")
 weight_dir = os.path.join(save_dir, J_foldname)
