@@ -14,17 +14,6 @@ import numpy as np
 FOLDS = ["train", "test", "val"]
 SAMPLES_PER_EPOCH = 512*50
 
-jtfs_params = dict(
-    J=13,  # scattering scale ~ 1000 ms
-    shape=(2**16,), # input duration ~ 3 seconds
-    Q=(12, 1),  # number of filters per octave in time at 1st, 2nd order
-    Q_fr=1, # number of fiters per octave in frequency
-    F=2,  # local frequential averaging
-    max_pad_factor=1,  # temporal padding cannot be greater than 1x support
-    max_pad_factor_fr=1,  # frequential padding cannot be greater than 1x support
-    pad_mode='zero',
-    pad_mode_fr='zero'
-)
 
 mss_param = dict(
     max_n_fft=2048,
