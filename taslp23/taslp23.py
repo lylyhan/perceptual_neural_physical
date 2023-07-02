@@ -12,7 +12,6 @@ import torch
 import numpy as np
 
 FOLDS = ["train", "test", "val"]
-THETA_COLUMNS = ["omega", "tau", "p", "D", "alpha"]
 SAMPLES_PER_EPOCH = 512*50
 
 jtfs_params = dict(
@@ -36,12 +35,12 @@ mss_param = dict(
     p=1.0,
 )
 
-def load_fold(fold="full"):
+def load_fold(synth_type, fold="full"):
     """Load DataFrame."""
     fold_dfs = {}
     csv_folder = os.path.join(os.path.dirname(__file__), "data")
     csv_name = "full_param_log.csv"
-    csv_path = os.path.join(csv_folder, csv_name)
+    csv_path = os.path.join(csv_folder, synth_type, csv_name)
     full_df = pd.read_csv(csv_path)
     full_df = full_df.sort_values(by="ID", ignore_index=False)
     assert len(set(full_df["ID"])) == len(full_df)
@@ -95,42 +94,49 @@ def pnp_forward_factory(scaler, logscale, synth_type):
     )
 
 
-def scale_theta(logscale):
+def scale_theta(logscale, synth_type):
     """
     Scale training set to [-1, 1], return values (NumPy array)
     and min-max scaler (sklearn object)
     """
     # Load training set
-    train_df = load_fold(fold="train")
-
+    train_df = load_fold(synth_type, fold="train")
     # Fit scaler according to training set only
     scaler = sklearn.preprocessing.MinMaxScaler(feature_range=(-1, 1))
-    train_theta = []
-    for column in THETA_COLUMNS:
-        if not logscale and column in ["omega", "p", "D"]:
-            train_theta.append(10 ** train_df[column].values)
-        else:
-            train_theta.append(train_df[column].values)
-    train_theta = np.stack(train_theta, axis=1)
-    #train_theta = np.stack([
-    #    10 ** train_df[column].values for column in THETA_COLUMNS if not logscale and column in ["omega", "p", "D"] else train_df[column].values
-    #    ], axis=1)
+
+    if synth_type == "ftm":
+        THETA_COLUMNS = ["omega", "tau", "p", "D", "alpha"]
+        train_theta = []
+        for column in THETA_COLUMNS:
+            if not logscale and column in ["omega", "p", "D"]:
+                train_theta.append(10 ** train_df[column].values)
+            else:
+                train_theta.append(train_df[column].values)
+        train_theta = np.stack(train_theta, axis=1)
+    elif synth_type == "amchirp":
+        THETA_COLUMNS = ["f0", "fm", "gamma"]
+        train_theta = np.stack([
+        train_df[column].values if logscale else 10**train_df[column].values for column in THETA_COLUMNS], axis=1)
     scaler.fit(train_theta)
 
     # Load whole dataset
-    full_df = load_fold(fold="full")
+    full_df = load_fold(synth_type, fold="full")
 
     # Transform whole dataset with scaler
-    theta = []
-    for column in THETA_COLUMNS:
-        if not logscale and column in ["omega", "p", "D"]:
-            theta.append(10 ** full_df[column].values)
-        else:
-            theta.append(full_df[column].values)
-    theta = np.stack(theta, axis=1)
-    #theta = np.stack([
-    #    full_df[column].values for column in THETA_COLUMNS
-    #], axis=1)
+    if synth_type == "ftm":
+        theta = []
+        for column in THETA_COLUMNS:
+            if not logscale and column in ["omega", "p", "D"]:
+                theta.append(10 ** full_df[column].values)
+            else:
+                theta.append(full_df[column].values)
+        theta = np.stack(theta, axis=1)
+        #theta = np.stack([
+        #    full_df[column].values for column in THETA_COLUMNS
+        #], axis=1)
+    elif synth_type == "amchirp":
+        theta = np.stack([
+        full_df[column].values if logscale else 10**full_df[column].values for column in THETA_COLUMNS], axis=1)
     nus = scaler.transform(theta)
     return nus, scaler
 

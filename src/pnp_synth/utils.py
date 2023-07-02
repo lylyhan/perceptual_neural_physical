@@ -39,9 +39,19 @@ def scale_theta(full_df, out_fold, scaler, logscale, synth_type):
     out_df = load_fold(full_df, out_fold)
 
     # Transform partial dataset with scaler
-    theta = np.stack([
-        out_df[column].values if logscale else 10**out_df[column].values for column in THETA_COLUMNS
-    ], axis=1) 
+    if synth_type == "ftm":
+        theta = []
+        for column in THETA_COLUMNS:
+            if not logscale and column in ["omega", "p", "D"]:
+                theta.append(10 ** full_df[column].values)
+            else:
+                theta.append(full_df[column].values)
+        theta = np.stack(theta, axis=1)
+    elif synth_type == "amchirp":
+        theta = np.stack([
+            out_df[column].values if logscale else 10**out_df[column].values for column in THETA_COLUMNS
+        ], axis=1) 
+
     if scaler:
         nus = scaler.transform(theta)
         return nus 

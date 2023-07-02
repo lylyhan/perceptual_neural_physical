@@ -43,7 +43,7 @@ print("")
 sys.stdout.flush()
 
 data_dir = os.path.join(save_dir, "x")
-weight_dir = os.path.join(save_dir, "M")
+weight_dir = os.path.join(save_dir, "J")
 model_dir = os.path.join(save_dir, "f_W")
 cqt_dir = data_dir
 
@@ -53,10 +53,15 @@ steps_per_epoch = taslp23.SAMPLES_PER_EPOCH / batch_size
 max_steps = steps_per_epoch * epoch_max
 # feature parameters
 Q = 12
-J = 10
-outdim = 5
+if synth_type == "ftm":
+    J = 10
+    outdim = 5
+    sr = 22050
+elif synth_type == "amchirp":
+    J = 6
+    outdim = 3
+    sr = 2 ** 13
 bn_var = 0.5
-sr = 22050
 cnn_type = "efficientnet"  # efficientnet / cnn.wav2shape
 loss_type = "ploss"  # spec / weighted_p / ploss
 weight_type = "None"  # novol / pnp / None
@@ -93,12 +98,13 @@ if __name__ == "__main__":
     os.makedirs(model_save_path, exist_ok=True)
     pred_path = os.path.join(model_save_path, "test_predictions.npy")
 
-    if minmax:
-        nus, scaler = taslp23.scale_theta(logscale_theta)
+    if minmax: 
+        nus, scaler = taslp23.scale_theta(logscale_theta, synth_type)
     else:
         scaler = None
     #no min max scaling
-    full_df = taslp23.load_fold(fold="full")
+    full_df = taslp23.load_fold(synth_type, fold="full")
+    #print("sanity check", full_df)
 
     # initialize dataset
     dataset = cnn.DrumDataModule(

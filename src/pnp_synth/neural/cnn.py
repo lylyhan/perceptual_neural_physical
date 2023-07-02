@@ -566,7 +566,7 @@ class DrumDataModule(pl.LightningDataModule):
     def __init__(self,
                  data_dir,
                  cqt_dir,
-                 df,
+                 df, 
                  weight_dir,
                  weight_type,
                  batch_size,
@@ -623,9 +623,9 @@ class DrumDataModule(pl.LightningDataModule):
 
         self.val_ds = DrumData(y_norms_val, #partial dataframe
                                 val_ids,
-                                os.path.join(self.data_dir, self.synth_type + "_val_audio.h5"),
+                                os.path.join(self.data_dir, self.h5name + "_val_audio.h5"),
                                 self.cqt_dir,
-                                os.path.join(self.weight_dir, self.synth_type + "_val_J.h5"),
+                                os.path.join(self.weight_dir, self.h5name + "_val_J.h5"),
                                 self.weight_type,
                                 fold='val',
                                 feature='cqt',
@@ -635,9 +635,9 @@ class DrumDataModule(pl.LightningDataModule):
 
         self.test_ds = DrumData(y_norms_test, #partial dataframe
                                 test_ids,
-                                os.path.join(self.data_dir, self.synth_type + "_test_audio.h5"),
+                                os.path.join(self.data_dir, self.h5name + "_test_audio.h5"),
                                 self.cqt_dir,
-                                os.path.join(self.weight_dir, self.synth_type + "_test_J.h5"),
+                                os.path.join(self.weight_dir, self.h5name + "_test_J.h5"),
                                 self.weight_type,
                                 fold='test',
                                 feature='cqt',
