@@ -151,7 +151,7 @@ class wav2shape(pl.LightningModule):
 
 
 class EffNet(pl.LightningModule):
-    def __init__(self, in_channels,outdim,loss,scaler,var,save_path, steps_per_epoch, lr=1e-3, minmax=True, LMA=None, opt="adam"):
+    def __init__(self, in_channels,outdim,loss,scaler,var,save_path, steps_per_epoch, lr=1e-3, minmax=True, logtheta=True, LMA=None, opt="adam"):
         super().__init__()
         self.scaler = scaler
         self.lr = lr
@@ -163,8 +163,10 @@ class EffNet(pl.LightningModule):
         #    self.automatic_optimization=False
         self.model = torchvision.models.efficientnet_b0(num_classes=outdim)#,in_channels=in_channels)
         self.minmax = minmax
+        self.logtheta = logtheta
         self.n_batches_train = steps_per_epoch
         #self.optimizer = self.configure_optimizers()
+        ##LAST LAYER
         if self.minmax:
             #disable efficientnet last linear layer's bias
             if self.model.get_submodule('classifier')[1].bias.requires_grad:
@@ -173,13 +175,13 @@ class EffNet(pl.LightningModule):
             self.batchnorm2 = nn.BatchNorm1d(outdim, eps=1e-5, momentum=0.1, affine=True)
             self.act = nn.Tanh()
         else:
-            if utils.logscale:
+            if self.logtheta: #if logscaled no minmax allow negative predictions
                 self.act = nn.Linear(in_features=outdim, out_features=outdim)
-            else:
+            else: #if no logscale no minmax require nonzero prediction
                 if loss == "spec":
                     self.act = nn.Softplus() #guarantees nonzero and improves gradient
                 else:
-                    self.act = nn.Softplus()#nn.LeakyReLU() #nn.Softplus()
+                    self.act = nn.LeakyReLU() #nn.Softplus()
                 
             
         self.loss_type = loss
@@ -200,10 +202,14 @@ class EffNet(pl.LightningModule):
         elif self.loss_type == "interp_pnp":
             self.loss = losses.loss_interpolate
         self.save_path = save_path
+        if "ftm" in self.save_path:
+            synth_type = "ftm"
+        elif "am" in self.save_path:
+            synth_type = "amchirp"
         self.val_loss = None
         self.outdim = outdim
-        self.metric_macro = metrics.JTFSloss(self.scaler, "macro")
-        self.metric_micro = metrics.JTFSloss(self.scaler, "micro")
+        self.metric_macro = metrics.JTFSloss(self.scaler, "macro", synth_type)
+        self.metric_micro = metrics.JTFSloss(self.scaler, "micro", synth_type)
         self.metric_mss = metrics.MSSloss(self.scaler)
         self.std = torch.sqrt(torch.tensor(var))
         self.monitor_valloss = torch.inf
@@ -241,8 +247,8 @@ class EffNet(pl.LightningModule):
         if self.minmax:
             x = self.batchnorm2(x) * self.std
         x = self.act(x) 
-        if not self.minmax and not utils.logscale and self.loss_type == "spec":
-            x = torch.abs(x) + eps_relu
+        #if not self.minmax and not self.logtheta and self.loss_type == "spec":
+        #    x = torch.abs(x) + eps_relu
         return x
 
     def step(self, batch, fold, batch_idx):
