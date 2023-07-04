@@ -602,7 +602,7 @@ class DrumDataModule(pl.LightningDataModule):
             self.h5name = "amchirp"
         elif "ftm" in weight_dir:
             self.synth_type = "ftm"
-            self.h5name = "icassp23"
+            self.h5name = "ftm"
 
     def setup(self, stage=None):
         
