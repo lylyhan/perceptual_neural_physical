@@ -145,7 +145,7 @@ if __name__ == "__main__":
             in_channels=1, bin_per_oct=Q, outdim=outdim, loss=loss_type, scaler=scaler
         )
     elif cnn_type == "efficientnet":
-        model = cnn.EffNet(in_channels=1, outdim=outdim, loss="ploss", scaler=scaler, LMA=LMA, steps_per_epoch=steps_per_epoch, var=bn_var, save_path=pred_path, lr=lr, minmax=minmax, opt=opt)
+        model = cnn.EffNet(in_channels=1, outdim=outdim, loss="ploss", scaler=scaler, LMA=LMA, steps_per_epoch=steps_per_epoch, var=bn_var, save_path=pred_path, lr=lr, minmax=minmax, logtheta=logscale_theta, opt=opt)
     print(str(datetime.datetime.now()) + " Finished initializing model")
 
     # initialize checkpoint methods

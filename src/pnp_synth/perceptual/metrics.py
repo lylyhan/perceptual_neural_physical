@@ -12,7 +12,7 @@ import auraloss
 import torch.nn as nn
 
 class JTFSloss(Metric):
-    def __init__(self, scaler, mode):
+    def __init__(self, scaler, mode, synth_type):
         super().__init__()
         self.add_state("dist", default=torch.tensor(0, dtype=torch.float64), dist_reduce_fx="sum")
         self.add_state("total",default=torch.tensor(0), dist_reduce_fx="sum")
@@ -20,11 +20,12 @@ class JTFSloss(Metric):
         device = "cuda" if torch.cuda.is_available() else "cpu"
         self.curr_device = device
         self.mode = mode
+        self.synth_type = synth_type
 
     def update(self, preds: torch.Tensor, target: torch.Tensor, weights: torch.Tensor): #update at each step
-        assert preds.shape == target.shape
-
-        jtfs_operator = TimeFrequencyScattering1D(**utils.jtfs_params, out_type="list").to(self.curr_device)
+        assert preds.shape == target.shape 
+        jtfs_params = utils.jtfsparam(self.synth_type)
+        jtfs_operator = TimeFrequencyScattering1D(**jtfs_params, out_type="list").to(self.curr_device)
         jtfs_operator.average_global = True
         phi = functools.partial(utils.S_from_x, jtfs_operator=jtfs_operator)
 
