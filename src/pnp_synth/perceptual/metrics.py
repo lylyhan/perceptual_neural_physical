@@ -12,7 +12,7 @@ import auraloss
 import torch.nn as nn
 
 class JTFSloss(Metric):
-    def __init__(self, scaler, mode, synth_type):
+    def __init__(self, scaler, mode, synth_type, logscale):
         super().__init__()
         self.add_state("dist", default=torch.tensor(0, dtype=torch.float64), dist_reduce_fx="sum")
         self.add_state("total",default=torch.tensor(0), dist_reduce_fx="sum")
@@ -21,6 +21,7 @@ class JTFSloss(Metric):
         self.curr_device = device
         self.mode = mode
         self.synth_type = synth_type
+        self.logscale = logscale
 
     def update(self, preds: torch.Tensor, target: torch.Tensor, weights: torch.Tensor): #update at each step
         assert preds.shape == target.shape 
@@ -28,6 +29,7 @@ class JTFSloss(Metric):
         jtfs_operator = TimeFrequencyScattering1D(**jtfs_params, out_type="list").to(self.curr_device)
         jtfs_operator.average_global = True
         phi = functools.partial(utils.S_from_x, jtfs_operator=jtfs_operator)
+        g = functools.partial(utils.x_from_theta, synth_type=self.synth_type, logscale=self.logscale)
 
         #loop over batch - temporary
         wav_gt = []
@@ -35,12 +37,12 @@ class JTFSloss(Metric):
         for i in range(target.shape[0]):
             wav_gt.append(forward.pnp_forward(target[i,:], 
                                             Phi=phi,
-                                            g=utils.x_from_theta, 
+                                            g=g, 
                                             scaler=self.scaler))
 
             wav_pred.append(forward.pnp_forward(preds[i,:], 
                                             Phi=phi, 
-                                            g=utils.x_from_theta, 
+                                            g=g, 
                                             scaler=self.scaler))
         jtfs_targets = torch.stack(wav_gt)
         jtfs_preds = torch.stack(wav_pred) #(bs, #path)
@@ -60,13 +62,15 @@ class JTFSloss(Metric):
        
 
 class MSSloss(Metric):
-    def __init__(self, scaler):
+    def __init__(self, scaler, synth_type, logscale):
         super().__init__()
         self.add_state("dist", default=torch.tensor(0, dtype=torch.float64), dist_reduce_fx="sum")
         self.add_state("total",default=torch.tensor(0), dist_reduce_fx="sum")
         self.scaler = scaler
         device = "cuda" if torch.cuda.is_available() else "cpu"
         self.curr_device = device
+        self.synth_type = synth_type
+        self.logscale = logscale
 
     def update(self, preds: torch.Tensor, target: torch.Tensor): #update at each step
 
@@ -75,14 +79,15 @@ class MSSloss(Metric):
         #temporary loop
         wav_gt = []
         wav_pred = []
+        g = functools.partial(utils.x_from_theta, synth_type=self.synth_type, logscale=self.logscale)
         for i in range(preds.shape[0]):
             wav_gt.append(forward.pnp_forward(target[i,:], 
                         Phi=nn.Identity(), 
-                        g=utils.x_from_theta, 
+                        g=g, 
                         scaler=self.scaler))
             wav_pred.append(forward.pnp_forward(preds[i,:], 
                         Phi=nn.Identity(), 
-                        g=utils.x_from_theta, 
+                        g=g, 
                         scaler=self.scaler))
         
         wav_gt = torch.stack(wav_gt)

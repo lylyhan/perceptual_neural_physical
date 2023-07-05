@@ -76,8 +76,6 @@ class wav2shape(pl.LightningModule):
         elif self.loss_type == "spec":
             self.loss = losses.loss_spec
             self.specloss = auraloss.freq.MultiResolutionSTFTLoss()
-        elif self.loss_type == "interp_pnp":
-            self.loss = losses.loss_interpolate
         self.scaler = scaler
         self.outdim = outdim
         self.metric_macro = metrics.JTFSloss(self.scaler, "macro")
@@ -106,7 +104,7 @@ class wav2shape(pl.LightningModule):
         if self.loss_type == "spec":
             loss = self.loss(outputs, y, self.specloss, self.scaler)
         else:
-            if self.loss_type == "weighted_p" or self.loss_type == "interp_pnp":
+            if self.loss_type == "weighted_p":
                 loss = self.loss(weight[:,None] * outputs, y, M)
             else: #ploss
                 loss = self.loss(weight[:,None] * outputs, y)
@@ -197,10 +195,6 @@ class EffNet(pl.LightningModule):
             self.specloss = losses.MultiScaleSpectralLoss(p=2)
         elif self.loss_type == "LMA":
             self.loss = losses.TimeFrequencyScatteringLoss(self.scaler)
-        elif self.loss_type == "fid":
-            self.loss = losses.loss_fid
-        elif self.loss_type == "interp_pnp":
-            self.loss = losses.loss_interpolate
         self.save_path = save_path
         if "ftm" in self.save_path:
             synth_type = "ftm"
@@ -208,9 +202,9 @@ class EffNet(pl.LightningModule):
             synth_type = "amchirp"
         self.val_loss = None
         self.outdim = outdim
-        self.metric_macro = metrics.JTFSloss(self.scaler, "macro", synth_type)
-        self.metric_micro = metrics.JTFSloss(self.scaler, "micro", synth_type)
-        self.metric_mss = metrics.MSSloss(self.scaler)
+        self.metric_macro = metrics.JTFSloss(self.scaler, "macro", synth_type, logtheta)
+        self.metric_micro = metrics.JTFSloss(self.scaler, "micro", synth_type, logtheta)
+        self.metric_mss = metrics.MSSloss(self.scaler, synth_type, logtheta)
         self.std = torch.sqrt(torch.tensor(var))
         self.monitor_valloss = torch.inf
         self.current_device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -276,10 +270,8 @@ class EffNet(pl.LightningModule):
             loss = self.loss(outputs, y, self.specloss, self.scaler)
         elif self.loss_type == "LMA":
             loss = self.loss(outputs, y, JdagJ)
-        elif self.loss_type == "fid":
-            loss = self.loss(outputs, y)
         else:
-            if self.loss_type == "weighted_p" or self.loss_type == "interp_pnp":
+            if self.loss_type == "weighted_p":
                 if fold == "val" or fold == "test":
                     D = torch.zeros(M.shape).double()
                 elif self.LMA_damping == "id":
