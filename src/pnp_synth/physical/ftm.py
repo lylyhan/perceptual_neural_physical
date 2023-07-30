@@ -19,16 +19,17 @@ constants = {
 
 def rectangular_drum(theta, logscale, **constants):
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cpu"
     w11 = 10 ** theta[0] if logscale else theta[0]
     p = 10 ** theta[2] if logscale else theta[2]
     D = 10 ** theta[3] if logscale else theta[3]
     #theta
     tau11 = theta[1]
     alpha_side = theta[4]
-    l0 = torch.tensor(constants['l0'])
+    l0 = torch.tensor(constants['l0']).to(device)
 
     l2 = l0 * alpha_side 
-    pi = torch.tensor(np.pi, dtype=torch.float64)
+    pi = torch.tensor(np.pi, dtype=torch.float64).to(device)
 
     beta_side = alpha_side + 1 / alpha_side
     S = l0 / pi * ((D * w11 * alpha_side)**2 + (p * alpha_side / tau11)**2)**0.25

@@ -197,14 +197,14 @@ class EffNet(pl.LightningModule):
             self.loss = losses.TimeFrequencyScatteringLoss(self.scaler)
         self.save_path = save_path
         if "ftm" in self.save_path:
-            synth_type = "ftm"
+            self.synth_type = "ftm"
         elif "am" in self.save_path:
-            synth_type = "amchirp"
+            self.synth_type = "amchirp"
         self.val_loss = None
         self.outdim = outdim
-        self.metric_macro = metrics.JTFSloss(self.scaler, "macro", synth_type, logtheta)
-        self.metric_micro = metrics.JTFSloss(self.scaler, "micro", synth_type, logtheta)
-        self.metric_mss = metrics.MSSloss(self.scaler, synth_type, logtheta)
+        self.metric_macro = metrics.JTFSloss(self.scaler, "macro", self.synth_type, logtheta)
+        self.metric_micro = metrics.JTFSloss(self.scaler, "micro", self.synth_type, logtheta)
+        self.metric_mss = metrics.MSSloss(self.scaler, self.synth_type, logtheta)
         self.std = torch.sqrt(torch.tensor(var))
         self.monitor_valloss = torch.inf
         self.current_device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -267,7 +267,7 @@ class EffNet(pl.LightningModule):
         
         #compute loss function
         if self.loss_type == "spec" or self.loss_type == "specl2":
-            loss = self.loss(outputs, y, self.specloss, self.scaler)
+            loss = self.loss(outputs, y, self.specloss, self.scaler, self.synth_type, self.logtheta)
         elif self.loss_type == "LMA":
             loss = self.loss(outputs, y, JdagJ)
         else:
