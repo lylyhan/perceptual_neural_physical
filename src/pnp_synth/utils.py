@@ -68,9 +68,9 @@ def scale_theta(full_df, out_fold, scaler, logscale, synth_type):
         theta = []
         for column in THETA_COLUMNS:
             if not logscale and column in ["omega", "p", "D"]:
-                theta.append(10 ** full_df[column].values)
+                theta.append(10 ** out_df[column].values)
             else:
-                theta.append(full_df[column].values)
+                theta.append(out_df[column].values)
         theta = np.stack(theta, axis=1)
     elif synth_type == "amchirp":
         theta = np.stack([
