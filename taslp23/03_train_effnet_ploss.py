@@ -26,8 +26,8 @@ print(str(datetime.datetime.now()) + " Start.")
 print(__doc__ + "\n")
 save_dir = sys.argv[1]  # /home/han/data/
 init_id = sys.argv[2]
-minmax = sys.argv[3]
-logscale_theta = sys.argv[4]
+minmax = int(sys.argv[3]) #need to cast to int to make the boolean evaluation work
+logscale_theta = int(sys.argv[4])
 opt = sys.argv[5]
 synth_type = sys.argv[6]
 
@@ -75,7 +75,6 @@ LMA = {
 }
 lr = 1e-3
 finetune = False
-
 
 if __name__ == "__main__":
     print("Current device: ", torch.cuda.get_device_name(0))
