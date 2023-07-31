@@ -199,7 +199,7 @@ if __name__ == "__main__":
     model = model.load_from_checkpoint(
         os.path.join(model_save_path, ckpt_path), 
         in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler,
-        var=bn_var, save_path=pred_path, lr=lr, LMA=LMA, minmax=minmax, opt=opt)
+        var=bn_var, save_path=pred_path, steps_per_epoch=steps_per_epoch, lr=lr, LMA=LMA, minmax=minmax,logtheta=logscale_theta, opt=opt)
     print("Fine-tuning model")
     trainer_ft.fit(model, dataset)
 
