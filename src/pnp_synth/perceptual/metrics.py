@@ -38,16 +38,12 @@ class JTFSloss(Metric):
             wav_gt.append(forward.pnp_forward(target[i,:], 
                                             Phi=phi,
                                             g=g, 
-                                            scaler=self.scaler,
-                                            synth_type=self.synth_type, 
-                                            logscale=self.logscale))
+                                            scaler=self.scaler))
 
             wav_pred.append(forward.pnp_forward(preds[i,:], 
                                             Phi=phi, 
                                             g=g, 
-                                            scaler=self.scaler,
-                                            synth_type=self.synth_type, 
-                                            logscale=self.logscale))
+                                            scaler=self.scaler))
         jtfs_targets = torch.stack(wav_gt)
         jtfs_preds = torch.stack(wav_pred) #(bs, #path)
 
@@ -84,19 +80,15 @@ class MSSloss(Metric):
         wav_gt = []
         wav_pred = []
         g = functools.partial(utils.x_from_theta, synth_type=self.synth_type, logscale=self.logscale)
-        for i in range(preds.shape[0]):
+        for i in range(preds.shape[0]): 
             wav_gt.append(forward.pnp_forward(target[i,:], 
                         Phi=nn.Identity(), 
                         g=g, 
-                        scaler=self.scaler,
-                        synth_type=self.synth_type, 
-                        logscale=self.logscale))
+                        scaler=self.scaler))
             wav_pred.append(forward.pnp_forward(preds[i,:], 
                         Phi=nn.Identity(), 
                         g=g, 
-                        scaler=self.scaler,
-                        synth_type=self.synth_type, 
-                        logscale=self.logscale))
+                        scaler=self.scaler))
         
         wav_gt = torch.stack(wav_gt)
         wav_pred = torch.stack(wav_pred)

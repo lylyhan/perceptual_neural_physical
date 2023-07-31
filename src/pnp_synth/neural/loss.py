@@ -128,9 +128,10 @@ def loss_spec(outputs, y, specloss, scaler, synth_type, logscale):
     #temporary loop
     wav_gt = []
     wav_pred = []
+    g = functools.partial(utils.x_from_theta, synth_type=synth_type, logscale=logscale)
     for i in range(y.shape[0]):
-        wav_gt.append(forward.pnp_forward(y[i,:], Phi=nn.Identity(), g=utils.x_from_theta, scaler=scaler, synth_type=synth_type, logscale=logscale))
-        wav_pred.append(forward.pnp_forward(outputs[i,:], Phi=nn.Identity(), g=utils.x_from_theta, scaler=scaler, synth_type=synth_type, logscale=logscale))
+        wav_gt.append(forward.pnp_forward(y[i,:], Phi=nn.Identity(), g=g, scaler=scaler))
+        wav_pred.append(forward.pnp_forward(outputs[i,:], Phi=nn.Identity(), g=g, scaler=scaler))
     wav_gt = torch.stack(wav_gt)
     wav_pred = torch.stack(wav_pred)
     #print("is there any sound", torch.norm(wav_gt), torch.norm(wav_pred), outputs)

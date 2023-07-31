@@ -13,7 +13,7 @@ def inverse_scale(nu, scaler):
     return theta
 
 
-def pnp_forward(nu, Phi, g, scaler, synth_type, logscale):
+def pnp_forward(nu, Phi, g, scaler):
     """
     Computes S = (Phi o g o h^{-1})(nu) = (Phi o g)(theta) = Phi(x), given:
     1. a scaler h
@@ -26,7 +26,7 @@ def pnp_forward(nu, Phi, g, scaler, synth_type, logscale):
     else:
         theta = nu
     # Synthesis
-    x = g(theta, synth_type, logscale) 
+    x = g(theta) 
     # Spectral analysis
     S = Phi(x)
     return S.flatten()
