@@ -32,7 +32,7 @@ opt = sys.argv[5]
 synth_type = sys.argv[6]
 
 batch_size = 64
-is_train = True
+is_train = False
 
 print("Command-line arguments:\n" + "\n".join(sys.argv[1:]))
 print(f"Batch size: {batch_size}\n")
@@ -155,7 +155,13 @@ if __name__ == "__main__":
     )
     # train
     print("Training ...")
-    trainer.fit(model, dataset)
+    if is_train:
+        trainer.fit(model, dataset)
+    else:
+         model = model.load_from_checkpoint(
+                    os.path.join(model_save_path, "best.ckpt"), 
+                    in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler,
+                    var=bn_var, save_path=pred_path, steps_per_epoch=steps_per_epoch, lr=lr, LMA=LMA, minmax=minmax,logtheta=logscale_theta, opt=opt)
 
     test_loss = trainer.test(model, dataset, verbose=False)
     print("Model saved at: {}".format(model_save_path))
