@@ -38,12 +38,16 @@ class JTFSloss(Metric):
             wav_gt.append(forward.pnp_forward(target[i,:], 
                                             Phi=phi,
                                             g=g, 
-                                            scaler=self.scaler))
+                                            scaler=self.scaler,
+                                            synth_type=self.synth_type, 
+                                            logscale=self.logscale))
 
             wav_pred.append(forward.pnp_forward(preds[i,:], 
                                             Phi=phi, 
                                             g=g, 
-                                            scaler=self.scaler))
+                                            scaler=self.scaler,
+                                            synth_type=self.synth_type, 
+                                            logscale=self.logscale))
         jtfs_targets = torch.stack(wav_gt)
         jtfs_preds = torch.stack(wav_pred) #(bs, #path)
 
@@ -84,11 +88,15 @@ class MSSloss(Metric):
             wav_gt.append(forward.pnp_forward(target[i,:], 
                         Phi=nn.Identity(), 
                         g=g, 
-                        scaler=self.scaler))
+                        scaler=self.scaler,
+                        synth_type=self.synth_type, 
+                        logscale=self.logscale))
             wav_pred.append(forward.pnp_forward(preds[i,:], 
                         Phi=nn.Identity(), 
                         g=g, 
-                        scaler=self.scaler))
+                        scaler=self.scaler,
+                        synth_type=self.synth_type, 
+                        logscale=self.logscale))
         
         wav_gt = torch.stack(wav_gt)
         wav_pred = torch.stack(wav_pred)
