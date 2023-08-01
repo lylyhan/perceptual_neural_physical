@@ -74,7 +74,7 @@ LMA = {
     'damping': "id"
 }
 lr = 1e-3
-finetune = True
+finetune = False
 
 
 if __name__ == "__main__":
@@ -198,19 +198,23 @@ if __name__ == "__main__":
     )
 
     # train
-
-    print("Pre-training ...")
-    trainer.fit(model, dataset)
-    ckpt_path = os.path.join(model_save_path, "best.ckpt")
-    print("Load Pretrained model")
-    model = model.load_from_checkpoint(
-        os.path.join(model_save_path, ckpt_path), 
-        in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler,
-        var=bn_var, save_path=pred_path, steps_per_epoch=steps_per_epoch, lr=lr, LMA=LMA, minmax=minmax,logtheta=logscale_theta, opt=opt)
-    print("Fine-tuning model")
-    trainer_ft.fit(model, dataset_mss) #change batch size to fit gpu
-
-    
+    if is_train:
+        print("Pre-training ...")
+        trainer.fit(model, dataset)
+        ckpt_path = os.path.join(model_save_path, "best.ckpt")
+        print("Load Pretrained model")
+        model = model.load_from_checkpoint(
+            os.path.join(model_save_path, ckpt_path), 
+            in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler,
+            var=bn_var, save_path=pred_path, steps_per_epoch=steps_per_epoch, lr=lr, LMA=LMA, minmax=minmax,logtheta=logscale_theta, opt=opt)
+        print("Fine-tuning model")
+        trainer_ft.fit(model, dataset_mss) #change batch size to fit gpu
+    else:
+        model = model.load_from_checkpoint(
+            os.path.join(model_save_path, "finetune", "best.ckpt"), 
+            in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler,
+            var=bn_var, save_path=pred_path, steps_per_epoch=steps_per_epoch, lr=lr, LMA=LMA, minmax=minmax,logtheta=logscale_theta, opt=opt)
+        
 
 
     test_loss = trainer_ft.test(model, dataset, verbose=False)
