@@ -33,7 +33,7 @@ opt = sys.argv[5]
 synth_type = sys.argv[6]
 
 batch_size = 256
-is_train = True
+is_train = False
 
 print("Command-line arguments:\n" + "\n".join(sys.argv[1:]))
 print(f"Batch size: {batch_size}\n")
@@ -191,18 +191,22 @@ if __name__ == "__main__":
     )
 
     # train
-
-    print("Pre-training ...")
-    trainer.fit(model, dataset)
-    ckpt_path = os.path.join(model_save_path, "best.ckpt")
-    print("Load Pretrained model")
-    model = model.load_from_checkpoint(
-        os.path.join(model_save_path, ckpt_path), 
-        in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler,
-        var=bn_var, save_path=pred_path, steps_per_epoch=steps_per_epoch, lr=lr, LMA=LMA, minmax=minmax,logtheta=logscale_theta, opt=opt)
-    print("Fine-tuning model")
-    trainer_ft.fit(model, dataset)
-
+    if is_train:
+        print("Pre-training ...")
+        trainer.fit(model, dataset)
+        ckpt_path = os.path.join(model_save_path, "best.ckpt")
+        print("Load Pretrained model")
+        model = model.load_from_checkpoint(
+            os.path.join(model_save_path, ckpt_path), 
+            in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler,
+            var=bn_var, save_path=pred_path, steps_per_epoch=steps_per_epoch, lr=lr, LMA=LMA, minmax=minmax,logtheta=logscale_theta, opt=opt)
+        print("Fine-tuning model")
+        trainer_ft.fit(model, dataset)
+    else:
+        model = model.load_from_checkpoint(
+            os.path.join(model_save_path, "finetune", "best.ckpt"), 
+            in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler,
+            var=bn_var, save_path=pred_path, steps_per_epoch=steps_per_epoch, lr=lr, LMA=LMA, minmax=minmax,logtheta=logscale_theta, opt=opt)
     
 
 
