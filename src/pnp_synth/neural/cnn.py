@@ -209,8 +209,8 @@ class EffNet(pl.LightningModule):
         self.monitor_valloss = torch.inf
         self.current_device = "cuda" if torch.cuda.is_available() else "cpu"
         if LMA:
-            self.LMA_lambda0 = LMA['lambda']
-            self.LMA_lambda = LMA['lambda']
+            #self.LMA_lambda0 = LMA['lambda']
+            #self.LMA_lambda = LMA['lambda']
             self.LMA_threshold = LMA['threshold']
             self.LMA_accelerator = LMA['accelerator']
             self.LMA_brake = LMA['brake']
@@ -254,6 +254,8 @@ class EffNet(pl.LightningModule):
         except:
             M = None
         M_mean = batch['M_mean'].to(self.current_device)
+        self.LMA_lambda0 = batch['lambda0'].to(self.current_device)
+        self.LMA_lambda = self.LMA_lambda0
         try:
             metric_weight = batch['metric_weight'].to(self.current_device)
             JdagJ = batch['JdagJ'].to(self.current_device)
@@ -494,7 +496,7 @@ class DrumData(Dataset):
             else:
                 fmin = 32.7
             self.cqt_from_x = CQT(**cqt_params,fmin=fmin).cuda()
-        self.M_mean, self.sigma_mean = self.make_M_mean()
+        self.M_mean, self.sigma_mean, self.lambda0 = self.make_M_mean()
         # Initialize joblib Memory object
         # self.cqt_memory = joblib.Memory(cqt_dir, verbose=0)
         # self.cqt_from_id = self.cqt_memory.cache(self.cqt_from_id)
@@ -516,7 +518,7 @@ class DrumData(Dataset):
         if self.feature == "cqt":
             Sy = self.cqt_from_id(id, eps)
             return {'feature': torch.abs(Sy), 'y': y_norm, 'weight': weight, 'M': M,
-                    'metric_weight': metric_weight, 'M_mean': self.M_mean, 'JdagJ': JdagJ}
+                    'metric_weight': metric_weight, 'M_mean': self.M_mean, 'JdagJ': JdagJ, 'lambda0':self.lambda0}
 
     def __len__(self):
         return len(self.ids)
@@ -540,6 +542,7 @@ class DrumData(Dataset):
         #load from h5
         M_mean = None
         sigma_mean = None
+        lambda_max = 0
         with h5py.File(self.weights_dir, "r") as f:
             ids = f['M'].keys()
             count = 0
@@ -548,8 +551,10 @@ class DrumData(Dataset):
                 sigma,_ = torch.sort(torch.abs(torch.tensor(f['sigma'][str(id)])), descending=False)
                 M_mean = M if M_mean is None else M_mean + M
                 sigma_mean = sigma if sigma_mean is None else sigma_mean + sigma
+                if max(sigma) > lambda_max:
+                    lambda_max = max(sigma)
                 count += 1
-        return M_mean / count, sigma_mean / count
+        return M_mean / count, sigma_mean / count, lambda_max ** 2
 
     def cqt_from_id(self, id, eps):
         with h5py.File(self.audio_dir, "r") as f:
@@ -661,8 +666,11 @@ class DrumDataModule(pl.LightningDataModule):
             JdagJ = torch.stack([s['JdagJ'] for s in batch])
         except: 
             metric_weight, JdagJ = None, None
-
-        return {'feature': Sy, 'y': y, 'weight': weight, 'M': M, 'metric_weight': metric_weight, 'M_mean': M_mean, 'JdagJ': JdagJ}
+        try:
+            lambda0 = batch[0]['lambda0']
+        except:
+            lambda0 = None
+        return {'feature': Sy, 'y': y, 'weight': weight, 'M': M, 'metric_weight': metric_weight, 'M_mean': M_mean, 'JdagJ': JdagJ, 'lambda0': lambda0}
 
     def train_dataloader(self):
         return DataLoader(self.train_ds,
