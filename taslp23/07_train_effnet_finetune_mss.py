@@ -33,7 +33,7 @@ opt = sys.argv[5]
 synth_type = sys.argv[6]
 
 batch_size = 256
-is_train = True
+is_train = False
 
 print("Command-line arguments:\n" + "\n".join(sys.argv[1:]))
 print(f"Batch size: {batch_size}\n")
@@ -74,7 +74,7 @@ LMA = {
     'damping': "id"
 }
 lr = 1e-3
-finetune = False
+finetune = True
 
 
 if __name__ == "__main__":
