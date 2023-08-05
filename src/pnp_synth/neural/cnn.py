@@ -221,7 +221,7 @@ class EffNet(pl.LightningModule):
             self.LMA_lambda = 1e+15
             self.LMA_threshold = 1e+20
             self.LMA_accelerator = 0.1
-            self.LMA_brake = 10
+            self.LMA_brake = 1
             self.LMA_mode = "adaptive"
             self.LMA_damping = "id"
         self.best_params = self.parameters
@@ -232,6 +232,9 @@ class EffNet(pl.LightningModule):
         self.train_outputs = []
         self.test_outputs = []
         self.val_outputs = []
+        self.step_count = 0
+        self.update_hessian = 10
+        self.LMA_lambda = None
 
     def forward(self, input_tensor):
         input_tensor = input_tensor.unsqueeze(1)
@@ -255,7 +258,8 @@ class EffNet(pl.LightningModule):
             M = None
         M_mean = batch['M_mean'].to(self.current_device)
         self.LMA_lambda0 = batch['lambda0'].to(self.current_device)
-        self.LMA_lambda = self.LMA_lambda0
+        if self.LMA_lambda is None:
+            self.LMA_lambda = self.LMA_lambda0
         try:
             metric_weight = batch['metric_weight'].to(self.current_device)
             JdagJ = batch['JdagJ'].to(self.current_device)
@@ -309,9 +313,9 @@ class EffNet(pl.LightningModule):
                 opt = self.optimizers()
                 def closure():
                     opt.zero_grad()
-                    self.manual_backward(loss)
+                    self.manual_backward(loss, retain_graph=True)
                     return loss
-                self.update_lr(batch_idx)
+                #self.update_lr(batch_idx)
                 opt.step(closure=closure)
 
         elif fold == "test":
@@ -413,6 +417,8 @@ class EffNet(pl.LightningModule):
 
         elif self.opt == "sophia":
             self.optimizer = optimizer.SophiaG(params=self.parameters(), lr=self.lr, betas=(0.965, 0.99), rho = 0.01, weight_decay=1e-1)
+            #self.automatic_optimization = False
+            #self.optimizer = optimizer.Sophia(self, None, self.parameters())
             lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             self.optimizer, patience=3)
             return{
