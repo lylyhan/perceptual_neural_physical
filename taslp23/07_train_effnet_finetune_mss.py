@@ -33,7 +33,7 @@ opt = sys.argv[5]
 synth_type = sys.argv[6]
 
 batch_size = 256
-is_train = False
+is_train = True
 
 print("Command-line arguments:\n" + "\n".join(sys.argv[1:]))
 print(f"Batch size: {batch_size}\n")
@@ -163,7 +163,7 @@ if __name__ == "__main__":
         dirpath=finetune_dir,
         monitor="val_loss",
         save_last=True,
-        filename= "best",#"ckpt-{epoch:02d}-{val_loss:.2f}",
+        filename= "best",
         save_weights_only=False,
     )
 
@@ -183,6 +183,7 @@ if __name__ == "__main__":
         enable_progress_bar=True,
         max_time=timedelta(hours=10)
     )
+    tb_logger_ft = pl_loggers.TensorBoardLogger(save_dir=os.path.join(model_save_path, "finetune", "logs"))
     trainer_ft = pl.Trainer(
         accelerator="gpu",
         devices=-1,
