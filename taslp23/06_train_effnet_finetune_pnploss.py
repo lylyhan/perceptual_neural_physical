@@ -33,7 +33,7 @@ opt = sys.argv[5]
 synth_type = sys.argv[6]
 
 batch_size = 256
-is_train = False
+is_train = True
 
 print("Command-line arguments:\n" + "\n".join(sys.argv[1:]))
 print(f"Batch size: {batch_size}\n")
