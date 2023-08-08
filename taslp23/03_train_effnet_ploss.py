@@ -48,7 +48,7 @@ model_dir = os.path.join(save_dir, "f_W")
 cqt_dir = data_dir
 
 
-epoch_max = 70
+epoch_max = 2#70
 steps_per_epoch = taslp23.SAMPLES_PER_EPOCH / batch_size
 max_steps = steps_per_epoch * epoch_max
 # feature parameters
