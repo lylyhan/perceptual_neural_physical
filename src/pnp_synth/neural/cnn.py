@@ -210,7 +210,7 @@ class EffNet(pl.LightningModule):
         self.current_device = "cuda" if torch.cuda.is_available() else "cpu"
         if LMA:
             #self.LMA_lambda0 = LMA['lambda']
-            #self.LMA_lambda = LMA['lambda']
+            self.LMA_lambda = LMA['lambda']
             self.LMA_threshold = LMA['threshold']
             self.LMA_accelerator = LMA['accelerator']
             self.LMA_brake = LMA['brake']
@@ -234,7 +234,8 @@ class EffNet(pl.LightningModule):
         self.val_outputs = []
         self.step_count = 0
         self.update_hessian = 10
-        self.LMA_lambda = None
+        if self.LMA_mode == "adaptive":
+            self.LMA_lambda = None
 
     def forward(self, input_tensor):
         input_tensor = input_tensor.unsqueeze(1)
@@ -258,7 +259,7 @@ class EffNet(pl.LightningModule):
             M = None
         M_mean = batch['M_mean'].to(self.current_device)
         self.LMA_lambda0 = batch['lambda0'].to(self.current_device)
-        if self.LMA_lambda is None:
+        if self.LMA_lambda is None and self.LMA_mode == "adaptive":
             self.LMA_lambda = self.LMA_lambda0
         try:
             metric_weight = batch['metric_weight'].to(self.current_device)
