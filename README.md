@@ -15,10 +15,15 @@ git clone https://github.com/lylyhan/perceptual_neural_physical.git
 cd perceptual_neural_physical
 python -m pip install .
 
+# install kymatio
+git clone https://github.com/cyrusvahidi/jtfs-gpu.git
+cd kymatio
+pip install -e .
+
 ```
 
 ## Example Usage:
-Compute $S = (\Phi \circ g \circ h^{-1})(nu) = (\Phi o g)(\theta) = \Phi(x)$, where $h$ is a minmax scaler, $g$ is a FTM synthesizer, and $\Phi$ is JTFS coefficients.
+Compute $S = (\Phi \circ g)(\theta) = \Phi(x)$, where $g$ is a FTM synthesizer, and $\Phi$ is the JTFS coefficients.
 ```
 
 from pnp_synth.neural import forward
@@ -57,6 +62,15 @@ S = forward.pnp_forward(theta[:,None],
 Compute $\nabla_{(\Phi \circ g)} (\theta)$
 
 ```
+import taslp23
+
 S_from_nu = taslp23.pnp_forward_factory(scaler, logscale, synth_type)
 dS_over_dnu = functorch.jacfwd(S_from_nu)
+
+S = S_from_nu(theta)
+# Compute Jacobian: d(S) / d(nu)
+J = dS_over_dnu(theta)
+
+# Compute Riemannian metric of a given theta
+M = torch.mm(J.T, J)
 ```
