@@ -18,7 +18,7 @@ python -m pip install .
 ```
 
 ## Example Usage:
-Compute $S = (\Phi o g o h^{-1})(nu) = (\Phi o g)(theta) = \Phi(x)$, where $h$ is a minmax scaler, $g$ is a FTM synthesizer, and $\Phi$ is JTFS coefficients.
+Compute $S = (\Phi \circ g \circ h^{-1})(nu) = (\Phi o g)(\theta) = \Phi(x)$, where $h$ is a minmax scaler, $g$ is a FTM synthesizer, and $\Phi$ is JTFS coefficients.
 ```
 
 from pnp_synth.neural import forward
