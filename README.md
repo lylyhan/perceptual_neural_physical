@@ -34,8 +34,10 @@ import functools
 
 # define synthesizer type
 synth_type = "ftm"
+
 # load JTFS hyperparameters based on synthesizer type
 jtfs_params = utils.jtfsparam(synth_type)
+
 # define scaling operation on parameter theta
 logscale = True
 scaler = None
@@ -44,14 +46,13 @@ scaler = None
 # define JTFS operator 
 jtfs_operator = TimeFrequencyScattering1D(**jtfs_params, out_type="list").to("cuda")
 jtfs_operator.average_global = True
-# define perceptual representation Phi
-phi = functools.partial(utils.S_from_x, jtfs_operator=jtfs_operator)
-# define synthesizer g
-g = functools.partial(utils.x_from_theta, synth_type=synth_type, logscale=logscale)
 
+
+phi = functools.partial(utils.S_from_x, jtfs_operator=jtfs_operator)
+g = functools.partial(utils.x_from_theta, synth_type=synth_type, logscale=logscale)
+theta = torch.randn(5)
 
 # Compute S given theta as input
-theta = torch.randn(5)
 S = forward.pnp_forward(theta[:,None], 
                         Phi=phi,
                         g=g, 
