@@ -13,13 +13,22 @@
 
         .sound-row {
             display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
             margin-bottom: 10px;
             align-items: center;
+            width: 100%;
         }
 
         .label {
             font-weight: bold;
             margin-bottom: 5px;
+            text-align: center;
+            width: 100%;
+        }
+        
+        audio {
+            max-width: calc(100% / 6 - 20px); /* Adjust the width as needed */
         }
     </style>
 </head>
@@ -49,7 +58,7 @@
                 Your browser does not support the audio element.
             </audio>
             <audio controls>
-                <source src="./sounds/1045/ploss_pred" type="audio/mpeg">
+                <source src="./sounds/1045/ploss_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
@@ -75,7 +84,7 @@
                 Your browser does not support the audio element.
             </audio>
             <audio controls>
-                <source src="./sounds/2600/ploss_pred" type="audio/mpeg">
+                <source src="./sounds/2600/ploss_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
