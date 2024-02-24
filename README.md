@@ -3,7 +3,10 @@
 Han Han, Vincent Lostanlen, Mathieu Lagrange
 
 ICASSP Paper on arxiv: (https://arxiv.org/abs/2301.02886)
+
 TASLP submission on arxiv: (https://arxiv.org/abs/2311.14213)
+
+Sound Matching examples: https://lylyhan.github.io/perceptual_neural_physical/ 
 
 ## Installation:
 
