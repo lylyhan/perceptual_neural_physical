@@ -73,7 +73,7 @@ def rectangular_drum(theta, logscale, **constants):
     y = yi[:,:,None] * y #(m1, m2, T)
     y_full = y * K[:,:,None] / N
     mode_rejected = mode_rejected.unsqueeze(2).repeat(1,1,y_full.shape[-1])
-    y_full[mode_rejected] *= 0
+    y_full[mode_rejected] -= y_full[mode_rejected]
     y = torch.sum(y_full, dim=(0,1)) #(T,)
     y = y / torch.max(torch.abs(y))
 
