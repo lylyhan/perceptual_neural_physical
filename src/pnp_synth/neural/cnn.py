@@ -258,9 +258,10 @@ class EffNet(pl.LightningModule):
         weight = batch['weight'].to(self.current_device)
         try:
             M = batch['M'].to(self.current_device).double()
+            M_mean = batch['M_mean'].to(self.current_device)
         except:
             M = None
-        M_mean = batch['M_mean'].to(self.current_device)
+            M_mean = None
         self.LMA_lambda0 = batch['lambda0'].to(self.current_device)
         if self.LMA_lambda is None and self.LMA_mode == "adaptive":
             self.LMA_lambda = self.LMA_lambda0
