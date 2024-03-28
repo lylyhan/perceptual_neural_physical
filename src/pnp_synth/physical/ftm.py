@@ -42,39 +42,39 @@ def rectangular_drum(theta, logscale, **constants):
 
     EI = S ** 4 
 
-    mu = torch.arange(1, constants['m1'] + 1).to(device) #(m,)
-    mu2 = torch.arange(1, constants['m2'] + 1).to(device) #(m,)
+    mu = torch.arange(1, constants['m1'] + 1).to(device) #(m1,)
+    mu2 = torch.arange(1, constants['m2'] + 1).to(device) #(m2,)
     dur = constants['dur']
-    n = (mu * pi / l0) ** 2 + (mu2 * pi / l2)**2 #(m,)
+    
+    n = (mu[:,None] * pi / l0) ** 2 + (mu2[None,:] * pi / l2)**2 #(m1,m2)
     n2 = n ** 2 
-    K = torch.sin(mu * pi * constants['x1']) * torch.sin(mu2 * pi * constants['x2']) #(m,)
+    K = torch.sin(mu[:,None] * pi * constants['x1']) * torch.sin(mu2[None,:] * pi * constants['x2']) #(m1,m2)
 
-
-    beta = EI * n2 + T * n #(m)
+    beta = EI * n2 + T * n #(m1, m2)
     alpha = (d1 - d3 * n)/2 # nonlinear
     omega = torch.sqrt(torch.abs(beta - alpha**2))
 
     #adaptively change mode number according to nyquist frequency
-    temp = (omega / 2 / pi) <= constants['sr'] / 2
-    mode_corr = torch.sum(temp.to(torch.int32),)
+    mode_rejected = (omega / 2 / pi) > constants['sr'] / 2
     
     N = l0 * l2 / 4
     yi = (
         constants['h'] 
-        * torch.sin(mu[:mode_corr] * pi * constants['x1']) 
-        * torch.sin(mu2[:mode_corr] * pi * constants['x2']) 
-        / omega[:mode_corr] #(mode)
-    )
+        * torch.sin(mu[:, None] * pi * constants['x1']) 
+        * torch.sin(mu2[None, :] * pi * constants['x2']) 
+        / omega #(m1, m2)
+    ) 
 
     time_steps = torch.linspace(0, dur, dur).to(device) / constants['sr'] #(T,)
-    y = torch.exp(-alpha[:mode_corr,None] * time_steps[None,:]) * torch.sin(
-        omega[:mode_corr,None] * time_steps[None,:]
-    ) # (mode,T)
+    y = torch.exp(-alpha[:,:,None] * time_steps[None, None, :]) * torch.sin(
+        omega[:,:,None] * time_steps[None,None,:]
+    ) # (m1, m2, T)
 
-    y = yi[:,None] * y #(mode,T)
-
-    y = torch.sum(y * K[:mode_corr,None] / N,axis=0) #(T,)
-
+    y = yi[:,:,None] * y #(m1, m2, T)
+    y_full = y * K[:,:,None] / N
+    mode_rejected = mode_rejected.unsqueeze(2).repeat(1,1,y_full.shape[-1])
+    y_full[mode_rejected] = 0
+    y = torch.sum(y_full, dim=(0,1)) #(T,)
     y = y / torch.max(torch.abs(y))
 
     return y

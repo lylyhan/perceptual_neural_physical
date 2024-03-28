@@ -310,11 +310,11 @@ class EffNet(pl.LightningModule):
         if fold == "train":
             self.train_outputs.append(loss)
             self.log("train loss step", loss, prog_bar=True)
-            if self.opt == None:
+            if self.opt == "sophia":
                 opt = self.optimizers()
                 def closure():
                     opt.zero_grad()
-                    self.manual_backward(loss, retain_graph=True)
+                    self.manual_backward(loss, retain_graph=True)#, create_graph=True)
                     return loss
                 #self.update_lr(batch_idx)
                 opt.step(closure=closure)
@@ -419,7 +419,7 @@ class EffNet(pl.LightningModule):
         elif self.opt == "sophia":
             self.optimizer = optimizer.SophiaG(params=self.parameters(), lr=self.lr, betas=(0.965, 0.99), rho = 0.01, weight_decay=1e-1)
             #self.automatic_optimization = False
-            #self.optimizer = optimizer.Sophia(self, None, self.parameters())
+            #self.optimizer = optimizer.Sophia(None, None, self.parameters())
             lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             self.optimizer, patience=3)
             return{
