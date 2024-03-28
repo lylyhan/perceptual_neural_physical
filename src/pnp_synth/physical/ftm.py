@@ -56,7 +56,8 @@ def rectangular_drum(theta, logscale, **constants):
 
     #adaptively change mode number according to nyquist frequency
     mode_rejected = (omega / 2 / pi) > constants['sr'] / 2
-    
+    mode1_corr = constants['m1'] - max(torch.sum(mode_rejected, dim=0)) if constants['m1']-max(torch.sum(mode_rejected, dim=0))!=0 else constants['m1']
+    mode2_corr = constants['m2'] - max(torch.sum(mode_rejected, dim=1)) if constants['m2']-max(torch.sum(mode_rejected, dim=1))!=0 else constants['m2']
     N = l0 * l2 / 4
     yi = (
         constants['h'] 
@@ -72,8 +73,9 @@ def rectangular_drum(theta, logscale, **constants):
 
     y = yi[:,:,None] * y #(m1, m2, T)
     y_full = y * K[:,:,None] / N
-    mode_rejected = mode_rejected.unsqueeze(2).repeat(1,1,y_full.shape[-1])
-    y_full[mode_rejected] -= y_full[mode_rejected]
+    #mode_rejected = mode_rejected.unsqueeze(2).repeat(1,1,y_full.shape[-1])
+    y_full = y_full[:mode1_corr, :mode2_corr, :]
+    #y_full[mode_rejected] -= y_full[mode_rejected]
     y = torch.sum(y_full, dim=(0,1)) #(T,)
     y = y / torch.max(torch.abs(y))
 
