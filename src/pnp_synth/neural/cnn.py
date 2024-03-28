@@ -210,7 +210,7 @@ class EffNet(pl.LightningModule):
         self.current_device = "cuda" if torch.cuda.is_available() else "cpu"
         if LMA:
             #self.LMA_lambda0 = LMA['lambda']
-            self.LMA_lambda = LMA['lambda']
+            #self.LMA_lambda = LMA['lambda']
             self.LMA_threshold = LMA['threshold']
             self.LMA_accelerator = LMA['accelerator']
             self.LMA_brake = LMA['brake']
