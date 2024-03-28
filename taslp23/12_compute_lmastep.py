@@ -57,7 +57,7 @@ else:
     else:
         logscale = False
         
-    _, scaler = taslp23.scale_theta(logscale, "ftm") #sorted in terms of id
+    _, scaler = taslp23.scale_theta(logscale, synth_type="ftm") #sorted in terms of id
     
     full_df = taslp23.load_fold()
     nus = []
