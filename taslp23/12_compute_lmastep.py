@@ -32,6 +32,7 @@ print("")
 sys.stdout.flush()
 
 dir_name = "M_log" # M, M_nominmax_log, M_log
+synth_type = "ftm"
 eps = 1e-3
 
 if "nominmax" in dir_name:
@@ -41,7 +42,7 @@ if "nominmax" in dir_name:
     else:
         logscale = False
         
-    full_df = taslp23.load_fold()
+    full_df = taslp23.load_fold(synth_type)
     nus = []
     for column in taslp23.THETA_COLUMNS:
         if not logscale and column in ["omega", "p", "D"]:
@@ -56,10 +57,9 @@ else:
         logscale = True
     else:
         logscale = False
-        
-    _, scaler = taslp23.scale_theta(logscale, synth_type="ftm") #sorted in terms of id
-    
-    full_df = taslp23.load_fold()
+
+    _, scaler = taslp23.scale_theta(logscale, synth_type) #sorted in terms of id    
+    full_df = taslp23.load_fold(synth_type)
     nus = []
     for column in taslp23.THETA_COLUMNS:
         if not logscale and column in ["omega", "p", "D"]:
@@ -80,7 +80,7 @@ os.makedirs(os.path.join(save_dir, dir_name), exist_ok=True)
 torch.autograd.set_detect_anomaly(True)
 # Make h5 files for M
 for fold in taslp23.FOLDS:
-    fold_df = taslp23.load_fold(fold)
+    fold_df = taslp23.load_fold(synth_type, fold)
     h5_name = "ftm_{}_M_{}.h5".format(fold, id_start)
     h5_path = os.path.join(save_dir, dir_name, h5_name)
     if not os.path.exists(h5_path):
@@ -88,7 +88,7 @@ for fold in taslp23.FOLDS:
             M_group = h5_file.create_group("M")
             evals_group = h5_file.create_group("sigma")
 
-fold_df = taslp23.load_fold()
+fold_df = taslp23.load_fold(synth_type)
 for i in range(id_start, id_end):
     row = fold_df.iloc[i]
     #theta = torch.tensor([row[column] for column in setups.THETA_COLUMNS])
