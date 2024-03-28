@@ -70,7 +70,7 @@ else:
     nus = np.stack(nus, axis=1)   
 
 # Define the forward PNP operator.
-S_from_nu = taslp23.pnp_forward_factory(scaler)
+S_from_nu = taslp23.pnp_forward_factory(scaler, logscale, synth_type)
 
 # Define the associated Jacobian operator.
 # NB: jacfwd is faster than reverse-mode autodiff here because the input
