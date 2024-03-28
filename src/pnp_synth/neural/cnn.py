@@ -205,12 +205,14 @@ class EffNet(pl.LightningModule):
         self.metric_macro = metrics.JTFSloss(self.scaler, "macro", self.synth_type, logtheta)
         self.metric_micro = metrics.JTFSloss(self.scaler, "micro", self.synth_type, logtheta)
         self.metric_mss = metrics.MSSloss(self.scaler, self.synth_type, logtheta)
+        self.mss_validation = metrics.MSSloss(self.scaler, self.synth_type, logtheta)
+        self.jtfs_validation = metrics.JTFSloss(self.scaler, "macro", self.synth_type, logtheta)
         self.std = torch.sqrt(torch.tensor(var))
         self.monitor_valloss = torch.inf
         self.current_device = "cuda" if torch.cuda.is_available() else "cpu"
         if LMA:
             #self.LMA_lambda0 = LMA['lambda']
-            self.LMA_lambda = LMA['lambda']
+            #self.LMA_lambda = LMA['lambda']
             self.LMA_threshold = LMA['threshold']
             self.LMA_accelerator = LMA['accelerator']
             self.LMA_brake = LMA['brake']
@@ -232,6 +234,7 @@ class EffNet(pl.LightningModule):
         self.train_outputs = []
         self.test_outputs = []
         self.val_outputs = []
+        self.ploss_validation = []
         self.step_count = 0
         self.update_hessian = 10
         if self.LMA_mode == "adaptive":
@@ -266,6 +269,7 @@ class EffNet(pl.LightningModule):
             JdagJ = batch['JdagJ'].to(self.current_device)
         except:
             metric_weight, JdagJ = None, None
+
         outputs = self(Sy) 
         assert outputs.shape[1] == self.outdim
         # match outputs and y dimension
@@ -309,8 +313,7 @@ class EffNet(pl.LightningModule):
         
         if fold == "train":
             self.train_outputs.append(loss)
-            self.log("train loss step", loss, prog_bar=True)
-            if self.opt == "sophia":
+            if self.opt == None:
                 opt = self.optimizers()
                 def closure():
                     opt.zero_grad()
@@ -323,8 +326,11 @@ class EffNet(pl.LightningModule):
             self.test_outputs.append(loss)
         elif fold == "val":
             self.val_outputs.append(loss)
+            self.mss_validation.update(outputs, y)
+            self.jtfs_validation.update(outputs, y, None)
             #compute comparable validation loss
-            self.log("everyone's val loss step", F.mse_loss(outputs.double(), y.double()))
+            self.ploss_validation.append(F.mse_loss(outputs.double(), y.double()))
+            #self.log("ploss metrics", F.mse_loss(outputs.double(), y.double()))
         return {'loss': loss}
 
     def training_step(self, batch, batch_idx):
@@ -340,6 +346,7 @@ class EffNet(pl.LightningModule):
         self.train_outputs = []
         self.test_outputs = []
         self.val_outputs = []
+        self.ploss_validation = []
         self.log("lr", self.optimizer.param_groups[-1]['lr'])
 
     def on_train_epoch_end(self):
@@ -371,7 +378,8 @@ class EffNet(pl.LightningModule):
         return avg_loss, avg_macro_metric, avg_micro_metric, avg_mss_metric
 
     def on_validation_epoch_end(self):
-        avg_loss = torch.tensor(self.val_outputs).mean()
+        avg_loss = torch.tensor(self.val_outputs).mean() #current loss function's validation loss
+        avg_ploss_validation = torch.tensor(self.ploss_validation).mean()
         if self.loss_type == "weighted_p":
             if self.LMA_mode == "adaptive":
                 # Levenburg-Marquardt Algorithm, lambda decay heuristics
@@ -385,7 +393,6 @@ class EffNet(pl.LightningModule):
                     else:
                         self.LMA_lambda = self.LMA_threshold
                     self.parameters = self.best_params
-                #print("changed????", self.LMA_lambda)
             elif self.LMA_mode == "scheduled":
                 self.epoch += 1
                 self.LMA_lambda = self.LMA_lambda * self.LMA_accelerator
@@ -394,6 +401,14 @@ class EffNet(pl.LightningModule):
         self.log('LMA_lambda', self.LMA_lambda)
         self.log('val_loss', avg_loss, on_step=False,
                  prog_bar=True, on_epoch=True)
+        avg_mss_validation = self.mss_validation.compute()
+        self.epoch += 1
+        if self.epoch % 10 == 0:
+            avg_jtfs_validation = self.jtfs_validation.compute()
+            self.log("epoch jtfs metrics", avg_jtfs_validation)
+        self.log("epoch mss metrics", avg_mss_validation)
+        self.log("epoch ploss metrics", avg_ploss_validation)
+        
 
         return {'val_loss': avg_loss}
 
@@ -495,7 +510,7 @@ class DrumData(Dataset):
             cqt_params = {
                     'sr': self.sr,
                     'n_bins': self.J * self.Q,
-                    'hop_length': 256,
+                    'hop_length': 256, 
                     }
             #find fmin
             if 2**self.J * 32.7 >= cqt_params['sr']/2:
@@ -503,7 +518,11 @@ class DrumData(Dataset):
             else:
                 fmin = 32.7
             self.cqt_from_x = CQT(**cqt_params,fmin=fmin).cuda()
-        self.M_mean, self.sigma_mean, self.lambda0 = self.make_M_mean()
+        try:
+            self.M_mean, self.sigma_mean, self.lambda0 = self.make_M_mean()
+        except:
+            self.M_mean, self.sigma_mean, self.lambda0 = None, None, None
+    
         # Initialize joblib Memory object
         # self.cqt_memory = joblib.Memory(cqt_dir, verbose=0)
         # self.cqt_from_id = self.cqt_memory.cache(self.cqt_from_id)
