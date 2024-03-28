@@ -33,6 +33,7 @@ sys.stdout.flush()
 
 dir_name = "M_log" # M, M_nominmax_log, M_log
 synth_type = "ftm"
+THETA_COLUMNS = ["omega", "tau", "p", "D", "alpha"]
 eps = 1e-3
 
 if "nominmax" in dir_name:
@@ -44,7 +45,7 @@ if "nominmax" in dir_name:
         
     full_df = taslp23.load_fold(synth_type)
     nus = []
-    for column in taslp23.THETA_COLUMNS:
+    for column in THETA_COLUMNS:
         if not logscale and column in ["omega", "p", "D"]:
             nus.append(10 ** full_df[column].values)
         else:
@@ -62,7 +63,7 @@ else:
     
     full_df = taslp23.load_fold(synth_type)
     nus = []
-    for column in taslp23.THETA_COLUMNS:
+    for column in THETA_COLUMNS:
         if not logscale and column in ["omega", "p", "D"]:
             nus.append(10 ** full_df[column].values)
         else:
