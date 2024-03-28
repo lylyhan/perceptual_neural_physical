@@ -52,12 +52,13 @@ if "nominmax" in dir_name:
     nus = np.stack(nus, axis=1)        
 
 else:
-    _, scaler = taslp23.scale_theta() #sorted in terms of id
     if "log" in dir_name:
         logscale = True
     else:
         logscale = False
-
+        
+    _, scaler = taslp23.scale_theta(logscale, "ftm") #sorted in terms of id
+    
     full_df = taslp23.load_fold()
     nus = []
     for column in taslp23.THETA_COLUMNS:
