@@ -48,7 +48,7 @@ model_dir = os.path.join(save_dir, "f_W")
 cqt_dir = data_dir
 
 
-epoch_max = 2#70
+epoch_max = 70
 steps_per_epoch = taslp23.SAMPLES_PER_EPOCH / batch_size
 max_steps = steps_per_epoch * epoch_max
 # feature parameters
@@ -158,9 +158,16 @@ if __name__ == "__main__":
         max_time=timedelta(hours=12)
     )
     # train
-    print("Training ...")
-    trainer.fit(model, dataset)
-
+    if is_train:
+        print("Training ...")
+        trainer.fit(model, dataset)
+    else:
+        ckpt_path = os.path.join(model_save_path, 'best.ckpt')
+        print("Load Pretrained model")
+        model = model.load_from_checkpoint(
+            ckpt_path, 
+            in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler,
+            var=bn_var, save_path=pred_path, steps_per_epoch=steps_per_epoch, lr=lr, LMA=LMA, minmax=minmax,logtheta=logscale_theta, opt=opt)
     test_loss = trainer.test(model, dataset, verbose=False)
     print("Model saved at: {}".format(model_save_path))
     print("Average test loss: {}".format(test_loss))
