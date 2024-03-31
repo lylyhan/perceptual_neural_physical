@@ -211,9 +211,6 @@ class EffNet(pl.LightningModule):
         self.monitor_valloss = torch.inf
         self.current_device = "cuda" if torch.cuda.is_available() else "cpu"
         if LMA:
-            #self.LMA_lambda0 = LMA['lambda']
-            #self.LMA_lambda = LMA['lambda']
-            self.LMA_threshold = LMA['threshold']
             self.LMA_accelerator = LMA['accelerator']
             self.LMA_brake = LMA['brake']
             self.LMA_mode = LMA['mode']
@@ -221,8 +218,8 @@ class EffNet(pl.LightningModule):
         else:
             self.LMA_lambda0 = 1e+15
             self.LMA_lambda = 1e+15
-            self.LMA_threshold = 1e+20
-            self.LMA_accelerator = 0.2
+            self.LMA_threshold = 1e+40
+            self.LMA_accelerator = 0.1
             self.LMA_brake = 1
             self.LMA_mode = "adaptive"
             self.LMA_damping = "id"
@@ -260,13 +257,15 @@ class EffNet(pl.LightningModule):
             M = batch['M'].to(self.current_device).double()
             M_mean = batch['M_mean'].to(self.current_device)
             self.LMA_lambda0 = batch['lambda0'].to(self.current_device)
+            self.LMA_threshold = self.LMA_lambda0 # set threshold to be the initialized lambda
         except:
             M = None
             M_mean = None
             self.LMA_lambda0 = None
+            self.LMA_theshold = None
 
         if self.LMA_lambda is None and self.LMA_mode == "adaptive":
-            self.LMA_lambda = self.LMA_lambda0
+            self.LMA_lambda = self.LMA_lambda0 #initialize lambda to be intiialized lambda
         try:
             metric_weight = batch['metric_weight'].to(self.current_device)
             JdagJ = batch['JdagJ'].to(self.current_device)
@@ -386,7 +385,7 @@ class EffNet(pl.LightningModule):
         if self.loss_type == "weighted_p":
             if self.LMA_mode == "adaptive":
                 # Levenburg-Marquardt Algorithm, lambda decay heuristics
-                print("what's going on,", avg_loss, self.monitor_valloss, self.LMA_lambda)
+                print("what's going on", avg_loss, self.monitor_valloss, self.LMA_lambda)
                 if avg_loss < self.monitor_valloss:
                     self.monitor_valloss = avg_loss
                     self.LMA_lambda = self.LMA_lambda * self.LMA_accelerator

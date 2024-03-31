@@ -32,7 +32,7 @@ opt = sys.argv[5]
 synth_type = sys.argv[6]
 
 batch_size = 256
-is_train = True
+is_train = False
 
 print("Command-line arguments:\n" + "\n".join(sys.argv[1:]))
 print(f"Batch size: {batch_size}\n")
@@ -65,14 +65,15 @@ bn_var = 0.5
 cnn_type = "efficientnet"  # efficientnet / cnn.wav2shape
 loss_type = "ploss"  # spec / weighted_p / ploss
 weight_type = "None"  # novol / pnp / None
-LMA = {
-    'mode': "constant", #scheduled / constant
-    'lambda': 1,
-    'threshold': 1e+8,
-    'accelerator': 0.5,
-    'brake': 1,
-    'damping': "mean"
-}
+#LMA = {
+#    'mode': "constant", #scheduled / constant
+#    'lambda': 1,
+#    'threshold': 1e+8,
+#    'accelerator': 0.5,
+#    'brake': 1,
+#    'damping': "mean"
+#}
+LMA = None
 lr = 1e-3
 finetune = False
 
