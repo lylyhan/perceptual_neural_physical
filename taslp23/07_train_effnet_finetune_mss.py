@@ -63,7 +63,7 @@ elif synth_type == "amchirp":
     sr = 2 ** 13
 bn_var = 0.5
 cnn_type = "efficientnet"  # efficientnet / cnn.wav2shape
-loss_type = "spec"  # spec / weighted_p / ploss
+loss_type = "specl2"  # spec / weighted_p / ploss
 weight_type = "novol"  # novol / pnp / None
 LMA = {
     'mode': "adaptive", #scheduled / constant
@@ -200,8 +200,8 @@ if __name__ == "__main__":
 
     # train
     if is_train:
-        print("Pre-training ...")
-        trainer.fit(model, dataset)
+        #print("Pre-training ...")
+        #trainer.fit(model, dataset)
         ckpt_path = os.path.join(model_save_path, "best.ckpt")
         print("Load Pretrained model")
         model = model.load_from_checkpoint(
