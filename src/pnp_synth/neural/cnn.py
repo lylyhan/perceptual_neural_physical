@@ -221,7 +221,7 @@ class EffNet(pl.LightningModule):
         else:
             self.LMA_lambda0 = 1e+15
             self.LMA_lambda = 1e+15
-            self.LMA_threshold = 1e+20
+            self.LMA_threshold = 1e+40
             self.LMA_accelerator = 0.1
             self.LMA_brake = 1
             self.LMA_mode = "adaptive"
@@ -386,6 +386,7 @@ class EffNet(pl.LightningModule):
         if self.loss_type == "weighted_p":
             if self.LMA_mode == "adaptive":
                 # Levenburg-Marquardt Algorithm, lambda decay heuristics
+                print("what's going on", avg_loss, self.monitor_valloss, self.LMA_lambda)
                 if avg_loss < self.monitor_valloss:
                     self.monitor_valloss = avg_loss
                     self.LMA_lambda = self.LMA_lambda * self.LMA_accelerator
