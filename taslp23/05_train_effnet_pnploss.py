@@ -44,7 +44,7 @@ print("")
 sys.stdout.flush()
 
 
-names = ["J"]
+names = ["M"]
     
 if minmax == False:
     names.append("nominmax")
@@ -78,11 +78,12 @@ weight_type = "novol"  # novol / pnp / None
 LMA = {
     'mode': "adaptive", #scheduled / constant
     #'lambda': 1e+20,
-    'threshold': 1e+20,
-    'accelerator': 0.2,
+    #'threshold': 1e+20,
+    'accelerator': 0.05,
     'brake': 1,
     'damping': "id"
 }
+#LMA = None
 
 lr = 1e-3
 finetune = False
