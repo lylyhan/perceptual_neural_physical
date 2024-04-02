@@ -77,14 +77,10 @@ loss_type = "weighted_p"  # spec / weighted_p / ploss
 weight_type = "novol"  # novol / pnp / None
 LMA = {
     'mode': "adaptive", #scheduled / constant
-    #'lambda': 1e+20,
-    #'threshold': 1e+20,
     'accelerator': 0.05,
     'brake': 1,
     'damping': "id"
 }
-#LMA = None
-
 lr = 1e-3
 finetune = False
 
