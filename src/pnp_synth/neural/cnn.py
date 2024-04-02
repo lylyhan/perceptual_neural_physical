@@ -216,10 +216,10 @@ class EffNet(pl.LightningModule):
             self.LMA_mode = LMA['mode']
             self.LMA_damping = LMA['damping']
         else:
-            self.LMA_lambda0 = 1e+15
-            self.LMA_lambda = 1e+15
-            self.LMA_threshold = 1e+40
-            self.LMA_accelerator = 0.1
+            self.LMA_lambda0 = 1e+20
+            self.LMA_lambda = 1e+20
+            self.LMA_threshold = 1e+20
+            self.LMA_accelerator = 0.2
             self.LMA_brake = 1
             self.LMA_mode = "adaptive"
             self.LMA_damping = "id"
@@ -385,17 +385,24 @@ class EffNet(pl.LightningModule):
         if self.loss_type == "weighted_p":
             if self.LMA_mode == "adaptive":
                 # Levenburg-Marquardt Algorithm, lambda decay heuristics
-                print("what's going on", avg_loss, self.monitor_valloss, self.LMA_lambda)
+                print("what's going on", self.epoch, avg_loss, self.monitor_valloss, self.LMA_lambda)
                 if avg_loss < self.monitor_valloss:
                     self.monitor_valloss = avg_loss
                     self.LMA_lambda = self.LMA_lambda * self.LMA_accelerator
-                    self.best_params = self.parameters
+                    self.best_params = self.parameters # register best model
                 else:
                     if self.LMA_lambda * self.LMA_brake < self.LMA_threshold:
                         self.LMA_lambda = self.LMA_lambda * self.LMA_brake
                     else:
                         self.LMA_lambda = self.LMA_threshold
-                    self.parameters = self.best_params
+                    self.parameters = self.best_params # revert to best model
+                
+                #disregard the monitor_valloss at the first evaluation
+                #if self.epoch == 1:
+                #    self.best_params = self.parameters
+                #    self.monitor_valloss = avg_loss
+                self.epoch += 1
+
             elif self.LMA_mode == "scheduled":
                 self.epoch += 1
                 self.LMA_lambda = self.LMA_lambda * self.LMA_accelerator
