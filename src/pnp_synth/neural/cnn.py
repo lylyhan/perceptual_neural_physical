@@ -236,6 +236,8 @@ class EffNet(pl.LightningModule):
         self.update_hessian = 10
         if self.LMA_mode == "adaptive":
             self.LMA_lambda = None
+        #this is for accomodating the new dataset
+        self.mu = 1e-15 # usually it should be 1
 
     def forward(self, input_tensor):
         input_tensor = input_tensor.unsqueeze(1)
@@ -299,7 +301,7 @@ class EffNet(pl.LightningModule):
                 loss = self.loss(
                     weight[:, None] * outputs.double(),
                     y.double(),
-                    M
+                    self.mu * M
                 )
             else: #ploss
                 loss = self.loss(weight[:,None].double() * outputs.double(), y.double())
