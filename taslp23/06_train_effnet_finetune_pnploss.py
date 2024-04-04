@@ -75,9 +75,7 @@ loss_type = "weighted_p"  # spec / weighted_p / ploss
 weight_type = "novol"  # novol / pnp / None
 LMA = {
     'mode': "adaptive", #scheduled / constant
-    'lambda': 1e+20,
-    'threshold': 1e+20,
-    'accelerator': 0.2,
+    'accelerator': 0.05,
     'brake': 1,
     'damping': "id"
 }
@@ -139,7 +137,7 @@ if __name__ == "__main__":
             in_channels=1, bin_per_oct=Q, outdim=outdim, loss=loss_type, scaler=scaler
         )
     elif cnn_type == "efficientnet":
-        model = cnn.EffNet(in_channels=1, outdim=outdim, loss="ploss", scaler=scaler, LMA=LMA, steps_per_epoch=steps_per_epoch, var=bn_var, save_path=pred_path, lr=lr, minmax=minmax, logtheta=logscale_theta, opt=opt)
+        model = cnn.EffNet(in_channels=1, outdim=outdim, loss="ploss", scaler=scaler, LMA=LMA, steps_per_epoch=steps_per_epoch, var=bn_var, save_path=pred_path, lr=lr, minmax=minmax, logtheta=logscale_theta, opt=opt,mu=mu)
     print(str(datetime.datetime.now()) + " Finished initializing model")
 
     # initialize checkpoint methods
@@ -200,14 +198,14 @@ if __name__ == "__main__":
         model = model.load_from_checkpoint(
             os.path.join(model_save_path, ckpt_path), 
             in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler,
-            var=bn_var, save_path=pred_path, steps_per_epoch=steps_per_epoch, lr=lr, LMA=LMA, minmax=minmax,logtheta=logscale_theta, opt=opt)
+            var=bn_var, save_path=pred_path, steps_per_epoch=steps_per_epoch, lr=lr, LMA=LMA, minmax=minmax,logtheta=logscale_theta, opt=opt, mu=mu)
         print("Fine-tuning model")
         trainer_ft.fit(model, dataset)
     else:
         model = model.load_from_checkpoint(
             os.path.join(model_save_path, "finetune", "best.ckpt"), 
             in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler,
-            var=bn_var, save_path=pred_path, steps_per_epoch=steps_per_epoch, lr=lr, LMA=LMA, minmax=minmax,logtheta=logscale_theta, opt=opt)
+            var=bn_var, save_path=pred_path, steps_per_epoch=steps_per_epoch, lr=lr, LMA=LMA, minmax=minmax,logtheta=logscale_theta, opt=opt, mu=mu)
     
 
 
