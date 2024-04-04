@@ -44,7 +44,7 @@ print("")
 sys.stdout.flush()
 
 
-names = ["J"]
+names = ["M"]
 if minmax == False:
     names.append("nominmax")
 if logscale_theta == True:
@@ -75,9 +75,7 @@ loss_type = "weighted_p"  # spec / weighted_p / ploss
 weight_type = "novol"  # novol / pnp / None
 LMA = {
     'mode': "adaptive", #scheduled / constant
-    'lambda': 1e+20,
-    'threshold': 1e+20,
-    'accelerator': 0.2,
+    'accelerator': 0.05,
     'brake': 1,
     'damping': "id"
 }
@@ -192,8 +190,8 @@ if __name__ == "__main__":
 
     # train
     if is_train:
-        print("Pre-training ...")
-        trainer.fit(model, dataset)
+        #print("Pre-training ...")
+        #trainer.fit(model, dataset)
         ckpt_path = os.path.join(model_save_path, "best.ckpt")
         print("Load Pretrained model")
         model = model.load_from_checkpoint(
