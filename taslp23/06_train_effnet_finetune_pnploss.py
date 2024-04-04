@@ -81,6 +81,7 @@ LMA = {
 }
 lr = 1e-3
 finetune = True
+mu = 1e-10
 
 
 if __name__ == "__main__":
