@@ -149,7 +149,7 @@ class wav2shape(pl.LightningModule):
 
 
 class EffNet(pl.LightningModule):
-    def __init__(self, in_channels,outdim,loss,scaler,var,save_path, steps_per_epoch, lr=1e-3, minmax=True, logtheta=True, LMA=None, opt="adam"):
+    def __init__(self, in_channels,outdim,loss,scaler,var,save_path, steps_per_epoch, lr=1e-3, minmax=True, logtheta=True, LMA=None, opt="adam",mu=1):
         super().__init__()
         self.scaler = scaler
         self.lr = lr
@@ -237,8 +237,7 @@ class EffNet(pl.LightningModule):
         if self.LMA_mode == "adaptive":
             self.LMA_lambda = None
         #this is for accomodating the new dataset
-        self.mu = 1e-15 # usually it should be 1
-
+        self.mu = mu
     def forward(self, input_tensor):
         input_tensor = input_tensor.unsqueeze(1)
         x = self.batchnorm1(input_tensor)

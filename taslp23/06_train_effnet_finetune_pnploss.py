@@ -44,7 +44,7 @@ print("")
 sys.stdout.flush()
 
 
-names = ["J"]
+names = ["M"]
 if minmax == False:
     names.append("nominmax")
 if logscale_theta == True:
@@ -83,6 +83,7 @@ LMA = {
 }
 lr = 1e-3
 finetune = True
+mu = 1e-10
 
 
 if __name__ == "__main__":
