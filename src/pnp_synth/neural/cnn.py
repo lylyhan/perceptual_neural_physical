@@ -205,8 +205,9 @@ class EffNet(pl.LightningModule):
         self.metric_macro = metrics.JTFSloss(self.scaler, "macro", self.synth_type, logtheta)
         self.metric_micro = metrics.JTFSloss(self.scaler, "micro", self.synth_type, logtheta)
         self.metric_mss = metrics.MSSloss(self.scaler, self.synth_type, logtheta)
-        #self.mss_validation = metrics.MSSloss(self.scaler, self.synth_type, logtheta)
-        #self.jtfs_validation = metrics.JTFSloss(self.scaler, "macro", self.synth_type, logtheta)
+        self.mss_validation = metrics.MSSloss(self.scaler, self.synth_type, logtheta)
+        self.jtfs_validation = metrics.JTFSloss(self.scaler, "macro", self.synth_type, logtheta)
+        self.ploss_validation = []
         self.std = torch.sqrt(torch.tensor(var))
         self.monitor_valloss = torch.inf
         self.current_device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -231,7 +232,6 @@ class EffNet(pl.LightningModule):
         self.train_outputs = []
         self.test_outputs = []
         self.val_outputs = []
-        #self.ploss_validation = []
         self.step_count = 0
         self.update_hessian = 10
         if self.LMA_mode == "adaptive":
@@ -329,10 +329,11 @@ class EffNet(pl.LightningModule):
             self.test_outputs.append(loss)
         elif fold == "val":
             self.val_outputs.append(loss)
-            #self.mss_validation.update(outputs, y)
-            #self.jtfs_validation.update(outputs, y, None)
+            self.mss_validation.update(outputs, y)
+            #if self.epoch % 10 == 0: 
+            #    self.jtfs_validation.update(outputs, y, None)
             #compute comparable validation loss
-            #self.ploss_validation.append(F.mse_loss(outputs.double(), y.double()))
+            self.ploss_validation.append(F.mse_loss(outputs.double(), y.double()))
             #self.log("ploss metrics", F.mse_loss(outputs.double(), y.double()))
         return {'loss': loss}
 
@@ -382,7 +383,7 @@ class EffNet(pl.LightningModule):
 
     def on_validation_epoch_end(self):
         avg_loss = torch.tensor(self.val_outputs).mean() #current loss function's validation loss
-        #avg_ploss_validation = torch.tensor(self.ploss_validation).mean()
+        avg_ploss_validation = torch.tensor(self.ploss_validation).mean()
         if self.loss_type == "weighted_p":
             if self.LMA_mode == "adaptive":
                 # Levenburg-Marquardt Algorithm, lambda decay heuristics
@@ -402,7 +403,7 @@ class EffNet(pl.LightningModule):
                 #if self.epoch == 1:
                 #    self.best_params = self.parameters
                 #    self.monitor_valloss = avg_loss
-                self.epoch += 1
+                #self.epoch += 1
 
             elif self.LMA_mode == "scheduled":
                 self.epoch += 1
@@ -412,13 +413,13 @@ class EffNet(pl.LightningModule):
             self.log('LMA_lambda', self.LMA_lambda)
         self.log('val_loss', avg_loss, on_step=False,
                  prog_bar=True, on_epoch=True)
-        #avg_mss_validation = self.mss_validation.compute()
-        #self.epoch += 1
+        avg_mss_validation = self.mss_validation.compute()
+        self.epoch += 1
         #if self.epoch % 10 == 0:
         #    avg_jtfs_validation = self.jtfs_validation.compute()
         #    self.log("epoch jtfs metrics", avg_jtfs_validation)
-        #self.log("epoch mss metrics", avg_mss_validation)
-        #self.log("epoch ploss metrics", avg_ploss_validation)
+        self.log("epoch mss metrics", avg_mss_validation)
+        self.log("epoch ploss metrics", avg_ploss_validation)
         
 
         return {'val_loss': avg_loss}
