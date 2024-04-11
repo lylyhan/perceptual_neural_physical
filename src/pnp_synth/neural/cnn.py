@@ -149,7 +149,7 @@ class wav2shape(pl.LightningModule):
 
 
 class EffNet(pl.LightningModule):
-    def __init__(self, in_channels,outdim,loss,scaler,var,save_path, steps_per_epoch, lr=1e-3, minmax=True, logtheta=True, LMA=None, opt="adam"):
+    def __init__(self, in_channels,outdim,loss,scaler,var,save_path, steps_per_epoch, lr=1e-3, minmax=True, logtheta=True, LMA=None, opt="adam",mu=1):
         super().__init__()
         self.scaler = scaler
         self.lr = lr
@@ -205,22 +205,22 @@ class EffNet(pl.LightningModule):
         self.metric_macro = metrics.JTFSloss(self.scaler, "macro", self.synth_type, logtheta)
         self.metric_micro = metrics.JTFSloss(self.scaler, "micro", self.synth_type, logtheta)
         self.metric_mss = metrics.MSSloss(self.scaler, self.synth_type, logtheta)
+        self.mss_validation = metrics.MSSloss(self.scaler, self.synth_type, logtheta)
+        self.jtfs_validation = metrics.JTFSloss(self.scaler, "macro", self.synth_type, logtheta)
+        self.ploss_validation = []
         self.std = torch.sqrt(torch.tensor(var))
         self.monitor_valloss = torch.inf
         self.current_device = "cuda" if torch.cuda.is_available() else "cpu"
         if LMA:
-            #self.LMA_lambda0 = LMA['lambda']
-            self.LMA_lambda = LMA['lambda']
-            self.LMA_threshold = LMA['threshold']
             self.LMA_accelerator = LMA['accelerator']
             self.LMA_brake = LMA['brake']
             self.LMA_mode = LMA['mode']
             self.LMA_damping = LMA['damping']
         else:
-            self.LMA_lambda0 = 1e+15
-            self.LMA_lambda = 1e+15
+            self.LMA_lambda0 = 1e+20
+            self.LMA_lambda = 1e+20
             self.LMA_threshold = 1e+20
-            self.LMA_accelerator = 0.1
+            self.LMA_accelerator = 0.2
             self.LMA_brake = 1
             self.LMA_mode = "adaptive"
             self.LMA_damping = "id"
@@ -236,7 +236,8 @@ class EffNet(pl.LightningModule):
         self.update_hessian = 10
         if self.LMA_mode == "adaptive":
             self.LMA_lambda = None
-
+        #this is for accomodating the new dataset
+        self.mu = mu
     def forward(self, input_tensor):
         input_tensor = input_tensor.unsqueeze(1)
         x = self.batchnorm1(input_tensor)
@@ -255,17 +256,23 @@ class EffNet(pl.LightningModule):
         weight = batch['weight'].to(self.current_device)
         try:
             M = batch['M'].to(self.current_device).double()
+            M_mean = batch['M_mean'].to(self.current_device)
+            self.LMA_lambda0 = batch['lambda0'].to(self.current_device)
+            self.LMA_threshold = self.LMA_lambda0 # set threshold to be the initialized lambda
         except:
             M = None
-        M_mean = batch['M_mean'].to(self.current_device)
-        self.LMA_lambda0 = batch['lambda0'].to(self.current_device)
+            M_mean = None
+            self.LMA_lambda0 = None
+            self.LMA_theshold = None
+
         if self.LMA_lambda is None and self.LMA_mode == "adaptive":
-            self.LMA_lambda = self.LMA_lambda0
+            self.LMA_lambda = self.LMA_lambda0 #initialize lambda to be intiialized lambda
         try:
             metric_weight = batch['metric_weight'].to(self.current_device)
             JdagJ = batch['JdagJ'].to(self.current_device)
         except:
             metric_weight, JdagJ = None, None
+
         outputs = self(Sy) 
         assert outputs.shape[1] == self.outdim
         # match outputs and y dimension
@@ -293,7 +300,7 @@ class EffNet(pl.LightningModule):
                 loss = self.loss(
                     weight[:, None] * outputs.double(),
                     y.double(),
-                    M
+                    self.mu * M
                 )
             else: #ploss
                 loss = self.loss(weight[:,None].double() * outputs.double(), y.double())
@@ -309,12 +316,11 @@ class EffNet(pl.LightningModule):
         
         if fold == "train":
             self.train_outputs.append(loss)
-            self.log("train loss step", loss, prog_bar=True)
             if self.opt == None:
                 opt = self.optimizers()
                 def closure():
                     opt.zero_grad()
-                    self.manual_backward(loss, retain_graph=True)
+                    self.manual_backward(loss, retain_graph=True)#, create_graph=True)
                     return loss
                 #self.update_lr(batch_idx)
                 opt.step(closure=closure)
@@ -323,8 +329,12 @@ class EffNet(pl.LightningModule):
             self.test_outputs.append(loss)
         elif fold == "val":
             self.val_outputs.append(loss)
+            self.mss_validation.update(outputs, y)
+            #if self.epoch % 10 == 0: 
+            #    self.jtfs_validation.update(outputs, y, None)
             #compute comparable validation loss
-            self.log("everyone's val loss step", F.mse_loss(outputs.double(), y.double()))
+            self.ploss_validation.append(F.mse_loss(outputs.double(), y.double()))
+            #self.log("ploss metrics", F.mse_loss(outputs.double(), y.double()))
         return {'loss': loss}
 
     def training_step(self, batch, batch_idx):
@@ -340,6 +350,7 @@ class EffNet(pl.LightningModule):
         self.train_outputs = []
         self.test_outputs = []
         self.val_outputs = []
+        self.ploss_validation = []
         self.log("lr", self.optimizer.param_groups[-1]['lr'])
 
     def on_train_epoch_end(self):
@@ -371,29 +382,45 @@ class EffNet(pl.LightningModule):
         return avg_loss, avg_macro_metric, avg_micro_metric, avg_mss_metric
 
     def on_validation_epoch_end(self):
-        avg_loss = torch.tensor(self.val_outputs).mean()
+        avg_loss = torch.tensor(self.val_outputs).mean() #current loss function's validation loss
+        avg_ploss_validation = torch.tensor(self.ploss_validation).mean()
         if self.loss_type == "weighted_p":
             if self.LMA_mode == "adaptive":
                 # Levenburg-Marquardt Algorithm, lambda decay heuristics
+                print("what's going on", self.epoch, avg_loss, self.monitor_valloss, self.LMA_lambda)
                 if avg_loss < self.monitor_valloss:
                     self.monitor_valloss = avg_loss
                     self.LMA_lambda = self.LMA_lambda * self.LMA_accelerator
-                    self.best_params = self.parameters
+                    self.best_params = self.parameters # register best model
                 else:
                     if self.LMA_lambda * self.LMA_brake < self.LMA_threshold:
                         self.LMA_lambda = self.LMA_lambda * self.LMA_brake
                     else:
                         self.LMA_lambda = self.LMA_threshold
-                    self.parameters = self.best_params
-                #print("changed????", self.LMA_lambda)
+                    self.parameters = self.best_params # revert to best model
+                
+                #disregard the monitor_valloss at the first evaluation
+                #if self.epoch == 1:
+                #    self.best_params = self.parameters
+                #    self.monitor_valloss = avg_loss
+                #self.epoch += 1
+
             elif self.LMA_mode == "scheduled":
                 self.epoch += 1
                 self.LMA_lambda = self.LMA_lambda * self.LMA_accelerator
 
-
-        self.log('LMA_lambda', self.LMA_lambda)
+        if self.LMA_lambda:
+            self.log('LMA_lambda', self.LMA_lambda)
         self.log('val_loss', avg_loss, on_step=False,
                  prog_bar=True, on_epoch=True)
+        avg_mss_validation = self.mss_validation.compute()
+        self.epoch += 1
+        #if self.epoch % 10 == 0:
+        #    avg_jtfs_validation = self.jtfs_validation.compute()
+        #    self.log("epoch jtfs metrics", avg_jtfs_validation)
+        self.log("epoch mss metrics", avg_mss_validation)
+        self.log("epoch ploss metrics", avg_ploss_validation)
+        
 
         return {'val_loss': avg_loss}
 
@@ -419,7 +446,7 @@ class EffNet(pl.LightningModule):
         elif self.opt == "sophia":
             self.optimizer = optimizer.SophiaG(params=self.parameters(), lr=self.lr, betas=(0.965, 0.99), rho = 0.01, weight_decay=1e-1)
             #self.automatic_optimization = False
-            #self.optimizer = optimizer.Sophia(self, None, self.parameters())
+            #self.optimizer = optimizer.Sophia(None, None, self.parameters())
             lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             self.optimizer, patience=3)
             return{
@@ -495,7 +522,7 @@ class DrumData(Dataset):
             cqt_params = {
                     'sr': self.sr,
                     'n_bins': self.J * self.Q,
-                    'hop_length': 256,
+                    'hop_length': 256, 
                     }
             #find fmin
             if 2**self.J * 32.7 >= cqt_params['sr']/2:
@@ -503,7 +530,11 @@ class DrumData(Dataset):
             else:
                 fmin = 32.7
             self.cqt_from_x = CQT(**cqt_params,fmin=fmin).cuda()
-        self.M_mean, self.sigma_mean, self.lambda0 = self.make_M_mean()
+        try:
+            self.M_mean, self.sigma_mean, self.lambda0 = self.make_M_mean()
+        except:
+            self.M_mean, self.sigma_mean, self.lambda0 = None, None, None
+    
         # Initialize joblib Memory object
         # self.cqt_memory = joblib.Memory(cqt_dir, verbose=0)
         # self.cqt_from_id = self.cqt_memory.cache(self.cqt_from_id)

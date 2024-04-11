@@ -44,7 +44,7 @@ print("")
 sys.stdout.flush()
 
 
-names = ["J"]
+names = ["M"]
     
 if minmax == False:
     names.append("nominmax")
@@ -77,16 +77,14 @@ loss_type = "weighted_p"  # spec / weighted_p / ploss
 weight_type = "novol"  # novol / pnp / None
 LMA = {
     'mode': "adaptive", #scheduled / constant
-    #'lambda': 1e+20,
-    'threshold': 1e+20,
-    'accelerator': 0.2,
+    'accelerator': 0.05,
     'brake': 1,
     'damping': "id"
 }
 
 lr = 1e-3
 finetune = False
-
+mu = 1e-10 # the scaling factor of M
 
 if __name__ == "__main__":
     #os.environ["CUDA_VISIBLE_DEVICES"] = "0" #restrict machine
@@ -103,6 +101,7 @@ if __name__ == "__main__":
                 "opt-" + opt,
                 "batch_size" + str(batch_size),
                 "lr-"+ str(lr),
+                "mu-"+str(mu),
                 "init-" + str(init_id),
             ]
         ),
@@ -141,7 +140,7 @@ if __name__ == "__main__":
             in_channels=1, bin_per_oct=Q, outdim=outdim, loss=loss_type, scaler=scaler
         )
     elif cnn_type == "efficientnet":
-        model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, LMA=LMA, steps_per_epoch=steps_per_epoch, var=bn_var, save_path=pred_path, lr=lr, minmax=minmax, logtheta=logscale_theta, opt=opt)
+        model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, LMA=LMA, steps_per_epoch=steps_per_epoch, var=bn_var, save_path=pred_path, lr=lr, minmax=minmax, logtheta=logscale_theta, opt=opt, mu=mu)
     print(str(datetime.datetime.now()) + " Finished initializing model")
 
     # initialize checkpoint methods
