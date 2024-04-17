@@ -330,8 +330,8 @@ class EffNet(pl.LightningModule):
         elif fold == "val":
             self.val_outputs.append(loss)
             self.mss_validation.update(outputs, y)
-            #if self.epoch % 10 == 0: 
-            #    self.jtfs_validation.update(outputs, y, None)
+            if self.epoch % 10 == 0: 
+                self.jtfs_validation.update(outputs, y, None)
             #compute comparable validation loss
             self.ploss_validation.append(F.mse_loss(outputs.double(), y.double()))
             #self.log("ploss metrics", F.mse_loss(outputs.double(), y.double()))
@@ -389,7 +389,8 @@ class EffNet(pl.LightningModule):
                 # Levenburg-Marquardt Algorithm, lambda decay heuristics
                 print("what's going on", self.epoch, avg_loss, self.monitor_valloss, self.LMA_lambda)
                 if avg_loss < self.monitor_valloss:
-                    self.monitor_valloss = avg_loss
+                    if self.epoch > 0:
+                        self.monitor_valloss = avg_loss
                     self.LMA_lambda = self.LMA_lambda * self.LMA_accelerator
                     self.best_params = self.parameters # register best model
                 else:
@@ -415,9 +416,9 @@ class EffNet(pl.LightningModule):
                  prog_bar=True, on_epoch=True)
         avg_mss_validation = self.mss_validation.compute()
         self.epoch += 1
-        #if self.epoch % 10 == 0:
-        #    avg_jtfs_validation = self.jtfs_validation.compute()
-        #    self.log("epoch jtfs metrics", avg_jtfs_validation)
+        if self.epoch % 10 == 0:
+            avg_jtfs_validation = self.jtfs_validation.compute()
+            self.log("epoch jtfs metrics", avg_jtfs_validation)
         self.log("epoch mss metrics", avg_mss_validation)
         self.log("epoch ploss metrics", avg_ploss_validation)
         
