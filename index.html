@@ -12,16 +12,18 @@
         }
         .label-row {
             display: flex;
-            justify-content: space-around;
+            justify-content: space-between;
             margin-bottom: 10px;
+            width: 100%;
         }
 
         .label {
-            font-weight: bold;
-            margin-bottom: 5px;
-            text-align: center;
-            flex: 1;
-        }
+        font-weight: bold;
+        margin-bottom: 5px;
+        text-align: center;
+        flex: 1;
+        margin-right: calc((100% / 6 - 20px) / 6); /* Adjust the width as needed */
+    }
         .sound-row {
             display: flex;
             flex-wrap: wrap;
@@ -32,6 +34,7 @@
 
         
         audio {
+            flex: 1;
             max-width: calc(100% / 6 - 20px); /* Adjust the width as needed */
         }
     </style>
@@ -40,227 +43,343 @@
     <h1>Perceptual Neural Physical Sound Matching</h1>
 
     <h2>Description</h2>
-    <p>This website demonstrates the sound matching result of EfficientNet-B0 type models trained by various loss functions. Each row demonstrates five sound matching outputs of the same target sound (leftmost).</p>
+    <p>This website demonstrates the sound matching result of EfficientNet-B0 type models trained by various loss functions. Each row displays five sound matching outputs of the same target sound (leftmost).</p>
 
-    <h2>Sound Variations</h2>
+    <h2>Sound Matching outputs</h2>
+    <p> FTM </p>
     <div class="sound-grid">
-        <div class="sound-row">
+        <div class="label-row">
             <span class="label">Target</span>
             <span class="label">Current</span>
             <span class="label">Ploss</span>
-            <span class="label">PNP</span>
+            <span class="label">PNP ICASSP</span>
             <span class="label">DDSP</span>
-            <span class="label">MasudaSaito</span>
+            <span class="label">Masuda and Saito</span>
         </div>
          <div class="sound-row">
             <audio controls>
-                <source src="./sounds/1045/target.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/1045/target.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/1045/current_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/1045/current_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
             <audio controls>
-                <source src="./sounds/1045/ploss_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/1045/ploss_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/1045/ddsp_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/1045/ddsp_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/1045/masudasaito_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/1045/masudasaito_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/1045/pnp_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/1045/pnp_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>      
         </div>
         <div class="sound-row">
             <audio controls>
-                <source src="./sounds/2600/target.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/2600/target.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/2600/current_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/2600/current_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
             <audio controls>
-                <source src="./sounds/2600/ploss_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/2600/ploss_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/2600/ddsp_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/2600/ddsp_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/2600/masudasaito_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/2600/masudasaito_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/2600/pnp_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/2600/pnp_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>      
         </div>
         <div class="sound-row">
             <audio controls>
-                <source src="./sounds/3469/target.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/3469/target.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/3469/current_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/3469/current_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
             <audio controls>
-                <source src="./sounds/3469/ploss_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/3469/ploss_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/3469/ddsp_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/3469/ddsp_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/3469/masudasaito_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/3469/masudasaito_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/3469/pnp_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/3469/pnp_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>      
         </div>
          <div class="sound-row">
             <audio controls>
-                <source src="./sounds/3486/target.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/3486/target.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/3486/current_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/3486/current_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
             <audio controls>
-                <source src="./sounds/3486/ploss_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/3486/ploss_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/3486/ddsp_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/3486/ddsp_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/3486/masudasaito_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/3486/masudasaito_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/3486/pnp_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/3486/pnp_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>      
         </div>
          <div class="sound-row">
             <audio controls>
-                <source src="./sounds/3590/target.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/3590/target.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/3590/current_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/3590/current_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
             <audio controls>
-                <source src="./sounds/3590/ploss_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/3590/ploss_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/3590/ddsp_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/3590/ddsp_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/3590/masudasaito_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/3590/masudasaito_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/3590/pnp_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/3590/pnp_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>      
         </div>
          <div class="sound-row">
             <audio controls>
-                <source src="./sounds/6003/target.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/6003/target.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/6003/current_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/6003/current_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
             <audio controls>
-                <source src="./sounds/6003/ploss_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/6003/ploss_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/6003/ddsp_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/6003/ddsp_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/6003/masudasaito_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/6003/masudasaito_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/6003/pnp_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/6003/pnp_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>      
         </div>
          <div class="sound-row">
             <audio controls>
-                <source src="./sounds/6788/target.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/6788/target.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/6788/current_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/6788/current_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
             <audio controls>
-                <source src="./sounds/6788/ploss_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/6788/ploss_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/6788/ddsp_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/6788/ddsp_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/6788/masudasaito_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/6788/masudasaito_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/6788/pnp_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/6788/pnp_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>      
         </div>
         <div class="sound-row">
             <audio controls>
-                <source src="./sounds/9000/target.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/9000/target.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/9000/current_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/9000/current_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
             <audio controls>
-                <source src="./sounds/9000/ploss_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/9000/ploss_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/9000/ddsp_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/9000/ddsp_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/9000/masudasaito_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/9000/masudasaito_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
              <audio controls>
-                <source src="./sounds/9000/pnp_pred.wav" type="audio/mpeg">
+                <source src="./sounds/ftm/9000/pnp_pred.wav" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>      
         </div>
         <!-- Add more sound rows for additional sounds -->
     </div>
+<p> AM/FM arpeggiator </p>
+<div class="sound-grid">
+        <div class="label-row">
+            <span class="label">Target</span>
+            <span class="label">Current</span>
+            <span class="label">Ploss</span>
+            <span class="label">PNP ICASSP</span>
+            <span class="label">DDSP</span>
+            <span class="label">Masuda and Saito</span>
+        </div>
+         <div class="sound-row">
+            <audio controls>
+                <source src="./sounds/amchirp/0/target.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+             <audio controls>
+                <source src="./sounds/amchirp/0/current_pred.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+            <audio controls>
+                <source src="./sounds/amchirp/0/ploss_pred.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+             <audio controls>
+                <source src="./sounds/amchirp/0/ddsp_pred.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+             <audio controls>
+                <source src="./sounds/amchirp/0/masudasaito_pred.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+             <audio controls>
+                <source src="./sounds/amchirp/0/pnp_pred.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>      
+        </div>
+    <div class="sound-row">
+            <audio controls>
+                <source src="./sounds/amchirp/1000/target.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+             <audio controls>
+                <source src="./sounds/amchirp/1000/current_pred.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+            <audio controls>
+                <source src="./sounds/amchirp/1000/ploss_pred.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+             <audio controls>
+                <source src="./sounds/amchirp/1000/ddsp_pred.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+             <audio controls>
+                <source src="./sounds/amchirp/1000/masudasaito_pred.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+             <audio controls>
+                <source src="./sounds/amchirp/1000/pnp_pred.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>      
+        </div>
+    <div class="sound-row">
+            <audio controls>
+                <source src="./sounds/amchirp/1499/target.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+             <audio controls>
+                <source src="./sounds/amchirp/1499/current_pred.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+            <audio controls>
+                <source src="./sounds/amchirp/1499/ploss_pred.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+             <audio controls>
+                <source src="./sounds/amchirp/1499/ddsp_pred.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+             <audio controls>
+                <source src="./sounds/amchirp/1499/masudasaito_pred.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+             <audio controls>
+                <source src="./sounds/amchirp/1499/pnp_pred.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>      
+        </div>
+     <div class="sound-row">
+            <audio controls>
+                <source src="./sounds/amchirp/2000/target.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+             <audio controls>
+                <source src="./sounds/amchirp/2000/current_pred.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+            <audio controls>
+                <source src="./sounds/amchirp/2000/ploss_pred.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+             <audio controls>
+                <source src="./sounds/amchirp/2000/ddsp_pred.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+             <audio controls>
+                <source src="./sounds/amchirp/2000/masudasaito_pred.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+             <audio controls>
+                <source src="./sounds/amchirp/2000/pnp_pred.wav" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>      
+        </div>
+</div>
 </body>
 </html>
