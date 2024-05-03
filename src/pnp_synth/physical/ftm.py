@@ -126,7 +126,7 @@ def linearstring_percep(theta, logscale, **constants_string):
     EI = S4 * lm
     Ts0 = c2 * lm
 
-    mu = torch.arange(1, constants_string["m"] + 1)
+    mu = torch.arange(1, constants_string["m"] + 1).to(device)
     n = (mu * pi / ell) ** 2 
     n2 = n ** 2 
     K = torch.sin(mu * pi * constants_string["x"])
