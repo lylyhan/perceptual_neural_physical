@@ -16,6 +16,16 @@ constants = {
     "dur":2**16
 }
 
+constants_string = {
+    "x": 0.4,
+    "h": 0.03,
+    "l0": np.pi,
+    "m": 20,
+    "sr": 22050,
+    "dur":2**17
+}
+
+
 
 def rectangular_drum(theta, logscale, **constants):
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -78,5 +88,74 @@ def rectangular_drum(theta, logscale, **constants):
     #y_full[mode_rejected] -= y_full[mode_rejected]
     y = torch.sum(y_full, dim=(0,1)) #(T,)
     y = y / torch.max(torch.abs(y))
+
+    return y
+
+def percep2physics(w1, tau1, p, D, l):
+    # convert perceptual parameters to PDE parameters
+    d1 = 2 * (p-1) / tau1
+    d3 = 2 * p * l**2 / (tau1 * np.pi**2)
+    S4 = (l/np.pi)**4 * ((D*w1)**2 + (p/tau1)**2)
+    c2 = (l/np.pi)**2 * (w1**2 * (1-D**2) + (1-p**2)/tau1**2)
+    return d1, d3, S4, c2
+
+def physics2percep(S4, c2, d1, d3, l):
+    sigma1 = d3/2 * (np.pi/l)**2 - d1/2
+    tau1 = 1/sigma1
+    w1 = np.sqrt((S4-d3**2/4)*(np.pi/l)**4 + (c2 + d1*d3/2) * (np.pi/l)**2 - d1**2/4)
+    p = d3 * tau1 / 2 * (np.pi/l)**2
+    D = np.sqrt(S4 * (np.pi/l)**4 - (p*sigma1)**2) / w1
+    return w1, tau1, p, D
+
+# theta = {w1,tau1, p, D, lm, ell}
+def linearstring_percep(theta, logscale, **constants_string):
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    # convert omega, tau, p, D into S, c, d1, d3
+    w11 = 10 ** theta[0] if logscale else theta[0]
+    p = 10 ** theta[2] if logscale else theta[2]
+    D = 10 ** theta[3] if logscale else theta[3]
+    #theta
+    tau11 = theta[1]
+    lm = theta[4]
+    ell = theta[5]
+    pi = torch.tensor(np.pi, dtype=torch.float64).to(device)
+    dur = constants_string['dur']
+
+    d1, d3, S4, c2 = percep2physics(w11, tau11, p, D, ell)
+    d1 = abs(d1)
+    EI = S4 * lm
+    Ts0 = c2 * lm
+
+    mu = torch.arange(1, constants_string["m"] + 1)
+    n = (mu * pi / ell) ** 2 
+    n2 = n ** 2 
+    K = torch.sin(mu * pi * constants_string["x"])
+
+    beta = EI * n2 + Ts0 * (-n) #(m)
+    alpha = (d1 + d3 * n)/(2*lm) # nonlinear
+    omega = torch.sqrt(torch.abs(beta/(lm) - alpha**2))
+    #adaptively change mode number according to nyquist frequency
+    mode_rejected = (omega / 2 / pi) > constants_string['sr'] / 2
+    mode_corr = constants_string['m'] - torch.sum(mode_rejected)
+   
+    N = ell / 2
+    yi = (
+        constants_string['h']
+        * torch.sin(mu * pi * constants_string["x"]) #this should be the listening position
+        / omega #(mode)
+    )
+  
+    time_steps = torch.linspace(0, dur, dur).to(device) / constants_string['sr'] #(T,)
+
+    y = torch.exp(-alpha[:,None] * time_steps[ None, :]) * torch.sin(
+        omega[:,None] * time_steps[None,:]
+    ) # (m, T)
+
+    y = yi[:, None] * y #(m, T)
+    y_full = y * K[:,None] / N
+    y_full = y_full[:mode_corr, :]
+    y = torch.sum(y_full, dim=0) #(T,)
+    y = y / torch.max(torch.abs(y))
+
 
     return y
