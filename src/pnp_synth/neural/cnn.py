@@ -200,6 +200,8 @@ class EffNet(pl.LightningModule):
             self.synth_type = "ftm"
         elif "am" in self.save_path:
             self.synth_type = "amchirp"
+        elif "mersenne" in self.save_path:
+            self.synth_type = "string"
         self.val_loss = None
         self.outdim = outdim
         self.metric_macro = metrics.JTFSloss(self.scaler, "macro", self.synth_type, logtheta)
@@ -414,12 +416,12 @@ class EffNet(pl.LightningModule):
             self.log('LMA_lambda', self.LMA_lambda)
         self.log('val_loss', avg_loss, on_step=False,
                  prog_bar=True, on_epoch=True)
-        avg_mss_validation = self.mss_validation.compute()
-        self.epoch += 1
-        if self.epoch % 10 == 0:
-            avg_jtfs_validation = self.jtfs_validation.compute()
-            self.log("epoch jtfs metrics", avg_jtfs_validation)
-        self.log("epoch mss metrics", avg_mss_validation)
+        #avg_mss_validation = self.mss_validation.compute()
+        #self.epoch += 1
+        #if self.epoch % 10 == 0:
+        #    avg_jtfs_validation = self.jtfs_validation.compute()
+        #    self.log("epoch jtfs metrics", avg_jtfs_validation)
+        #self.log("epoch mss metrics", avg_mss_validation)
         self.log("epoch ploss metrics", avg_ploss_validation)
         
 
@@ -639,6 +641,9 @@ class DrumDataModule(pl.LightningDataModule):
         elif "ftm" in weight_dir:
             self.synth_type = "ftm"
             self.h5name = "ftm"
+        elif "mersenne" in weight_dir:
+            self.synth_type = "string"
+            self.h5name = "mersenne24"
 
     def setup(self, stage=None):
         

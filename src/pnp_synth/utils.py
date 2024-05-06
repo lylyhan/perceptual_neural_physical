@@ -38,6 +38,18 @@ def jtfsparam(synth_type):
             pad_mode='zero',
             pad_mode_fr='zero'
         )
+    elif synth_type == "string":
+        return dict(
+            J=13,  # scattering scale ~ 1000 ms
+            shape=(2**17,), # input duration ~ 3 seconds
+            Q=(12, 1),  # number of filters per octave in time at 1st, 2nd order
+            Q_fr=1, # number of fiters per octave in frequency
+            F=2,  # local frequential averaging
+            max_pad_factor=1,  # temporal padding cannot be greater than 1x support
+            max_pad_factor_fr=1,  # frequential padding cannot be greater than 1x support
+            pad_mode='zero',
+            pad_mode_fr='zero'
+        )
 
 def load_fold(full_df, fold="full"): 
     """Load DataFrame."""
@@ -59,7 +71,8 @@ def scale_theta(full_df, out_fold, scaler, logscale, synth_type):
         THETA_COLUMNS = ["omega", "tau", "p", "D", "alpha"]
     elif synth_type == "amchirp":
         THETA_COLUMNS = ["f0", "fm", "gamma"]
-
+    elif synth_type == "string":
+        THETA_COLUMNS = ["w1", "tau", "p", "D", "lm", "ell"]
     # Load partial dataset
     out_df = load_fold(full_df, out_fold)
 
@@ -68,6 +81,14 @@ def scale_theta(full_df, out_fold, scaler, logscale, synth_type):
         theta = []
         for column in THETA_COLUMNS:
             if not logscale and column in ["omega", "p", "D"]:
+                theta.append(10 ** out_df[column].values)
+            else:
+                theta.append(out_df[column].values)
+        theta = np.stack(theta, axis=1)
+    elif synth_type == "string":
+        theta = []
+        for column in THETA_COLUMNS:
+            if not logscale and column in ["w1", "p", "D"]:
                 theta.append(10 ** out_df[column].values)
             else:
                 theta.append(out_df[column].values)
@@ -96,6 +117,18 @@ def pnp_forward_factory(scaler, synth_type, logscale):
         jtfs_params = dict(
             J=13,  # scattering scale ~ 1000 ms
             shape=(2**16,), # input duration ~ 3 seconds
+            Q=(12, 1),  # number of filters per octave in time at 1st, 2nd order
+            Q_fr=1, # number of fiters per octave in frequency
+            F=2,  # local frequential averaging
+            max_pad_factor=1,  # temporal padding cannot be greater than 1x support
+            max_pad_factor_fr=1,  # frequential padding cannot be greater than 1x support
+            pad_mode='zero',
+            pad_mode_fr='zero'
+        )
+    elif synth_type == "string":
+        jtfs_params = dict(
+            J=13,  # scattering scale ~ 1000 ms
+            shape=(2**17,), # input duration ~ 3 seconds
             Q=(12, 1),  # number of filters per octave in time at 1st, 2nd order
             Q_fr=1, # number of fiters per octave in frequency
             F=2,  # local frequential averaging
@@ -160,4 +193,6 @@ def x_from_theta(theta, synth_type, logscale):
         x = ftm.rectangular_drum(theta, logscale=logscale, **ftm.constants)
     elif synth_type == "amchirp":
         x = amchirp.generate_am_chirp(theta, logscale=logscale)
+    elif synth_type == "string":
+        x = ftm.linearstring_percep(theta, logscale=logscale, **ftm.constants_string)
     return x
