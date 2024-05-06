@@ -331,9 +331,9 @@ class EffNet(pl.LightningModule):
             self.test_outputs.append(loss)
         elif fold == "val":
             self.val_outputs.append(loss)
-            self.mss_validation.update(outputs, y)
-            if self.epoch % 10 == 0: 
-                self.jtfs_validation.update(outputs, y, None)
+            #self.mss_validation.update(outputs, y)
+            #if self.epoch % 10 == 0: 
+            #    self.jtfs_validation.update(outputs, y, None)
             #compute comparable validation loss
             self.ploss_validation.append(F.mse_loss(outputs.double(), y.double()))
             #self.log("ploss metrics", F.mse_loss(outputs.double(), y.double()))
