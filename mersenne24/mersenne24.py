@@ -14,8 +14,7 @@ import numpy as np
 FOLDS = ["train", "test", "val"]
 THETA_COLUMNS = ["w1", "tau", "p", "D", "lm", "ell"]
 SAMPLES_PER_EPOCH = 512*50
-logscale = True
-synth_type = "ftm"
+
 
 jtfs_params = dict(
     J=13,  # scattering scale ~ 1000 ms
@@ -70,8 +69,7 @@ def pnp_forward_factory(scaler):
         forward.pnp_forward, Phi=Phi, g=x_from_theta, scaler=scaler
     )
 
-
-def scale_theta():
+def scale_theta(logscale):
     """
     Scale training set to [0, 1], return values (NumPy array)
     and min-max scaler (sklearn object)
@@ -83,7 +81,7 @@ def scale_theta():
     scaler = sklearn.preprocessing.MinMaxScaler(feature_range=(-1, 1))
     train_theta = []
     for column in THETA_COLUMNS:
-        if not logscale and column in ["omega", "p", "D"]:
+        if not logscale and column in ["w1", "p", "D"]:
             train_theta.append(10 ** train_df[column].values)
         else:
             train_theta.append(train_df[column].values)
@@ -99,7 +97,7 @@ def scale_theta():
     # Transform whole dataset with scaler
     theta = []
     for column in THETA_COLUMNS:
-        if not logscale and column in ["omega", "p", "D"]:
+        if not logscale and column in ["w1", "p", "D"]:
             theta.append(10 ** full_df[column].values)
         else:
             theta.append(full_df[column].values)
