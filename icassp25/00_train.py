@@ -31,16 +31,16 @@ def train(save_dir, init_id, batch_size,
     it should also output 2 vectors of average train loss and validation loss per save_freq epoch? (this is available in tensorboard!!)
 
     save_dir: directory to where the home folder where data, experimental results are saved
-    init_id: trial number
-    batch_size
+    init_id: trial number 0-4
+    batch_size: 256
     loss_type: ploss, weighted_p (PNP), specl2 (L2 MSS), spec(L1 + logL1 MSS)
     eff_type: b0, b1, ... b7
-    minmax: 0, 1
-    logscale_theta: 0, 1
-    finetune: 0, 1
+    minmax: 0, 1 True
+    logscale_theta: 0, 1 True
+    finetune: 0, 1 False
     opt: sophia, adam
     save_freq: frequency (in epoch) to save model checkpoints
-    epoch_max: maximum training epochs
+    epoch_max: maximum training epochs 70
     """
 
     start_time = int(time.time())
@@ -61,16 +61,13 @@ def train(save_dir, init_id, batch_size,
     sr = 22050
     bn_var = 0.5
 
-    weight_type = "None"  # novol / pnp / None
-
+    weight_type = "novol"  # novol / pnp / None
     if loss_type == "weighted_p":
         LMA = {
-        'mode': "constant", #scheduled / constant
-        'lambda': 1,
-        'threshold': 1e+8,
-        'accelerator': 0.5,
-        'brake': 1,
-        'damping': "mean"
+            'mode': "adaptive", #scheduled / constant
+            'accelerator': 0.05,
+            'brake': 1,
+            'damping': "id"
         }
     else:
         LMA = None
@@ -142,10 +139,16 @@ def train(save_dir, init_id, batch_size,
         save_weights_only=False,
     )
     # save best checkpoint 
+    if loss_type == "ploss":
+        abbr_loss = "p"
+    elif loss_type == "weighted_p":
+        abbr_loss = "pnp"
+    prefix = 'step=learn+optimizer={}+model={}+loss={}+log={}_trial_{}'.format(
+        opt, eff_type[1], abbr_loss, logscale_theta, init_id)
     checkpoint_cb_best = ModelCheckpoint(
         dirpath=model_save_path,
         monitor="val_loss",
-        filename= "bestckpt-{epoch:02d}-{val_loss:.2f}",
+        filename= prefix + "bestckpt-{epoch:02d}-{val_loss:.2f}",
         every_n_epochs=1,
         save_weights_only=False,
     )
