@@ -149,7 +149,7 @@ class wav2shape(pl.LightningModule):
 
 
 class EffNet(pl.LightningModule):
-    def __init__(self, in_channels,outdim,loss,scaler,var,save_path, steps_per_epoch, lr=1e-3, minmax=True, logtheta=True, LMA=None, opt="adam",mu=1):
+    def __init__(self, in_channels,outdim,loss,scaler,var,save_path, steps_per_epoch, eff_type = "b0", lr=1e-3, minmax=True, logtheta=True, LMA=None, opt="adam",mu=1):
         super().__init__()
         self.scaler = scaler
         self.lr = lr
@@ -159,7 +159,22 @@ class EffNet(pl.LightningModule):
         self.opt = opt
         #if self.opt == "adamW":
         #    self.automatic_optimization=False
-        self.model = torchvision.models.efficientnet_b0(num_classes=outdim)#,in_channels=in_channels)
+        if eff_type == "b0":
+            self.model = torchvision.models.efficientnet_b0(num_classes=outdim)#,in_channels=in_channels)
+        elif eff_type == "b1":
+            self.model = torchvision.models.efficientnet_b1(num_classes=outdim)
+        elif eff_type == "b2":
+            self.model = torchvision.models.efficientnet_b2(num_classes=outdim)
+        elif eff_type == "b3":
+            self.model = torchvision.models.efficientnet_b3(num_classes=outdim)
+        elif eff_type == "b4":
+            self.model = torchvision.models.efficientnet_b4(num_classes=outdim)
+        elif eff_type == "b5":
+            self.model = torchvision.models.efficientnet_b5(num_classes=outdim)
+        elif eff_type == "b6":
+            self.model = torchvision.models.efficientnet_b6(num_classes=outdim)
+        elif eff_type == 'b7':
+            self.model = torchvision.models.efficientnet_b7(num_classes=outdim)
         self.minmax = minmax
         self.logtheta = logtheta
         self.n_batches_train = steps_per_epoch
@@ -424,7 +439,6 @@ class EffNet(pl.LightningModule):
         #self.log("epoch mss metrics", avg_mss_validation)
         self.log("epoch ploss metrics", avg_ploss_validation)
         
-
         return {'val_loss': avg_loss}
 
     def configure_optimizers(self):
