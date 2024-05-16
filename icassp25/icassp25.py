@@ -14,7 +14,6 @@ import numpy as np
 FOLDS = ["train", "test", "val"]
 THETA_COLUMNS = ["omega", "tau", "p", "D", "alpha"]
 SAMPLES_PER_EPOCH = 512*50
-logscale = True
 synth_type = "ftm"
 
 jtfs_params = dict(
@@ -71,7 +70,7 @@ def pnp_forward_factory(scaler):
     )
 
 
-def scale_theta():
+def scale_theta(logscale):
     """
     Scale training set to [0, 1], return values (NumPy array)
     and min-max scaler (sklearn object)
