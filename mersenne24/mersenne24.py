@@ -12,7 +12,8 @@ import torch
 import numpy as np
 
 FOLDS = ["train", "test", "val"]
-THETA_COLUMNS = ["w1", "tau", "p", "D", "lm", "ell"]
+THETA_COLUMNS = ["Ts0", "ell", "lm", "EI", "d1", "d3"]
+#THETA_COLUMNS = ["w1", "tau", "p", "D", "lm", "ell"]
 SAMPLES_PER_EPOCH = 512*50
 
 
@@ -41,7 +42,7 @@ def load_fold(fold="full"):
     """Load DataFrame."""
     fold_dfs = {}
     csv_folder = os.path.join(os.path.dirname(__file__), "data")
-    csv_name = "full_param_log.csv"
+    csv_name = "full_param_log_phys.csv"
     csv_path = os.path.join(csv_folder, csv_name)
     full_df = pd.read_csv(csv_path)
     full_df = full_df.sort_values(by="ID", ignore_index=False)
