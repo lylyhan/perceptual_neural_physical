@@ -12,7 +12,7 @@ import torch
 import numpy as np
 
 FOLDS = ["train", "test", "val"]
-THETA_COLUMNS = ["Ts0", "ell", "lm", "EI", "d1", "d3"]
+THETA_COLUMNS = ["EI", "Ts0", "d1", "d3", "lm", "ell"]
 #THETA_COLUMNS = ["w1", "tau", "p", "D", "lm", "ell"]
 SAMPLES_PER_EPOCH = 512*50
 
@@ -128,7 +128,7 @@ def S_from_x(x, jtfs_operator):
 
 def x_from_theta(theta):
     """Drum synthesizer, based on the Functional Transformation Method (FTM)."""
-    x = ftm.linearstring_percep(theta, logscale, **ftm.constants)
+    x = ftm.linearstring_physics(theta, **ftm.constants)
     return x
 
 def pnp_forward_factory_mss(scaler):
