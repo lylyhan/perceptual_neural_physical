@@ -159,3 +159,61 @@ def linearstring_percep(theta, logscale, **constants_string):
 
 
     return y
+
+
+
+#theta:{EI, T, d1, d3, lm, ell}
+def linearstring_physics(theta, **constants_string):
+    """
+    unlike the convention in rabenstein's paper. d3 is always positive, so alpha=(d1+d3*n)/(2*lm)
+    beta = EI n2 + Ts0 n (positive sign here)
+    """
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    # convert omega, tau, p, D into S, c, d1, d3
+    EI = theta[0]
+    Ts0 = theta[1]
+    d1 = theta[2]
+    d3 = theta[3]
+    lm = theta[4]
+    ell = theta[5]
+    pi = torch.tensor(np.pi, dtype=torch.float64).to(device)
+    dur = constants_string['dur']
+
+    mu = torch.arange(1, constants_string["m"] + 1).to(device)
+    n = (mu * pi / ell) ** 2 
+    n2 = n ** 2 
+    K = torch.sin(mu * pi * constants_string["x"])
+  
+    beta = EI * n2 + Ts0 * n #(m)
+    alpha = (d1 + d3 * n)/(2*lm) # nonlinear
+    # TODO: there should be constraint in how alpha should be, in case it exceeds beta!!!
+    
+    omega = torch.sqrt(beta/(lm) - alpha**2)
+    #adaptively change mode number according to nyquist frequency
+    mode_rejected = (omega / 2 / pi) > constants_string['sr'] / 2
+    mode_corr = constants_string['m'] - torch.sum(mode_rejected)
+    print(omega)
+    if torch.sum(torch.isnan(omega)) > 0 or torch.min(omega) > 1200 * 2 * np.pi:
+        return "exceeded pitch range"
+    else:
+        N = ell / 2
+        yi = (
+            constants_string['h']
+            * torch.sin(mu * pi * constants_string["x"]) #this should be the listening position
+            / omega #(mode)
+        )
+    
+        time_steps = torch.linspace(0, dur, dur).to(device) / constants_string['sr'] #(T,)
+
+        y = torch.exp(-alpha[:,None] * time_steps[ None, :]) * torch.sin(
+            omega[:,None] * time_steps[None,:]
+        ) # (m, T)
+
+        y = yi[:, None] * y #(m, T)
+        y_full = y * K[:,None] / N
+        y_full = y_full[:mode_corr, :]
+        y = torch.nansum(y_full, dim=0) #(T,)
+        y = y / torch.max(torch.abs(y))
+
+
+        return y

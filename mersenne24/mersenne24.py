@@ -12,7 +12,8 @@ import torch
 import numpy as np
 
 FOLDS = ["train", "test", "val"]
-THETA_COLUMNS = ["w1", "tau", "p", "D", "lm", "ell"]
+THETA_COLUMNS = ["Ts0", "ell", "lm", "EI", "d1", "d3"]
+#THETA_COLUMNS = ["w1", "tau", "p", "D", "lm", "ell"]
 SAMPLES_PER_EPOCH = 512*50
 
 
