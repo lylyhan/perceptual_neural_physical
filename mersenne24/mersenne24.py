@@ -42,7 +42,7 @@ def load_fold(fold="full"):
     """Load DataFrame."""
     fold_dfs = {}
     csv_folder = os.path.join(os.path.dirname(__file__), "data")
-    csv_name = "full_param_log_phys.csv"
+    csv_name = "full_param_log_phys_filtered.csv"
     csv_path = os.path.join(csv_folder, csv_name)
     full_df = pd.read_csv(csv_path)
     full_df = full_df.sort_values(by="ID", ignore_index=False)
