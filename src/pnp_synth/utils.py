@@ -72,7 +72,7 @@ def scale_theta(full_df, out_fold, scaler, logscale, synth_type):
     elif synth_type == "amchirp":
         THETA_COLUMNS = ["f0", "fm", "gamma"]
     elif synth_type == "string":
-        THETA_COLUMNS = ["w1", "tau", "p", "D", "lm", "ell"]
+        THETA_COLUMNS = ["EI", "Ts0", "d1", "d3", "lm", "ell"] #["w1", "tau", "p", "D", "lm", "ell"]
     # Load partial dataset
     out_df = load_fold(full_df, out_fold)
 
