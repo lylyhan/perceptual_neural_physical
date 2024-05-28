@@ -31,6 +31,7 @@ logscale_theta = int(sys.argv[4])
 opt = sys.argv[5]
 eff_type = sys.argv[6] #b0
 batch_size = int(sys.argv[7]) #256
+
 is_train = True
 save_freq = 10
 
@@ -148,6 +149,7 @@ if __name__ == "__main__":
         dirpath=model_save_path,
         monitor="val_loss",
         save_last=True,
+        save_top_k=-1,
         filename= prefix + "ckpt-{epoch:02d}-{val_loss:.2f}",
         every_n_epochs=save_freq,
         save_weights_only=False,

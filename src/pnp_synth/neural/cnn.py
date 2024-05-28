@@ -437,9 +437,9 @@ class EffNet(pl.LightningModule):
         #    avg_jtfs_validation = self.jtfs_validation.compute()
         #    self.log("epoch jtfs metrics", avg_jtfs_validation)
         #self.log("epoch mss metrics", avg_mss_validation)
-        self.log("epoch ploss metrics", avg_ploss_validation)
+        self.log("epoch_ploss_metrics", avg_ploss_validation)
         
-        return {'val_loss': avg_loss}
+        return {'val_loss': avg_loss, 'epoch_ploss_metrics': avg_ploss_validation}
 
     def configure_optimizers(self):
         if self.opt == "adamW":
