@@ -153,19 +153,19 @@ if __name__ == "__main__":
         opt, eff_type[1], abbr_loss, logscale_theta, init_id)
     checkpoint_cb_best = ModelCheckpoint(
         dirpath=model_save_path,
-        monitor="epoch_ploss_metrics",
+        monitor="ploss_metrics",
         save_top_k=1,
-        filename= prefix + "bestckpt-{epoch:02d}-{epoch_ploss_metrics:.2f}",
+        filename= prefix + "bestckpt-{epoch:02d}-{ploss_metrics:.2f}",
         every_n_epochs=1,
         save_weights_only=False,
     )
     # save checkpoint every save_freq epochs
     checkpoint_cb = ModelCheckpoint(
         dirpath=model_save_path,
-        monitor="epoch_ploss_metrics",
+        monitor="ploss_metrics",
         save_last=True,
         save_top_k=-1,
-        filename= prefix + "ckpt-{epoch:02d}-{epoch_ploss_metrics:.2f}",
+        filename= prefix + "ckpt-{epoch:02d}-{ploss_metrics:.2f}",
         every_n_epochs=save_freq,
         save_weights_only=False,
     )
@@ -179,8 +179,8 @@ if __name__ == "__main__":
         devices=-1,
         max_epochs=epoch_max,
         max_steps=max_steps,
-        limit_train_batches=steps_per_epoch,  # if integer than it's #steps per epoch, if float then it's percentage
-        limit_val_batches=1.0,
+        limit_train_batches=1,#steps_per_epoch,  # if integer than it's #steps per epoch, if float then it's percentage
+        limit_val_batches=0.01, #1.0,
         limit_test_batches=1.0,
         callbacks=[checkpoint_cb, checkpoint_cb_best, lr_monitor],
         logger=tb_logger,
