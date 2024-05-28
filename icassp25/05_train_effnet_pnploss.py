@@ -162,7 +162,7 @@ if __name__ == "__main__":
     # save checkpoint every save_freq epochs
     checkpoint_cb = ModelCheckpoint(
         dirpath=model_save_path,
-        monitor="val_loss",
+        monitor="epoch ploss metrics",
         save_last=True,
         save_top_k=-1,
         filename= prefix + "ckpt-{epoch:02d}-{val_loss:.2f}",
