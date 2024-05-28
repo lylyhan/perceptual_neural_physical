@@ -30,8 +30,8 @@ minmax = int(sys.argv[3]) #need to cast to int to make the boolean evaluation wo
 logscale_theta = int(sys.argv[4])
 opt = sys.argv[5]
 eff_type = sys.argv[6] #b0
- 
-batch_size = 64
+batch_size = int(sys.argv[7]) #256
+
 is_train = True
 save_freq = 10
 

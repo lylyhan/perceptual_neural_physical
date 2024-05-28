@@ -31,8 +31,8 @@ minmax = int(sys.argv[3])
 logscale_theta = int(sys.argv[4])
 opt = sys.argv[5]
 eff_type = sys.argv[6]
+batch_size = int(sys.argv[7])
 
-batch_size = 256
 is_train = True
 save_freq = 10
 
@@ -153,19 +153,19 @@ if __name__ == "__main__":
         opt, eff_type[1], abbr_loss, logscale_theta, init_id)
     checkpoint_cb_best = ModelCheckpoint(
         dirpath=model_save_path,
-        monitor="val_loss",
+        monitor="epoch_ploss_metrics",
         save_top_k=1,
-        filename= prefix + "bestckpt-{epoch:02d}-{val_loss:.2f}",
+        filename= prefix + "bestckpt-{epoch:02d}-{epoch_ploss_metrics:.2f}",
         every_n_epochs=1,
         save_weights_only=False,
     )
     # save checkpoint every save_freq epochs
     checkpoint_cb = ModelCheckpoint(
         dirpath=model_save_path,
-        monitor="epoch ploss metrics",
+        monitor="epoch_ploss_metrics",
         save_last=True,
         save_top_k=-1,
-        filename= prefix + "ckpt-{epoch:02d}-{val_loss:.2f}",
+        filename= prefix + "ckpt-{epoch:02d}-{epoch_ploss_metrics:.2f}",
         every_n_epochs=save_freq,
         save_weights_only=False,
     )

@@ -78,10 +78,10 @@ weight_type = "novol"  # novol / pnp / None
 LMA = {
     'mode': "adaptive", #scheduled / constant
     'accelerator': 0.05,
-    'brake': 1,
+     'brake': 1,
     'damping': "id"
 }
-
+#LMA = None
 lr = 1e-3
 finetune = False
 mu = 1e-10 # the scaling factor of M

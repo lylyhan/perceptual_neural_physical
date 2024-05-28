@@ -191,8 +191,8 @@ if __name__ == "__main__":
 
     # train
     if is_train:
-        print("Pre-training ...")
-        trainer.fit(model, dataset)
+        #print("Pre-training ...")
+        #trainer.fit(model, dataset)
         ckpt_path = os.path.join(model_save_path, "best.ckpt")
         print("Load Pretrained model")
         model = model.load_from_checkpoint(
