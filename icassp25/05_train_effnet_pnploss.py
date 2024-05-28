@@ -179,8 +179,8 @@ if __name__ == "__main__":
         devices=-1,
         max_epochs=epoch_max,
         max_steps=max_steps,
-        limit_train_batches=1,#steps_per_epoch,  # if integer than it's #steps per epoch, if float then it's percentage
-        limit_val_batches=0.01, #1.0,
+        limit_train_batches=steps_per_epoch,  # if integer than it's #steps per epoch, if float then it's percentage
+        limit_val_batches=1.0,
         limit_test_batches=1.0,
         callbacks=[checkpoint_cb, checkpoint_cb_best, lr_monitor],
         logger=tb_logger,
