@@ -12,8 +12,11 @@ import torch
 import numpy as np
 
 FOLDS = ["train", "test", "val"]
-THETA_COLUMNS = ["EI", "Ts0", "d1", "d3", "lm", "ell"]
-#THETA_COLUMNS = ["w1", "tau", "p", "D", "lm", "ell"]
+mode = "phys"
+if mode == "phys":
+    THETA_COLUMNS = ["EI", "Ts0", "d1", "d3", "lm", "ell"]
+elif mode == "perc":
+    THETA_COLUMNS = ["w1", "tau", "p", "D", "lm", "ell"]
 SAMPLES_PER_EPOCH = 512*50
 
 
@@ -38,11 +41,14 @@ mss_param = dict(
     p=1.0,
 )
 
-def load_fold(fold="full"):
+def load_fold(fold="full", mode="phys"):
     """Load DataFrame."""
     fold_dfs = {}
     csv_folder = os.path.join(os.path.dirname(__file__), "data")
-    csv_name = "full_param_log_phys_filtered.csv"
+    if mode == "phys":
+        csv_name = "full_param_log_phys_filtered.csv"
+    elif mode == "perc":
+        csv_name = "full_param_log.csv"
     csv_path = os.path.join(csv_folder, csv_name)
     full_df = pd.read_csv(csv_path)
     full_df = full_df.sort_values(by="ID", ignore_index=False)
@@ -70,13 +76,13 @@ def pnp_forward_factory(scaler):
         forward.pnp_forward, Phi=Phi, g=x_from_theta, scaler=scaler
     )
 
-def scale_theta(logscale):
+def scale_theta(logscale, mode):
     """
     Scale training set to [0, 1], return values (NumPy array)
     and min-max scaler (sklearn object)
     """
     # Load training set
-    train_df = load_fold(fold="train")
+    train_df = load_fold(fold="train", mode=mode)
 
     # Fit scaler according to training set only
     scaler = sklearn.preprocessing.MinMaxScaler(feature_range=(-1, 1))
@@ -93,7 +99,7 @@ def scale_theta(logscale):
     scaler.fit(train_theta)
 
     # Load whole dataset
-    full_df = load_fold(fold="full")
+    full_df = load_fold(fold="full", mode=mode)
 
     # Transform whole dataset with scaler
     theta = []
