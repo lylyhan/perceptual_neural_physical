@@ -227,7 +227,7 @@ class EffNet(pl.LightningModule):
         self.ploss_validation = []
         self.std = torch.sqrt(torch.tensor(var))
         self.monitor_valloss = torch.inf
-        self.current_device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.current_device = "cpu"# "cuda" if torch.cuda.is_available() else "cpu"
         if LMA:
             self.LMA_accelerator = LMA['accelerator']
             self.LMA_brake = LMA['brake']
@@ -646,7 +646,7 @@ class DrumData(Dataset):
                 idx = idx[0]
             closest_id = self.noise_ids[idx]
             with h5py.File(self.noise_dir, "r") as f:
-                noise = f["noise"][closest_id]
+                noise = np.array(f["noise"][str(closest_id)])
             #randomly select snr
             snr = np.random.choice([1, 10, 40, 60])
             #mix noise
