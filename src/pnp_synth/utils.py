@@ -6,6 +6,7 @@ from pnp_synth.physical import ftm, amchirp
 import sklearn.preprocessing
 import torch
 import numpy as np
+import librosa
 
 #kymatio 0.4.0
 #from kymatio.scattering1d.frontend.torch_frontend import TimeFrequencyScatteringTorch as TimeFrequencyScattering1D
@@ -196,3 +197,27 @@ def x_from_theta(theta, synth_type, logscale):
     elif synth_type == "string":
         x = ftm.linearstring_percep(theta, logscale=logscale, **ftm.constants_string)
     return x
+
+
+def mix_noise(SNR, noise, signal):
+    sr = ftm.constants_string["sr"]
+    # align start of noise 
+    onsets_t = librosa.onset.onset_detect(y=np.array(noise), sr=sr, units='time', energy=noise**2)
+
+    try: 
+        noise_aligned = noise[(int(onsets_t[1]*sr)):]
+    except:
+        noise_aligned = noise[(int(onsets_t[0]*sr)):]
+
+    # align lengths of signals
+    if len(noise_aligned) > len(signal):
+        noise_aligned = noise_aligned[:len(signal)]
+    else:
+        noise_aligned = torch.cat([noise_aligned, torch.zeros((len(signal)-len(noise_aligned)))])
+
+    RMS_s = torch.sqrt(torch.mean(signal**2))
+    RMS_n = torch.sqrt(torch.mean(noise_aligned**2))
+    scale_factor = RMS_s / (RMS_n * np.exp(SNR/20))
+
+    mix = signal + scale_factor * noise_aligned
+    return mix / torch.max(torch.abs(mix))

@@ -520,15 +520,24 @@ class DrumData(Dataset):
                  feature,
                  J,
                  Q,
-                 sr):
+                 sr,
+                 noise_dir): #path to noise audio hdf files
         super().__init__()
 
         self.fold = fold
         self.y_norms = y_norms # partial annotation corresponding to current set load_fold(fold)
         self.ids = ids
         self.audio_dir = audio_dir #path to hdf5 file
+        self.noise_dir = noise_dir
         self.weights_dir = weights_dir
         self.weight_type = weight_type
+        
+        #make list of noise pitches
+        if self.noise_dir:
+            self.noise_inventory()
+            self.isnoise = True
+        else:
+            self.isnoise = False
 
         self.feature = feature
         self.J = J
@@ -611,9 +620,37 @@ class DrumData(Dataset):
                 count += 1
         return M_mean / count, sigma_mean / count, lambda_max ** 2
 
+
+    def noise_inventory(self):
+        ids = []
+        pitches = []
+        with h5py.File(self.noise_dir, "r") as f:
+            for id in f["theta"].keys():
+                T, l, lm = np.array(f["theta"][id])
+                ids.append(id)
+                pitches.append(1/l * np.sqrt(T/lm))
+        self.noise_ids = ids
+        self.noise_pitches = pitches
+
     def cqt_from_id(self, id, eps):
         with h5py.File(self.audio_dir, "r") as f:
             x = np.array(f['x'][str(id)])
+            theta = np.array(f['theta'][str(id)])
+        # insert code to mix in noise
+        if self.isnoise:
+            #randomly select noise, or the noise with the closest pitch 
+            T, lm, l = theta[1], theta[4], theta[5]
+            pitch = 1/l * np.sqrt(T/lm)
+            idx = np.argmin(np.abs(self.noise_pitches - pitch))
+            if type(idx) == list:
+                idx = idx[0]
+            closest_id = self.noise_ids[idx]
+            with h5py.File(self.noise_dir, "r") as f:
+                noise = f["noise"][closest_id]
+            #randomly select snr
+            snr = np.random.choice([1, 10, 40, 60])
+            #mix noise
+            x = utils.mix_noise(snr, noise, x)
         x = torch.tensor(x, dtype=torch.float32).cuda()
         Sy = self.cqt_from_x(x)[0]
         Sy = torch.log1p(Sy/eps)
@@ -634,7 +671,8 @@ class DrumDataModule(pl.LightningDataModule):
                  scaler,
                  logscale,
                  feature,
-                 num_workers):
+                 num_workers,
+                 noise_dir=None):
         super().__init__()
         self.data_dir = data_dir
         self.num_workers = num_workers
@@ -658,6 +696,7 @@ class DrumDataModule(pl.LightningDataModule):
         elif "mersenne" in weight_dir:
             self.synth_type = "string"
             self.h5name = "mersenne24"
+        self.noise_dir = noise_dir
 
     def setup(self, stage=None):
         
@@ -680,7 +719,8 @@ class DrumDataModule(pl.LightningDataModule):
                                 feature='cqt',
                                 J = self.J,
                                 Q = self.Q,
-                                sr = self.sr)
+                                sr = self.sr,
+                                noise_dir=self.noise_dir)
 
         self.val_ds = DrumData(y_norms_val, #partial dataframe
                                 val_ids,
@@ -692,7 +732,8 @@ class DrumDataModule(pl.LightningDataModule):
                                 feature='cqt',
                                 J = self.J,
                                 Q = self.Q,
-                                sr = self.sr)
+                                sr = self.sr,
+                                noise_dir=self.noise_dir)
 
         self.test_ds = DrumData(y_norms_test, #partial dataframe
                                 test_ids,
@@ -704,7 +745,8 @@ class DrumDataModule(pl.LightningDataModule):
                                 feature='cqt',
                                 J = self.J,
                                 Q = self.Q,
-                                sr = self.sr)
+                                sr = self.sr,
+                                noise_dir=self.noise_dir)
 
 
     def collate_batch(self, batch):

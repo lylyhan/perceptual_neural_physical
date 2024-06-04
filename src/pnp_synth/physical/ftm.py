@@ -91,25 +91,27 @@ def rectangular_drum(theta, logscale, **constants):
 
     return y
 
-def percep2physics(w1, tau1, p, D, l):
+def physics2percep(S4, T, d1, d3, l, lm):
+    c2 = T/lm
+    sigma1 = d3/(2*lm) * (np.pi/l)**2 - d1/(2*lm)
+    tau1 = 1/sigma1
+    w1 = np.sqrt((S4-d3**2/(4*lm**2))*(np.pi/l)**4 + (c2 + d1*d3/(2*lm**2)) * (np.pi/l)**2 - d1**2/(4*lm**2))
+    p = d3 * tau1 / (2*lm) * (np.pi/l)**2
+    D = np.sqrt(S4 * (np.pi/l)**4 - (p*sigma1)**2) / w1
+    return w1, tau1, p, D
+
+def percep2physics(w1, tau1, p, D, l, lm):
     # convert perceptual parameters to PDE parameters
-    d1 = 2 * (p-1) / tau1
-    d3 = 2 * p * l**2 / (tau1 * np.pi**2)
+    #d1 = 2 * (1 - p * lm * (l/np.pi)**2 ) / tau1 # wrong
+    d3 = 2 * p * lm * l**2 / (tau1 * np.pi**2)
+    d1 = -2 * lm / tau1 + d3 * (np.pi/l)**2
     S4 = (l/np.pi)**4 * ((D*w1)**2 + (p/tau1)**2)
     c2 = (l/np.pi)**2 * (w1**2 * (1-D**2) + (1-p**2)/tau1**2)
     return d1, d3, S4, c2
 
-def physics2percep(S4, c2, d1, d3, l):
-    sigma1 = d3/2 * (np.pi/l)**2 - d1/2
-    tau1 = 1/sigma1
-    w1 = np.sqrt((S4-d3**2/4)*(np.pi/l)**4 + (c2 + d1*d3/2) * (np.pi/l)**2 - d1**2/4)
-    p = d3 * tau1 / 2 * (np.pi/l)**2
-    D = np.sqrt(S4 * (np.pi/l)**4 - (p*sigma1)**2) / w1
-    return w1, tau1, p, D
-
 # theta = {w1,tau1, p, D, lm, ell}
 def linearstring_percep(theta, logscale, **constants_string):
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cpu" # "cuda" if torch.cuda.is_available() else "cpu"
     # convert omega, tau, p, D into S, c, d1, d3
     w11 = 10 ** theta[0] if logscale else theta[0]
     p = 10 ** theta[2] if logscale else theta[2]
@@ -121,7 +123,7 @@ def linearstring_percep(theta, logscale, **constants_string):
     pi = torch.tensor(np.pi, dtype=torch.float64).to(device)
     dur = constants_string['dur']
 
-    d1, d3, S4, c2 = percep2physics(w11, tau11, p, D, ell)
+    d1, d3, S4, c2 = percep2physics(w11, tau11, p, D, ell, lm)
     d1 = abs(d1)
     EI = S4 * lm
     Ts0 = c2 * lm
@@ -168,7 +170,7 @@ def linearstring_physics(theta, **constants_string):
     unlike the convention in rabenstein's paper. d3 is always positive, so alpha=(d1+d3*n)/(2*lm)
     beta = EI n2 + Ts0 n (positive sign here)
     """
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cpu" #"cuda" if torch.cuda.is_available() else "cpu"
     # convert omega, tau, p, D into S, c, d1, d3
     EI = theta[0]
     Ts0 = theta[1]
