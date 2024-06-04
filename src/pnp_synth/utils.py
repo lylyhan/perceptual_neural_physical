@@ -214,8 +214,8 @@ def mix_noise(SNR, noise, signal):
         noise_aligned = torch.tensor(noise_aligned[:len(signal)])
     else:
         noise_aligned = torch.cat([torch.tensor(noise_aligned), torch.zeros((len(signal)-len(noise_aligned)))])
-
-    RMS_s = torch.sqrt(torch.mean(signal**2))
+ 
+    RMS_s = torch.sqrt(torch.mean(torch.tensor(signal)**2))
     RMS_n = torch.sqrt(torch.mean(noise_aligned**2))
     scale_factor = RMS_s / (RMS_n * np.exp(SNR/20))
 
