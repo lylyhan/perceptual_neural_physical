@@ -227,7 +227,7 @@ class EffNet(pl.LightningModule):
         self.ploss_validation = []
         self.std = torch.sqrt(torch.tensor(var))
         self.monitor_valloss = torch.inf
-        self.current_device = "cpu"# "cuda" if torch.cuda.is_available() else "cpu"
+        self.current_device = "cuda" if torch.cuda.is_available() else "cpu"
         if LMA:
             self.LMA_accelerator = LMA['accelerator']
             self.LMA_brake = LMA['brake']
