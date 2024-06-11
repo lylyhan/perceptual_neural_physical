@@ -627,7 +627,7 @@ class DrumData(Dataset):
         with h5py.File(self.noise_dir, "r") as f:
             for id in f["theta"].keys():
                 T, l, lm = np.array(f["theta"][id])
-                ids.append(id)
+                ids.append(int(id))
                 pitches.append(1/l * np.sqrt(T/lm))
         self.noise_ids = ids
         self.noise_pitches = pitches
@@ -639,12 +639,12 @@ class DrumData(Dataset):
         N_val = int(len(ids) // 10)
         N_train = int(len(ids) - N_test - N_val)
         # train test val split
-        self.train_noise_ids = ids[rand_idx[:N_train]]
-        self.train_noise_pitches = pitches[rand_idx[:N_train]]
-        self.test_noise_ids = ids[rand_idx[N_train:(N_train+N_test)]]
-        self.test_noise_pitches = pitches[rand_idx[N_train:(N_train+N_test)]]
-        self.val_noise_ids = ids[rand_idx[-N_val:]]
-        self.val_noise_pitches = pitches[rand_idx[-N_val:]]
+        self.train_noise_ids = np.array(ids)[rand_idx[:N_train]]
+        self.train_noise_pitches = np.array(pitches)[rand_idx[:N_train]]
+        self.test_noise_ids = np.array(ids)[rand_idx[N_train:(N_train+N_test)]]
+        self.test_noise_pitches = np.array(pitches)[rand_idx[N_train:(N_train+N_test)]]
+        self.val_noise_ids = np.array(ids)[rand_idx[-N_val:]]
+        self.val_noise_pitches = np.array(pitches)[rand_idx[-N_val:]]
 
     def cqt_from_id(self, id, eps):
         with h5py.File(self.audio_dir, "r") as f:
