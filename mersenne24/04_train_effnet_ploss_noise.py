@@ -30,6 +30,7 @@ minmax = int(sys.argv[3]) #need to cast to int to make the boolean evaluation wo
 logscale_theta = int(sys.argv[4])
 opt = sys.argv[5]
 synth_type = sys.argv[6]
+ckpt_path = sys.argv[7]
 
 batch_size = 64
 is_train = False
@@ -142,12 +143,12 @@ if __name__ == "__main__":
     print(str(datetime.datetime.now()) + " Finished initializing model")
 
     # initialize checkpoint methods
-    checkpoint_cb = ModelCheckpoint(
+    checkpoint_cb_best = ModelCheckpoint(
         dirpath=model_save_path,
         monitor="val_loss",
-        save_last=True,
-        filename= "ckpt-{epoch:02d}-{val_loss:.2f}",
-        every_n_epochs=35,
+        save_top_k=1,
+        filename= "bestckpt-{epoch:02d}-{val_loss:.2f}",
+        every_n_epochs=1,
         save_weights_only=False,
     )
     tb_logger = pl_loggers.TensorBoardLogger(save_dir=os.path.join(model_save_path,"logs"))
@@ -162,23 +163,25 @@ if __name__ == "__main__":
         limit_train_batches=steps_per_epoch,  # if integer than it's #steps per epoch, if float then it's percentage
         limit_val_batches=1.0,
         limit_test_batches=1.0,
-        callbacks=[checkpoint_cb, lr_monitor],
+        callbacks=[checkpoint_cb_best, lr_monitor],
         enable_progress_bar=True,
         logger=tb_logger,
         max_time=None#timedelta(hours=12)
     )
     # train
-    if is_train:
-        print("Training ...")
-        trainer.fit(model, dataset)
-    else:
-        ckpt_path = os.path.join(model_save_path, 'last.ckpt')
-        print("Load Pretrained model")
+    if ckpt_path != "None":
+        ckpt_path = os.path.join(model_save_path, ckpt_path)
+        print("Load Pretrained model", ckpt_path)
         model = model.load_from_checkpoint(
             ckpt_path, 
             in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler,
             var=bn_var, save_path=pred_path, steps_per_epoch=steps_per_epoch, lr=lr, LMA=LMA, minmax=minmax,logtheta=logscale_theta, opt=opt)
-        trainer.fit(model, dataset)
+    if is_train:
+        print("Training ...")
+        if ckpt_path != "None":
+            trainer.fit(model, dataset, ckpt_path=ckpt_path) # resume training taking into account of all the learning rate/epoch numbers
+        else:
+            trainer.fit(model, dataset)
     test_loss = trainer.test(model, dataset, verbose=False)
     print("Model saved at: {}".format(model_save_path))
     print("Average test loss: {}".format(test_loss))

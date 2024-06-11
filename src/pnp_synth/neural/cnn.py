@@ -631,6 +631,20 @@ class DrumData(Dataset):
                 pitches.append(1/l * np.sqrt(T/lm))
         self.noise_ids = ids
         self.noise_pitches = pitches
+        # separate train/val/test of noises
+        np.random.seed(100)
+        rand_idx = np.arange(len(ids))
+        np.random.shuffle(rand_idx)
+        N_test = len(ids) // 10
+        N_val = len(ids) // 10
+        N_train = len(ids) - N_test - N_val
+        # train test val split
+        self.train_noise_ids = ids[rand_idx[:N_train]]
+        self.train_noise_pitches = pitches[rand_idx[:N_train]]
+        self.test_noise_ids = ids[rand_idx[N_train:(N_train+N_test)]]
+        self.test_noise_pitches = pitches[rand_idx[N_train:(N_train+N_test)]]
+        self.val_noise_ids = ids[rand_idx[-N_val:]]
+        self.val_noise_pitches = pitches[rand_idx[-N_val:]]
 
     def cqt_from_id(self, id, eps):
         with h5py.File(self.audio_dir, "r") as f:
@@ -641,10 +655,21 @@ class DrumData(Dataset):
             #randomly select noise, or the noise with the closest pitch 
             T, lm, l = theta[1], theta[4], theta[5]
             pitch = 1/l * np.sqrt(T/lm)
-            idx = np.argmin(np.abs(self.noise_pitches - pitch))
+
+            if "test" in self.audio_dir:
+                noise_pitches = self.test_noise_pitches
+                noise_ids = self.test_noise_ids
+            elif "train" in self.audio_dir:
+                noise_pitches = self.train_noise_pitches
+                noise_ids = self.train_noise_ids
+            elif "val" in self.audio_dir:
+                noise_pitches = self.val_noise_pitches
+                noise_ids = self.val_noise_ids
+
+            idx = np.argmin(np.abs(noise_pitches - pitch))
             if type(idx) == list:
                 idx = idx[0]
-            closest_id = self.noise_ids[idx]
+            closest_id = noise_ids[idx]
             with h5py.File(self.noise_dir, "r") as f:
                 noise = np.array(f["noise"][str(closest_id)])
             #randomly select snr
