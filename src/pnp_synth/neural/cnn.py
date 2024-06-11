@@ -635,9 +635,9 @@ class DrumData(Dataset):
         np.random.seed(100)
         rand_idx = np.arange(len(ids))
         np.random.shuffle(rand_idx)
-        N_test = len(ids) // 10
-        N_val = len(ids) // 10
-        N_train = len(ids) - N_test - N_val
+        N_test = int(len(ids) // 10)
+        N_val = int(len(ids) // 10)
+        N_train = int(len(ids) - N_test - N_val)
         # train test val split
         self.train_noise_ids = ids[rand_idx[:N_train]]
         self.train_noise_pitches = pitches[rand_idx[:N_train]]
