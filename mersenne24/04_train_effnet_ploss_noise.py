@@ -33,7 +33,7 @@ synth_type = sys.argv[6]
 ckpt_path = sys.argv[7]
 
 batch_size = 64
-is_train = True
+is_train = False
 
 print("Command-line arguments:\n" + "\n".join(sys.argv[1:]))
 print(f"Batch size: {batch_size}\n")
@@ -50,7 +50,7 @@ model_dir = os.path.join(save_dir, "f_W")
 cqt_dir = data_dir
 
 
-epoch_max = 70
+epoch_max = 50
 steps_per_epoch = mersenne24.SAMPLES_PER_EPOCH / batch_size
 max_steps = steps_per_epoch * epoch_max
 # feature parameters
@@ -182,7 +182,6 @@ if __name__ == "__main__":
             trainer.fit(model, dataset, ckpt_path=ckpt_path) # resume training taking into account of all the learning rate/epoch numbers
         else:
             trainer.fit(model, dataset)
-
     test_loss = trainer.test(model, dataset, verbose=False)
     print("Model saved at: {}".format(model_save_path))
     print("Average test loss: {}".format(test_loss))
