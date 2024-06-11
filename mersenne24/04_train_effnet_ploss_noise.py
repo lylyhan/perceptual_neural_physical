@@ -32,7 +32,7 @@ opt = sys.argv[5]
 synth_type = sys.argv[6]
 
 batch_size = 64
-is_train = True
+is_train = False
 
 print("Command-line arguments:\n" + "\n".join(sys.argv[1:]))
 print(f"Batch size: {batch_size}\n")
@@ -49,7 +49,7 @@ model_dir = os.path.join(save_dir, "f_W")
 cqt_dir = data_dir
 
 
-epoch_max = 70
+epoch_max = 50
 steps_per_epoch = mersenne24.SAMPLES_PER_EPOCH / batch_size
 max_steps = steps_per_epoch * epoch_max
 # feature parameters
@@ -172,12 +172,13 @@ if __name__ == "__main__":
         print("Training ...")
         trainer.fit(model, dataset)
     else:
-        ckpt_path = os.path.join(model_save_path, 'best.ckpt')
+        ckpt_path = os.path.join(model_save_path, 'last.ckpt')
         print("Load Pretrained model")
         model = model.load_from_checkpoint(
             ckpt_path, 
             in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler,
             var=bn_var, save_path=pred_path, steps_per_epoch=steps_per_epoch, lr=lr, LMA=LMA, minmax=minmax,logtheta=logscale_theta, opt=opt)
+        trainer.fit(model, dataset)
     test_loss = trainer.test(model, dataset, verbose=False)
     print("Model saved at: {}".format(model_save_path))
     print("Average test loss: {}".format(test_loss))
