@@ -78,7 +78,7 @@ class wav2shape(pl.LightningModule):
             self.specloss = auraloss.freq.MultiResolutionSTFTLoss()
         self.scaler = scaler
         self.outdim = outdim
-        self.metric_macro = metrics.JTFSloss(self.scaler, "macro")
+        self.metric_macro = metrics.JTFSloss(self.scaler, "macro") 
         self.metric_micro = metrics.JTFSloss(self.scaler, "micro")
 
     def forward(self, input_tensor):

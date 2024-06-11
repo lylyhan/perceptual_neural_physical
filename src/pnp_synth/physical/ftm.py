@@ -111,7 +111,7 @@ def percep2physics(w1, tau1, p, D, l, lm):
 
 # theta = {w1,tau1, p, D, lm, ell}
 def linearstring_percep(theta, logscale, **constants_string):
-    device = "cpu" # "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     # convert omega, tau, p, D into S, c, d1, d3
     w11 = 10 ** theta[0] if logscale else theta[0]
     p = 10 ** theta[2] if logscale else theta[2]
@@ -170,7 +170,7 @@ def linearstring_physics(theta, **constants_string):
     unlike the convention in rabenstein's paper. d3 is always positive, so alpha=(d1+d3*n)/(2*lm)
     beta = EI n2 + Ts0 n (positive sign here)
     """
-    device = "cpu" #"cuda" if torch.cuda.is_available() else "cpu"
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     # convert omega, tau, p, D into S, c, d1, d3
     EI = theta[0]
     Ts0 = theta[1]
@@ -194,7 +194,6 @@ def linearstring_physics(theta, **constants_string):
     #adaptively change mode number according to nyquist frequency
     mode_rejected = (omega / 2 / pi) > constants_string['sr'] / 2
     mode_corr = constants_string['m'] - torch.sum(mode_rejected)
-    print(omega)
     if torch.sum(torch.isnan(omega)) > 0 or torch.min(omega) > 1200 * 2 * np.pi:
         return "exceeded pitch range"
     else:

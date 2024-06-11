@@ -195,7 +195,8 @@ def x_from_theta(theta, synth_type, logscale):
     elif synth_type == "amchirp":
         x = amchirp.generate_am_chirp(theta, logscale=logscale)
     elif synth_type == "string":
-        x = ftm.linearstring_percep(theta, logscale=logscale, **ftm.constants_string)
+        #x = ftm.linearstring_percep(theta, logscale=logscale, **ftm.constants_string)
+        x = ftm.linearstring_physics(theta, **ftm.constants_string)
     return x
 
 
