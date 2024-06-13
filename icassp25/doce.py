@@ -270,7 +270,7 @@ def eval(save_dir, init_id, batch_size,
             ]
         
     model_save_path = os.path.join(model_dir, "_".join(name_list))
-
+    pred_path = os.path.join(model_save_path, "test_predictions.npy")
     os.makedirs(model_save_path, exist_ok=True)
 
     if minmax: 
