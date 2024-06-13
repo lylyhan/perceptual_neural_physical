@@ -24,7 +24,7 @@ import doce
 
 
 save_dir = "/gpfswork/rech/aej/ufg99no/data/ftm_jtfs"
-loss_type = "p"
+loss_type = "ploss"
 minmax = 1
 logscale_theta = 1
 finetune = False
