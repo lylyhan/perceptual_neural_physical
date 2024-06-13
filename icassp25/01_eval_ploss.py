@@ -31,9 +31,9 @@ finetune = False
 epoch_max = 70
 save_freq = 10
 
-eff_type = sys.argv[0]
-opt = sys.argv[1]
-init_id = int(sys.argv[2])
+eff_type = sys.argv[1]
+opt = sys.argv[2]
+init_id = int(sys.argv[3])
 
 if eff_type == "b0":
         batch_size = 256
