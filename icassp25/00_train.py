@@ -16,6 +16,7 @@ import time
 import torch
 from pytorch_lightning import loggers as pl_loggers
 from datetime import timedelta
+import pandas as pd
 
 import icassp25
 from pnp_synth.neural import cnn
@@ -237,12 +238,26 @@ def eval(save_dir, init_id, batch_size,
         LMA = None
 
     lr = 1e-3
+    finetune = False
+    mu = 1e-10
     
     print("Current device: ", torch.cuda.get_device_name(0))
     torch.multiprocessing.set_start_method('spawn')
-    model_save_path = os.path.join(
-        model_dir,
-        "_".join([
+    if loss_type == "weighted_p":
+        name_list = [
+            eff_type, 
+            loss_type,
+            "finetune" + str(finetune),
+            "log-" + str(logscale_theta),
+            "minmax-" + str(minmax),
+            "opt-" + opt,
+            "batch_size" + str(batch_size),
+            "lr-"+ str(lr),
+            "mu-"+str(mu),
+            "init-" + str(init_id),
+            ]
+    else:
+        name_list = [
             eff_type, 
             loss_type,
             "finetune" + str(finetune),
@@ -253,10 +268,10 @@ def eval(save_dir, init_id, batch_size,
             "lr-"+ str(lr),
             "init-" + str(init_id),
             ]
-        ),
-    )
+        
+    model_save_path = os.path.join(model_dir, "_".join(name_list))
+
     os.makedirs(model_save_path, exist_ok=True)
-    pred_path = os.path.join(model_save_path, "test_predictions.npy")
 
     if minmax: 
         nus, scaler = icassp25.scale_theta(logscale_theta)
@@ -286,62 +301,68 @@ def eval(save_dir, init_id, batch_size,
 
     print(str(datetime.datetime.now()) + " Finished initializing dataset")
     # initialize model, designate loss function
-    model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, eff_type=eff_type,
+    if loss_type == "weighted_p":
+        model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, eff_type=eff_type,
+                       scaler=scaler, LMA=LMA, steps_per_epoch=steps_per_epoch, 
+                       var=bn_var, save_path=pred_path, lr=lr, minmax=minmax, 
+                       logtheta=logscale_theta, opt=opt, mu=mu)
+    else:
+        model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, eff_type=eff_type,
                        scaler=scaler, LMA=LMA, steps_per_epoch=steps_per_epoch, 
                        var=bn_var, save_path=pred_path, lr=lr, minmax=minmax, 
                        logtheta=logscale_theta, opt=opt)
     print(str(datetime.datetime.now()) + " Finished initializing model")
 
-    model = model.load_from_checkpoint(os.path.join(model_save_path, ckpt_path),in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, var=bn_var, save_path=pred_path)
-    # initialize checkpoint methods
-    # save checkpoint every save_freq epochs
-    checkpoint_cb = ModelCheckpoint(
-        dirpath=model_save_path,
-        monitor="val_loss",
-        save_last=True,
-        filename= "ckpt-{epoch:02d}-{val_loss:.2f}",
-        every_n_epochs=save_freq,
-        save_weights_only=False,
-    )
-    # save best checkpoint 
-    checkpoint_cb_best = ModelCheckpoint(
-        dirpath=model_save_path,
-        monitor="val_loss",
-        filename= "bestckpt-{epoch:02d}-{val_loss:.2f}",
-        every_n_epochs=1,
-        save_weights_only=False,
-    )
-    tb_logger = pl_loggers.TensorBoardLogger(save_dir=os.path.join(model_save_path,"logs"))
-    lr_monitor = LearningRateMonitor(logging_interval='step')
 
-    # initialize trainer, declare training parameters, possiibly in neural/cnn.py
-    trainer = pl.Trainer(
-        accelerator="gpu",
-        devices=-1,
-        max_epochs=epoch_max,
-        max_steps=max_steps,
-        limit_train_batches=steps_per_epoch,  # if integer than it's #steps per epoch, if float then it's percentage
-        limit_val_batches=1.0,
-        limit_test_batches=1.0,
-        callbacks=[checkpoint_cb, checkpoint_cb_best, lr_monitor],
-        enable_progress_bar=True,
-        logger=tb_logger,
-        max_time=None#timedelta(hours=12)
-    )
+    metrics = {}
+    for file in os.listdir(model_save_path):
+        if "ckpt" in file and "best" not in file:      
+            epoch = file.split("=")[-2][:2]
+            pred_path = os.path.join(model_save_path, "test_predictions_epoch{}.npy".format(epoch))
+            model = model.load_from_checkpoint(os.path.join(model_save_path, file),in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, var=bn_var, save_path=pred_path)
+            # initialize checkpoint methods
+            # save checkpoint every save_freq epochs
+            checkpoint_cb = ModelCheckpoint(
+                dirpath=model_save_path,
+                monitor="val_loss",
+                save_last=True,
+                filename= "ckpt-{epoch:02d}-{val_loss:.2f}",
+                every_n_epochs=save_freq,
+                save_weights_only=False,
+            )
+            # save best checkpoint 
+            checkpoint_cb_best = ModelCheckpoint(
+                dirpath=model_save_path,
+                monitor="val_loss",
+                filename= "bestckpt-{epoch:02d}-{val_loss:.2f}",
+                every_n_epochs=1,
+                save_weights_only=False,
+            )
+            tb_logger = pl_loggers.TensorBoardLogger(save_dir=os.path.join(model_save_path,"logs"))
+            lr_monitor = LearningRateMonitor(logging_interval='step')
 
-    print("Testing model ... ")
-    test_loss = trainer.test(model, dataset, verbose=False)
-    print("Model saved at: {}".format(model_save_path))
-    print("Average test loss: {}".format(test_loss))
-    print("\n")
+            # initialize trainer, declare training parameters, possiibly in neural/cnn.py
+            trainer = pl.Trainer(
+                accelerator="gpu",
+                devices=-1,
+                max_epochs=epoch_max,
+                max_steps=max_steps,
+                limit_train_batches=steps_per_epoch,  # if integer than it's #steps per epoch, if float then it's percentage
+                limit_val_batches=1.0,
+                limit_test_batches=1.0,
+                callbacks=[checkpoint_cb, checkpoint_cb_best, lr_monitor],
+                enable_progress_bar=True,
+                logger=tb_logger,
+                max_time=None#timedelta(hours=12)
+            )
 
-    # Print elapsed time.
-    print(str(datetime.datetime.now()) + " Success.")
-    elapsed_time = time.time() - int(start_time)
-    elapsed_hours = int(elapsed_time / (60 * 60))
-    elapsed_minutes = int((elapsed_time % (60 * 60)) / 60)
-    elapsed_seconds = elapsed_time % 60.0
-    elapsed_str = "{:>02}:{:>02}:{:>05.2f}".format(
-        elapsed_hours, elapsed_minutes, elapsed_seconds
-    )
-    print("Total elapsed time: " + elapsed_str + ".")
+            print("Testing model ... ")
+            test_loss = trainer.test(model, dataset, verbose=False) # avg_loss, avg_macro_metric, avg_micro_metric, avg_mss_metric
+            avg_loss, macro, micro, mss = test_loss
+            metrics[epoch] = {"test loss": avg_loss, "macro": macro, "micro": micro, "mss": mss}
+            print("Model saved at: {}".format(model_save_path))
+            print("Average test loss: {}".format(test_loss))
+            print("\n")
+    df = pd.DataFrame.from_dict(metrics)       
+    df.to_csv(os.path.join(model_save_path, "summarized_metrics.csv"))
+    return metrics
