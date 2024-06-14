@@ -151,6 +151,14 @@ if __name__ == "__main__":
         every_n_epochs=1,
         save_weights_only=False,
     )
+    checkpoint_cb_last = ModelCheckpoint(
+        dirpath=model_save_path,
+        monitor="val_loss",
+        save_last=1,
+        save_top_k=1,
+        every_n_epochs=0,
+        save_weights_only=False,
+    )
     tb_logger = pl_loggers.TensorBoardLogger(save_dir=os.path.join(model_save_path,"logs"))
     lr_monitor = LearningRateMonitor(logging_interval='step')
 
@@ -163,7 +171,7 @@ if __name__ == "__main__":
         limit_train_batches=steps_per_epoch,  # if integer than it's #steps per epoch, if float then it's percentage
         limit_val_batches=1.0,
         limit_test_batches=1.0,
-        callbacks=[checkpoint_cb_best, lr_monitor],
+        callbacks=[checkpoint_cb_best, checkpoint_cb_last, lr_monitor],
         enable_progress_bar=True,
         logger=tb_logger,
         max_time=None#timedelta(hours=12)
