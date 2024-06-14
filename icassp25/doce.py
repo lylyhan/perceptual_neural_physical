@@ -319,7 +319,11 @@ def eval(save_dir, init_id, batch_size,
         if "ckpt" in file and "best" not in file:      
             epoch = file.split("=")[-2][:2]
             pred_path = os.path.join(model_save_path, "test_predictions_epoch{}.npy".format(epoch))
-            model = model.load_from_checkpoint(os.path.join(model_save_path, file),in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler, var=bn_var, save_path=pred_path)
+            model = model.load_from_checkpoint(os.path.join(model_save_path, file), in_channels=1, 
+                                               outdim=outdim, loss=loss_type, scaler=scaler,var=bn_var, 
+                                               save_path=pred_path, steps_per_epoch=steps_per_epoch, 
+                                               lr=lr, LMA=LMA, minmax=minmax,logtheta=logscale_theta, opt=opt)
+            
             # initialize checkpoint methods
             # save checkpoint every save_freq epochs
             checkpoint_cb = ModelCheckpoint(
