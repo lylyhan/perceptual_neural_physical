@@ -362,7 +362,8 @@ def eval(save_dir, init_id, batch_size,
 
             print("Testing model ... ")
             test_loss = trainer.test(model, dataset, verbose=False) # avg_loss, avg_macro_metric, avg_micro_metric, avg_mss_metric
-            avg_loss, macro, micro, mss = test_loss
+            print("what's going on", test_loss)
+            avg_loss, macro, micro, mss = test_loss[0], test_loss[1], test_loss[2], test_loss[3]
             metrics[epoch] = {"test loss": avg_loss, "macro": macro, "micro": micro, "mss": mss}
             print("Model saved at: {}".format(model_save_path))
             print("Average test loss: {}".format(test_loss))
