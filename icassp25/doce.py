@@ -316,7 +316,7 @@ def eval(save_dir, init_id, batch_size,
 
     metrics = {}
     for file in os.listdir(model_save_path):
-        if "ckpt" in file and "best" not in file:      
+        if "ckpt" in file and "best" not in file and "last" not in file:      
             epoch = file.split("=")[-2][:2]
             pred_path = os.path.join(model_save_path, "test_predictions_epoch{}.npy".format(epoch))
             model = model.load_from_checkpoint(os.path.join(model_save_path, file), in_channels=1, 
