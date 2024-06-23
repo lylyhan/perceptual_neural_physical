@@ -227,12 +227,10 @@ def eval(save_dir, init_id, batch_size,
 
     if loss_type == "weighted_p":
         LMA = {
-        'mode': "constant", #scheduled / constant
-        'lambda': 1,
-        'threshold': 1e+8,
-        'accelerator': 0.5,
-        'brake': 1,
-        'damping': "mean"
+            'mode': "adaptive", #scheduled / constant
+            'accelerator': 0.05,
+            'brake': 1,
+            'damping': "id"
         }
     else:
         LMA = None
@@ -318,7 +316,7 @@ def eval(save_dir, init_id, batch_size,
     for file in os.listdir(model_save_path):
         if "ckpt" in file and "best" not in file and "last" not in file:      
             epoch = file.split("=")[-2][:2]
-            pred_path = os.path.join(model_save_path, "test_predictions_epoch{}.npy".format(epoch))
+            pred_path = os.path.join(model_save_path,v "test_predictions_epoch{}.npy".format(epoch))
             model = model.load_from_checkpoint(os.path.join(model_save_path, file), in_channels=1, 
                                                outdim=outdim, loss=loss_type, scaler=scaler,var=bn_var, 
                                                eff_type=eff_type, save_path=pred_path, steps_per_epoch=steps_per_epoch, 
