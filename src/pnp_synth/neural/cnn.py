@@ -646,6 +646,30 @@ class DrumData(Dataset):
         self.val_noise_ids = np.array(ids)[rand_idx[-N_val:]]
         self.val_noise_pitches = np.array(pitches)[rand_idx[-N_val:]]
 
+        ids_nonval = []
+        pitches_nonval = []
+        with h5py.File(self.noise_dir[:-3]+"_nonval.h5", "r") as f:
+            for id in f["pitch"].keys():
+                pitch = f["pitch"][id]
+                ids_nonval.append(int(id))
+                pitches_nonval.append(pitch)
+        self.noise_nonval_ids = ids_nonval
+        self.noise_nonval_pitches = pitches_nonval
+
+        rand_idx_nonval = np.arange(len(ids_nonval))
+        np.random.shuffle(rand_idx_nonval)
+        N_test_nonval = int(len(ids_nonval) // 10)
+        N_val_nonval = int(len(ids_nonval) // 10)
+        N_train_nonval = int(len(ids_nonval) - N_test_nonval - N_val_nonval)
+        # train test val split
+        self.train_noise_nonval_ids = np.array(ids_nonval)[rand_idx_nonval[:N_train_nonval]]
+        self.train_noise_nonval_pitches = np.array(pitches_nonval)[rand_idx_nonval[:N_train_nonval]]
+        self.test_noise_nonval_ids = np.array(ids_nonval)[rand_idx_nonval[N_train_nonval:(N_train_nonval+N_test_nonval)]]
+        self.test_noise_nonval_pitches = np.array(pitches_nonval)[rand_idx_nonval[N_train_nonval:(N_train_nonval+N_test_nonval)]]
+        self.val_noise_nonval_ids = np.array(ids_nonval)[rand_idx_nonval[-N_val_nonval:]]
+        self.val_noise_nonval_pitches = np.array(pitches_nonval)[rand_idx_nonval[-N_val_nonval:]]
+
+
     def cqt_from_id(self, id, eps):
         with h5py.File(self.audio_dir, "r") as f:
             x = np.array(f['x'][str(id)])
@@ -657,20 +681,27 @@ class DrumData(Dataset):
             pitch = 1/l * np.sqrt(T/lm)
 
             if "test" in self.audio_dir:
-                noise_pitches = self.test_noise_pitches
-                noise_ids = self.test_noise_ids
+                noise_pitches = np.concatenate((self.test_noise_pitches, self.test_noise_nonval_pitches))
+                noise_ids = np.concatenate((self.test_noise_ids, self.test_noise_nonval_ids))
+                division_len = len(self.test_noise_pitches)
             elif "train" in self.audio_dir:
-                noise_pitches = self.train_noise_pitches
-                noise_ids = self.train_noise_ids
+                noise_pitches = np.concatenate((self.train_noise_pitches, self.train_noise_nonval_pitches))
+                noise_ids = np.concatenate((self.train_noise_ids, self.train_noise_nonval_ids))
+                division_len = len(self.train_noise_pitches)
             elif "val" in self.audio_dir:
-                noise_pitches = self.val_noise_pitches
-                noise_ids = self.val_noise_ids
+                noise_pitches = np.concatenate((self.val_noise_pitches, self.val_noise_nonval_pitches))
+                noise_ids = np.concatenate((self.val_noise_ids, self.val_noise_nonval_ids))
+                division_len = len(self.val_noise_pitches)
 
             idx = np.argmin(np.abs(noise_pitches - pitch))
             if type(idx) == list:
                 idx = idx[0]
+                if idx >= division_len:
+                    find_noise_dir = self.noise_dir[:-3]+"_nonval.h5"
+                else:
+                    find_noise_dir = self.noise_dir
             closest_id = noise_ids[idx]
-            with h5py.File(self.noise_dir, "r") as f:
+            with h5py.File(find_noise_dir, "r") as f:
                 noise = np.array(f["noise"][str(closest_id)])
             #randomly select snr
             snr = np.random.choice([1, 10, 40, 60])
