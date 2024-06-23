@@ -650,7 +650,7 @@ class DrumData(Dataset):
         pitches_nonval = []
         with h5py.File(self.noise_dir[:-3]+"_nonval.h5", "r") as f:
             for id in f["pitch"].keys():
-                pitch = f["pitch"][id]
+                pitch = np.array(f["pitch"][id])
                 ids_nonval.append(int(id))
                 pitches_nonval.append(pitch)
         self.noise_nonval_ids = ids_nonval
