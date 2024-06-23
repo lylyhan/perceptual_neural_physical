@@ -696,10 +696,10 @@ class DrumData(Dataset):
             idx = np.argmin(np.abs(noise_pitches - pitch))
             if type(idx) == list:
                 idx = idx[0]
-                if idx >= division_len:
-                    find_noise_dir = self.noise_dir[:-3]+"_nonval.h5"
-                else:
-                    find_noise_dir = self.noise_dir
+            if idx >= division_len:
+                find_noise_dir = self.noise_dir[:-3]+"_nonval.h5"
+            else:
+                find_noise_dir = self.noise_dir
             closest_id = noise_ids[idx]
             with h5py.File(find_noise_dir, "r") as f:
                 noise = np.array(f["noise"][str(closest_id)])
