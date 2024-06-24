@@ -92,7 +92,7 @@ if __name__ == "__main__":
         "_".join(
             [
                 loss_type,
-                "matchednoisemix"
+                "randnoisemix"
                 "finetune" + str(finetune),
                 "log-" + str(logscale_theta),
                 "minmax-" + str(minmax),
@@ -130,7 +130,7 @@ if __name__ == "__main__":
         scaler=scaler,
         num_workers=0,
         noise_dir = noise_dir,
-        noise_mode = "matched"
+        noise_mode = "random"
     )
 
     print(str(datetime.datetime.now()) + " Finished initializing dataset")
