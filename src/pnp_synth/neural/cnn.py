@@ -521,7 +521,8 @@ class DrumData(Dataset):
                  J,
                  Q,
                  sr,
-                 noise_dir): #path to noise audio hdf files
+                 noise_dir,
+                 noise_mode="matched"): #path to noise audio hdf files
         super().__init__()
 
         self.fold = fold
@@ -536,6 +537,7 @@ class DrumData(Dataset):
         if self.noise_dir:
             self.noise_inventory()
             self.isnoise = True
+            self.noise_mode = noise_mode
         else:
             self.isnoise = False
 
@@ -693,9 +695,12 @@ class DrumData(Dataset):
                 noise_ids = np.concatenate((self.val_noise_ids, self.val_noise_nonval_ids))
                 division_len = len(self.val_noise_pitches)
 
-            idx = np.argmin(np.abs(noise_pitches - pitch))
-            if type(idx) == list:
-                idx = idx[0]
+            if self.noise_mode == "matched":
+                idx = np.argmin(np.abs(noise_pitches - pitch))
+                if type(idx) == list:
+                    idx = idx[0]
+            elif self.noise_mode == "random":
+                idx = np.random.choice(np.arange(len(noise_pitches)))
             if idx >= division_len:
                 find_noise_dir = self.noise_dir[:-3]+"_nonval.h5"
             else:
@@ -728,7 +733,8 @@ class DrumDataModule(pl.LightningDataModule):
                  logscale,
                  feature,
                  num_workers,
-                 noise_dir=None):
+                 noise_dir=None,
+                 noise_mode="matched"):
         super().__init__()
         self.data_dir = data_dir
         self.num_workers = num_workers
@@ -753,6 +759,7 @@ class DrumDataModule(pl.LightningDataModule):
             self.synth_type = "string"
             self.h5name = "mersenne24"
         self.noise_dir = noise_dir
+        self.noise_mode = noise_mode
 
     def setup(self, stage=None):
         
@@ -776,7 +783,8 @@ class DrumDataModule(pl.LightningDataModule):
                                 J = self.J,
                                 Q = self.Q,
                                 sr = self.sr,
-                                noise_dir=self.noise_dir)
+                                noise_dir=self.noise_dir,
+                                noise_mode=self.noise_mode)
 
         self.val_ds = DrumData(y_norms_val, #partial dataframe
                                 val_ids,
@@ -789,7 +797,8 @@ class DrumDataModule(pl.LightningDataModule):
                                 J = self.J,
                                 Q = self.Q,
                                 sr = self.sr,
-                                noise_dir=self.noise_dir)
+                                noise_dir=self.noise_dir,
+                                noise_mode=self.noise_mode)
 
         self.test_ds = DrumData(y_norms_test, #partial dataframe
                                 test_ids,
@@ -802,7 +811,8 @@ class DrumDataModule(pl.LightningDataModule):
                                 J = self.J,
                                 Q = self.Q,
                                 sr = self.sr,
-                                noise_dir=self.noise_dir)
+                                noise_dir=self.noise_dir,
+                                noise_mode=self.noise_mode)
 
 
     def collate_batch(self, batch):
