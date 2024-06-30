@@ -225,6 +225,7 @@ class EffNet(pl.LightningModule):
         self.mss_validation = metrics.MSSloss(self.scaler, self.synth_type, logtheta)
         self.jtfs_validation = metrics.JTFSloss(self.scaler, "macro", self.synth_type, logtheta)
         self.ploss_validation = []
+        self.ploss_test = []
         self.std = torch.sqrt(torch.tensor(var))
         self.monitor_valloss = torch.inf
         self.current_device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -344,6 +345,7 @@ class EffNet(pl.LightningModule):
 
         elif fold == "test":
             self.test_outputs.append(loss)
+            self.ploss_test.append(F.mse_loss(outputs.double(), y.double()))
         elif fold == "val":
             self.val_outputs.append(loss)
             #self.mss_validation.update(outputs, y)
@@ -368,6 +370,7 @@ class EffNet(pl.LightningModule):
         self.test_outputs = []
         self.val_outputs = []
         self.ploss_validation = []
+        self.ploss_test = []
         self.log("lr", self.optimizer.param_groups[-1]['lr'])
 
     def on_train_epoch_end(self):
@@ -376,6 +379,7 @@ class EffNet(pl.LightningModule):
     
     def on_test_epoch_end(self):
         avg_loss = torch.tensor(self.test_outputs).mean()
+        avg_ploss_test = torch.tensor(self.ploss_test).mean()
         avg_macro_metric = self.metric_macro.compute() 
         avg_micro_metric = self.metric_micro.compute()
         avg_mss_metric = self.metric_mss.compute()
@@ -383,6 +387,7 @@ class EffNet(pl.LightningModule):
         self.log('macro_metrics', avg_macro_metric)
         self.log('micro_metrics', avg_micro_metric)
         self.log('mss metrics', avg_mss_metric)
+        self.log('ploss', avg_ploss_test)
         self.test_gts = torch.stack(self.test_gts)
         self.test_preds = torch.stack(self.test_preds)
         try:
@@ -396,7 +401,7 @@ class EffNet(pl.LightningModule):
                                     self.test_preds.detach().cpu().numpy()],
                                     allow_pickle=True)
 
-        return avg_loss, avg_macro_metric, avg_micro_metric, avg_mss_metric
+        return avg_loss, avg_macro_metric, avg_micro_metric, avg_mss_metric, avg_ploss_test
 
     def on_validation_epoch_end(self):
         avg_loss = torch.tensor(self.val_outputs).mean() #current loss function's validation loss
@@ -699,7 +704,7 @@ class DrumData(Dataset):
                 idx = np.argmin(np.abs(noise_pitches - pitch))
                 if type(idx) == list:
                     idx = idx[0]
-            elif self.noise_mode == "random":
+            elif self.noise_mode == "random" or self.noise_mode == "gaussian":
                 idx = np.random.choice(np.arange(len(noise_pitches)))
             if idx >= division_len:
                 find_noise_dir = self.noise_dir[:-3]+"_nonval.h5"
@@ -708,6 +713,10 @@ class DrumData(Dataset):
             closest_id = noise_ids[idx]
             with h5py.File(find_noise_dir, "r") as f:
                 noise = np.array(f["noise"][str(closest_id)])
+                if self.noise_mode == "gaussian":
+                    noise_synth = np.abs(noise) * (np.random.normal(size=noise.shape[0])*2 - 1)
+                    noise_synth = noise_synth / np.max(np.abs(noise_synth))
+                    noise = noise_synth
             #randomly select snr
             snr = np.random.choice([1, 10, 40, 60])
             #mix noise
