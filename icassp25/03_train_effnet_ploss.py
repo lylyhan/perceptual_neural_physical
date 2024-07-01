@@ -33,7 +33,7 @@ eff_type = sys.argv[6] #b0
 batch_size = int(sys.argv[7]) #256
 
 is_train = True
-save_freq = 10
+save_freq = 1
 
 print("Command-line arguments:\n" + "\n".join(sys.argv[1:]))
 print(f"Batch size: {batch_size}\n")
@@ -49,7 +49,7 @@ model_dir = os.path.join(save_dir, "f_W")
 cqt_dir = data_dir
 
 
-epoch_max = 70
+epoch_max = 10
 steps_per_epoch = icassp25.SAMPLES_PER_EPOCH / batch_size
 max_steps = steps_per_epoch * epoch_max
 # feature parameters

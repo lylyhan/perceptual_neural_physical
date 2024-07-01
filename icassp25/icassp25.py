@@ -13,7 +13,7 @@ import numpy as np
 
 FOLDS = ["train", "test", "val"]
 THETA_COLUMNS = ["omega", "tau", "p", "D", "alpha"]
-SAMPLES_PER_EPOCH = 512*50
+SAMPLES_PER_EPOCH = 82224 #512*50
 synth_type = "ftm"
 
 jtfs_params = dict(
