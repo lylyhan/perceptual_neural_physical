@@ -1,24 +1,21 @@
-from decimal import Clamped
-from re import X
 import pytorch_lightning as pl
 from torch.utils.data import Dataset, DataLoader
 import os
-import pandas as pd
-import soundfile as sf
 import torch
 from torch import nn
 from nnAudio.features import CQT
 from pnp_synth.neural import loss as losses
 from pnp_synth.neural import optimizer
 import torchvision
-import torchvision.transforms as transforms
 import torch.nn.functional as F
 import numpy as np
 from pnp_synth.perceptual import metrics
 import auraloss
 from pnp_synth import utils
 import h5py
-import joblib
+import muda
+import jams
+
 #from Sophia import SophiaG 
 
 #logscale param
@@ -543,6 +540,8 @@ class DrumData(Dataset):
             self.noise_inventory()
             self.isnoise = True
             self.noise_mode = noise_mode
+            if self.noise_mode == "statgauss":
+                self.noise_gen = muda.deformers.ColoredNoise(n_samples=1, color=['pink'], weight_max=0.08, weight_min=0.01)
         else:
             self.isnoise = False
 
@@ -681,46 +680,55 @@ class DrumData(Dataset):
         with h5py.File(self.audio_dir, "r") as f:
             x = np.array(f['x'][str(id)])
             theta = np.array(f['theta'][str(id)])
+            sr = np.array(f["sr"][str(id)])
         # insert code to mix in noise
         if self.isnoise:
-            #randomly select noise, or the noise with the closest pitch 
-            T, lm, l = theta[1], theta[4], theta[5]
-            pitch = 1/l * np.sqrt(T/lm)
+            if self.noise_mode != "statgauss":
+                #randomly select noise, or the noise with the closest pitch 
+                T, lm, l = theta[1], theta[4], theta[5]
+                pitch = 1/l * np.sqrt(T/lm)
 
-            if "test" in self.audio_dir:
-                noise_pitches = np.concatenate((self.test_noise_pitches, self.test_noise_nonval_pitches))
-                noise_ids = np.concatenate((self.test_noise_ids, self.test_noise_nonval_ids))
-                division_len = len(self.test_noise_pitches)
-            elif "train" in self.audio_dir:
-                noise_pitches = np.concatenate((self.train_noise_pitches, self.train_noise_nonval_pitches))
-                noise_ids = np.concatenate((self.train_noise_ids, self.train_noise_nonval_ids))
-                division_len = len(self.train_noise_pitches)
-            elif "val" in self.audio_dir:
-                noise_pitches = np.concatenate((self.val_noise_pitches, self.val_noise_nonval_pitches))
-                noise_ids = np.concatenate((self.val_noise_ids, self.val_noise_nonval_ids))
-                division_len = len(self.val_noise_pitches)
+                if "test" in self.audio_dir:
+                    noise_pitches = np.concatenate((self.test_noise_pitches, self.test_noise_nonval_pitches))
+                    noise_ids = np.concatenate((self.test_noise_ids, self.test_noise_nonval_ids))
+                    division_len = len(self.test_noise_pitches)
+                elif "train" in self.audio_dir:
+                    noise_pitches = np.concatenate((self.train_noise_pitches, self.train_noise_nonval_pitches))
+                    noise_ids = np.concatenate((self.train_noise_ids, self.train_noise_nonval_ids))
+                    division_len = len(self.train_noise_pitches)
+                elif "val" in self.audio_dir:
+                    noise_pitches = np.concatenate((self.val_noise_pitches, self.val_noise_nonval_pitches))
+                    noise_ids = np.concatenate((self.val_noise_ids, self.val_noise_nonval_ids))
+                    division_len = len(self.val_noise_pitches)
 
-            if self.noise_mode == "matched":
-                idx = np.argmin(np.abs(noise_pitches - pitch))
-                if type(idx) == list:
-                    idx = idx[0]
-            elif self.noise_mode == "random" or self.noise_mode == "gaussian":
-                idx = np.random.choice(np.arange(len(noise_pitches)))
-            if idx >= division_len:
-                find_noise_dir = self.noise_dir[:-3]+"_nonval.h5"
+                if self.noise_mode == "matched":
+                    idx = np.argmin(np.abs(noise_pitches - pitch))
+                    if type(idx) == list:
+                        idx = idx[0]
+                elif self.noise_mode == "random" or self.noise_mode == "gaussian":
+                    idx = np.random.choice(np.arange(len(noise_pitches)))
+                if idx >= division_len:
+                    find_noise_dir = self.noise_dir[:-3]+"_nonval.h5"
+                else:
+                    find_noise_dir = self.noise_dir
+                closest_id = noise_ids[idx]
+                with h5py.File(find_noise_dir, "r") as f:
+                    noise = np.array(f["noise"][str(closest_id)])
+                    if self.noise_mode == "gaussian":
+                        noise_synth = np.abs(noise) * (np.random.normal(size=noise.shape[0])*2 - 1)
+                        noise_synth = noise_synth / np.max(np.abs(noise_synth))
+                        noise = noise_synth
+                #randomly select snr
+                snr = np.random.choice([1, 10, 40, 60])
+                #mix noise
+                x = utils.mix_noise(snr, noise, x)
             else:
-                find_noise_dir = self.noise_dir
-            closest_id = noise_ids[idx]
-            with h5py.File(find_noise_dir, "r") as f:
-                noise = np.array(f["noise"][str(closest_id)])
-                if self.noise_mode == "gaussian":
-                    noise_synth = np.abs(noise) * (np.random.normal(size=noise.shape[0])*2 - 1)
-                    noise_synth = noise_synth / np.max(np.abs(noise_synth))
-                    noise = noise_synth
-            #randomly select snr
-            snr = np.random.choice([1, 10, 40, 60])
-            #mix noise
-            x = utils.mix_noise(snr, noise, x)
+                # temporary jams object to apply the transformation
+                jam = jams.JAMS()
+                j_orig = muda.jam_pack(jam, _audio=dict(y=x, sr=sr))
+                for j_new in self.noise_gen.transform(j_orig):
+                    x = j_new.sandbox.muda._audio["y"]
+                   
         x = torch.tensor(x, dtype=torch.float32).cuda()
         Sy = self.cqt_from_x(x)[0]
         Sy = torch.log1p(Sy/eps)
