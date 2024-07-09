@@ -51,7 +51,7 @@ class NoiseData(Dataset):
    
     def __getitem__(self, idx): 
         id = self.ids[idx]
-        y = self.y_from_id(id)
+        y = self.y_from_id(id, idx)
         
         return {'noise': y}
     
@@ -75,9 +75,9 @@ class NoiseData(Dataset):
     def __len__(self):
         return len(self.ids)
 
-    def y_from_id(self, id):
+    def y_from_id(self, id, idx):
         
-        if int(id) < self.N_noise1:
+        if int(idx) < self.N_noise1:
             noise_dir = self.noise_dir
         else:
             noise_dir = self.noise_dir[:-3]+"_nonval.h5"
