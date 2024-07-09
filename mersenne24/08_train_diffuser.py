@@ -19,7 +19,7 @@ from pathlib import Path
 @dataclass
 class TrainingConfig:
     audio_len = 2**14  # the generated audio length
-    train_batch_size = 1
+    train_batch_size = 3
     eval_batch_size = 2  # how many images to sample during evaluation
     num_epochs = 10
     sr = 22050
