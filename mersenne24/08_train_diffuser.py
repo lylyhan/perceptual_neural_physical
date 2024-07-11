@@ -1,4 +1,4 @@
-from diffusers import DDPMScheduler, UNet1DModel, DDPMPipeline
+from diffusers import DDPMScheduler, UNet1DModel, DanceDiffusionPipeline
 import torch
 import h5py
 import mersenne24
@@ -13,21 +13,22 @@ import os
 from accelerate import Accelerator
 from tqdm.auto import tqdm
 from pathlib import Path
+import soundfile as sf
 
 
 
 @dataclass
 class TrainingConfig:
     audio_len = 2**14  # the generated audio length
-    train_batch_size = 3
-    eval_batch_size = 2  # how many images to sample during evaluation
-    num_epochs = 10
+    train_batch_size = 5
+    eval_batch_size = 5  # how many images to sample during evaluation
+    num_epochs = 20
     sr = 22050
     gradient_accumulation_steps = 1
     learning_rate = 1e-4
     lr_warmup_steps = 500
-    save_image_epochs = 10
-    save_model_epochs = 30
+    save_audio_epochs = 1
+    save_model_epochs = 5
     mixed_precision = "fp16"  # `no` for float32, `fp16` for automatic mixed precision
     #output_dir = "/home/han/data/mersenne24_data/f_W/ddpm_noise-init0/"  # the model name locally and on the HF Hub
     output_dir = "/gpfswork/rech/aej/ufg99no/data/mersenne24_data/f_W/ddpm_noise-init0/"
@@ -96,6 +97,16 @@ class NoiseData(Dataset):
         x = torch.tensor(x, dtype=torch.float32).cuda().unsqueeze(0)
         return x
 
+def evaluate(config, epoch, pipeline):
+    # Sample some images from random noise (this is the backward diffusion process).
+    # The default pipeline output type is `List[PIL.Image]`
+    audios = pipeline(
+        batch_size=config.eval_batch_size,
+        generator=torch.Generator(device='cpu').manual_seed(config.seed), # Use a separate torch generator to avoid rewinding the random state of the main training loop
+    ).audios
+    for i, audio in enumerate(audios):
+        sf.write(f"epoch{epoch}_test_{i}.wav", pipeline.unet.sample_rate, audio.transpose())
+
 
 def train_loop(config, model, noise_scheduler, optimizer, train_dataloader, lr_scheduler):
     # Initialize accelerator and tensorboard logging
@@ -160,7 +171,9 @@ def train_loop(config, model, noise_scheduler, optimizer, train_dataloader, lr_s
 
         # After each epoch you optionally sample some demo images with evaluate() and save the model
         if accelerator.is_main_process:
-            pipeline = DDPMPipeline(unet=accelerator.unwrap_model(model), scheduler=noise_scheduler)
+            pipeline = DanceDiffusionPipeline(unet=accelerator.unwrap_model(model), scheduler=noise_scheduler)
+            if (epoch + 1) % config.save_audio_epochs == 0 or epoch == config.num_epochs - 1:
+                evaluate(config, epoch, pipeline)
 
             if (epoch + 1) % config.save_model_epochs == 0 or epoch == config.num_epochs - 1:
                 pipeline.save_pretrained(config.output_dir)
