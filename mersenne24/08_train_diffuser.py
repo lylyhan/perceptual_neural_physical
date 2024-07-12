@@ -14,6 +14,7 @@ from accelerate import Accelerator
 from tqdm.auto import tqdm
 from pathlib import Path
 import soundfile as sf
+from pnp_synth.neural import optimizer
 
 
 
@@ -89,6 +90,15 @@ class NoiseData(Dataset):
         
         if sr != self.sr:
             x = librosa.resample(x, orig_sr=sr, target_sr=self.sr)
+
+        #onset detection:
+        onsets_t = librosa.onset.onset_detect(y=np.array(x), sr=sr, units='time', energy=x**2) 
+
+        try: 
+            x = x[(int(onsets_t[1]*sr)):]
+        except:
+            x = x[(int(onsets_t[0]*sr)):]
+
         if len(x) < self.audio_len:
             x = np.concatenate([x, np.zeros(self.audio_len-len(x))])
         else:
@@ -102,7 +112,7 @@ def evaluate(config, epoch, pipeline):
     # The default pipeline output type is `List[PIL.Image]`
     audios = pipeline(
         batch_size=config.eval_batch_size,
-        generator=torch.Generator(device='cpu').manual_seed(config.seed), # Use a separate torch generator to avoid rewinding the random state of the main training loop
+        generator=torch.Generator(device=pipeline.device).manual_seed(config.seed), # Use a separate torch generator to avoid rewinding the random state of the main training loop
     ).audios
     for i, audio in enumerate(audios):
         sf.write(f"epoch{epoch}_test_{i}.wav", pipeline.unet.sample_rate, audio.transpose())
@@ -217,7 +227,10 @@ if __name__ == "__main__":
     dataset = NoiseData(noise_dir, mode="train", audio_len=2**17, sr=22050)
     train_dataloader = DataLoader(dataset)
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=config.learning_rate)
+    #optimizer = torch.optim.AdamW(model.parameters(), lr=config.learning_rate)
+    optimizer = optimizer.SophiaG(params=model.parameters(), lr=config.learning_rate, 
+                                  betas=(0.965, 0.99), rho = 0.01, weight_decay=1e-1)
+
     lr_scheduler = get_cosine_schedule_with_warmup(
                     optimizer=optimizer,
                     num_warmup_steps=config.lr_warmup_steps,
