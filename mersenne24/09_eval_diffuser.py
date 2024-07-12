@@ -1,20 +1,24 @@
-from diffusers import DiffusionPipeline
+from diffusers import DanceDiffusionPipeline
 import torch
 import os
 import numpy as np
+import soundfile as sf
 
 pretrain_dir = "/home/han/data/mersenne24_data/f_W/ddpm_noise-init0"
 out_dir = "./samples"
 
+seed = 0 
+eval_batch_size = 10
+
 # load pipeline
-pipe = DiffusionPipeline.from_pretrained(pretrain_dir, torch_dtype=torch.float16).to("cuda")
+pipe = DanceDiffusionPipeline.from_pretrained(pretrain_dir, torch_dtype=torch.float16).to("cuda")
 
-noises = pipe(batch_size=2,
-        generator=torch.Generator(device='cpu').manual_seed(100),
-    ).images
+audios = pipe(
+        batch_size=eval_batch_size,
+        generator=torch.Generator(device=pipe.device).manual_seed(seed), # Use a separate torch generator to avoid rewinding the random state of the main training loop
+    ).audios
 
-noises = np.array(noises)
-
-test_dir = os.path.join(out_dir, "samples")
+test_dir = os.path.join(out_dir)
 os.makedirs(test_dir, exist_ok=True)
-np.save("test_samples.npy", noises)
+for i, audio in enumerate(audios):
+    sf.write(os.path.join(test_dir, f"test_{i}.wav"), audio.T, pipe.unet.config.sample_rate,)
