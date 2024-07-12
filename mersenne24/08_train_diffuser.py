@@ -14,24 +14,25 @@ from accelerate import Accelerator
 from tqdm.auto import tqdm
 from pathlib import Path
 import soundfile as sf
+from pnp_synth.neural import optimizer
 
 
 
 @dataclass
 class TrainingConfig:
     audio_len = 2**14  # the generated audio length
-    train_batch_size = 5
+    train_batch_size = 64
     eval_batch_size = 5  # how many images to sample during evaluation
-    num_epochs = 20
+    num_epochs = 1000
     sr = 22050
     gradient_accumulation_steps = 1
     learning_rate = 1e-4
     lr_warmup_steps = 500
     save_audio_epochs = 1
-    save_model_epochs = 5
+    save_model_epochs = 100
     mixed_precision = "fp16"  # `no` for float32, `fp16` for automatic mixed precision
     #output_dir = "/home/han/data/mersenne24_data/f_W/ddpm_noise-init0/"  # the model name locally and on the HF Hub
-    output_dir = "/gpfswork/rech/aej/ufg99no/data/mersenne24_data/f_W/ddpm_noise-init0/"
+    output_dir = "/gpfswork/rech/aej/ufg99no/data/mersenne24_data/f_W/ddpm_noise-init-1/"
     seed = 0
 
 class NoiseData(Dataset):
@@ -102,7 +103,7 @@ def evaluate(config, epoch, pipeline):
     # The default pipeline output type is `List[PIL.Image]`
     audios = pipeline(
         batch_size=config.eval_batch_size,
-        generator=torch.Generator(device='cpu').manual_seed(config.seed), # Use a separate torch generator to avoid rewinding the random state of the main training loop
+        generator=torch.Generator(device=pipeline.device).manual_seed(config.seed), # Use a separate torch generator to avoid rewinding the random state of the main training loop
     ).audios
     for i, audio in enumerate(audios):
         sf.write(f"epoch{epoch}_test_{i}.wav", pipeline.unet.sample_rate, audio.transpose())
@@ -172,8 +173,9 @@ def train_loop(config, model, noise_scheduler, optimizer, train_dataloader, lr_s
         # After each epoch you optionally sample some demo images with evaluate() and save the model
         if accelerator.is_main_process:
             pipeline = DanceDiffusionPipeline(unet=accelerator.unwrap_model(model), scheduler=noise_scheduler)
-            if (epoch + 1) % config.save_audio_epochs == 0 or epoch == config.num_epochs - 1:
-                evaluate(config, epoch, pipeline)
+            #if (epoch + 1) % config.save_audio_epochs == 0 or epoch == config.num_epochs - 1:
+            #    pipeline = pipeline.to('cuda')
+            #    evaluate(config, epoch, pipeline)
 
             if (epoch + 1) % config.save_model_epochs == 0 or epoch == config.num_epochs - 1:
                 pipeline.save_pretrained(config.output_dir)
@@ -217,13 +219,19 @@ if __name__ == "__main__":
     dataset = NoiseData(noise_dir, mode="train", audio_len=2**17, sr=22050)
     train_dataloader = DataLoader(dataset)
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=config.learning_rate)
+    #optimizer = torch.optim.AdamW(model.parameters(), lr=config.learning_rate)
+    optimizer = optimizer.SophiaG(params=model.parameters(), lr=config.learning_rate,
+                                  betas=(0.965, 0.99), rho = 0.01, weight_decay=1e-1)
     lr_scheduler = get_cosine_schedule_with_warmup(
                     optimizer=optimizer,
                     num_warmup_steps=config.lr_warmup_steps,
                     num_training_steps=(len(train_dataloader) * config.num_epochs),
                 )
-    
+    #optimizer = optimizer.SophiaG(params=model.parameters(), lr=config.learning_rate, 
+    #                              betas=(0.965, 0.99), rho = 0.01, weight_decay=1e-1)
+    #lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3)
+
+
     # try adding noise to the audio according to the noise schedule
     noise_scheduler = DDPMScheduler(num_train_timesteps=1000)
     train_loop(config, model, noise_scheduler, optimizer, train_dataloader, lr_scheduler)
