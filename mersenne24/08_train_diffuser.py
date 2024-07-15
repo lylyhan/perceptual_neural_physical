@@ -23,16 +23,16 @@ class TrainingConfig:
     audio_len = 2**14  # the generated audio length
     train_batch_size = 64
     eval_batch_size = 5  # how many images to sample during evaluation
-    num_epochs = 1000
+    num_epochs = 100
     sr = 22050
     gradient_accumulation_steps = 1
     learning_rate = 1e-4
     lr_warmup_steps = 500
     save_audio_epochs = 1
-    save_model_epochs = 100
+    save_model_epochs = 20
     mixed_precision = "fp16"  # `no` for float32, `fp16` for automatic mixed precision
     #output_dir = "/home/han/data/mersenne24_data/f_W/ddpm_noise-init0/"  # the model name locally and on the HF Hub
-    output_dir = "/gpfswork/rech/aej/ufg99no/data/mersenne24_data/f_W/ddpm_noise-init-1/"
+    output_dir = "/gpfswork/rech/aej/ufg99no/data/mersenne24_data/f_W/ddpm_noise-alignednoise/"
     seed = 0
 
 class NoiseData(Dataset):
@@ -90,6 +90,15 @@ class NoiseData(Dataset):
         
         if sr != self.sr:
             x = librosa.resample(x, orig_sr=sr, target_sr=self.sr)
+
+        #onset detection:
+        onsets_t = librosa.onset.onset_detect(y=np.array(x), sr=sr, units='time', energy=x**2) 
+
+        try: 
+            x = x[(int(onsets_t[1]*sr)):]
+        except:
+            x = x[(int(onsets_t[0]*sr)):]
+
         if len(x) < self.audio_len:
             x = np.concatenate([x, np.zeros(self.audio_len-len(x))])
         else:
@@ -220,17 +229,14 @@ if __name__ == "__main__":
     train_dataloader = DataLoader(dataset)
 
     #optimizer = torch.optim.AdamW(model.parameters(), lr=config.learning_rate)
-    optimizer = optimizer.SophiaG(params=model.parameters(), lr=config.learning_rate,
+    optimizer = optimizer.SophiaG(params=model.parameters(), lr=config.learning_rate, 
                                   betas=(0.965, 0.99), rho = 0.01, weight_decay=1e-1)
+
     lr_scheduler = get_cosine_schedule_with_warmup(
                     optimizer=optimizer,
                     num_warmup_steps=config.lr_warmup_steps,
                     num_training_steps=(len(train_dataloader) * config.num_epochs),
                 )
-    #optimizer = optimizer.SophiaG(params=model.parameters(), lr=config.learning_rate, 
-    #                              betas=(0.965, 0.99), rho = 0.01, weight_decay=1e-1)
-    #lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3)
-
 
     # try adding noise to the audio according to the noise schedule
     noise_scheduler = DDPMScheduler(num_train_timesteps=1000)
