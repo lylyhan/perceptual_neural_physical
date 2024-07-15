@@ -23,16 +23,17 @@ class TrainingConfig:
     audio_len = 2**14  # the generated audio length
     train_batch_size = 64
     eval_batch_size = 5  # how many images to sample during evaluation
-    num_epochs = 1000
+    num_epochs = 100
     sr = 22050
     gradient_accumulation_steps = 1
     learning_rate = 1e-4
     lr_warmup_steps = 500
     save_audio_epochs = 1
     save_model_epochs = 10
+
     mixed_precision = "fp16"  # `no` for float32, `fp16` for automatic mixed precision
     #output_dir = "/home/han/data/mersenne24_data/f_W/ddpm_noise-init0/"  # the model name locally and on the HF Hub
-    output_dir = "/gpfswork/rech/aej/ufg99no/data/mersenne24_data/f_W/ddpm_noise-init0/"
+    output_dir = "/gpfswork/rech/aej/ufg99no/data/mersenne24_data/f_W/ddpm_noise-alignednoise/"
     seed = 0
 
 class NoiseData(Dataset):
@@ -182,8 +183,9 @@ def train_loop(config, model, noise_scheduler, optimizer, train_dataloader, lr_s
         # After each epoch you optionally sample some demo images with evaluate() and save the model
         if accelerator.is_main_process:
             pipeline = DanceDiffusionPipeline(unet=accelerator.unwrap_model(model), scheduler=noise_scheduler)
-            if (epoch + 1) % config.save_audio_epochs == 0 or epoch == config.num_epochs - 1:
-                evaluate(config, epoch, pipeline)
+            #if (epoch + 1) % config.save_audio_epochs == 0 or epoch == config.num_epochs - 1:
+            #    pipeline = pipeline.to('cuda')
+            #    evaluate(config, epoch, pipeline)
 
             if (epoch + 1) % config.save_model_epochs == 0 or epoch == config.num_epochs - 1:
                 pipeline.save_pretrained(config.output_dir)
@@ -236,7 +238,7 @@ if __name__ == "__main__":
                     num_warmup_steps=config.lr_warmup_steps,
                     num_training_steps=(len(train_dataloader) * config.num_epochs),
                 )
-    
+
     # try adding noise to the audio according to the noise schedule
     noise_scheduler = DDPMScheduler(num_train_timesteps=1000)
     train_loop(config, model, noise_scheduler, optimizer, train_dataloader, lr_scheduler)
