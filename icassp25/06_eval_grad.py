@@ -6,12 +6,14 @@ import torch.nn.functional as F
 import numpy as np
 import math
 import copy
+import sys
 
+opt = sys.argv[1]
 
 data_dir = "/gpfswork/rech/aej/ufg99no/data/ftm_jtfs/" #"/home/han/localdata/data/ftm_jtfs/"
 full_df = icassp25.load_fold(fold="full")
 batch_size = 256
-opt = "adam"
+#opt = "adam"
 nbatch = icassp25.SAMPLES_PER_EPOCH // (10 * batch_size) # however much that covers 10% training set
 
 #model_path = "b0_ploss_finetuneFalse_log-1_minmax-1_opt-adam_batch_size256_lr-0.001_init-0/"
