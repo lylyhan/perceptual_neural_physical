@@ -156,5 +156,5 @@ for batch_idx, batch_data in enumerate(train_dataset): # see once all the traini
     if batch_idx > steps_per_epoch:
         break # break after seeing the entire training set
     
-np.save("./gradnorms.npy", gradnorms)
-np.save("./smoothness.npy", smooths)
+np.save("./{}_gradnorms.npy".format(opt), gradnorms)
+np.save("./{}_smoothness.npy".format(opt), smooths)
