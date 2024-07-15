@@ -15,6 +15,8 @@ from pnp_synth import utils
 import h5py
 import muda
 import jams
+import librosa
+
 
 #from Sophia import SophiaG 
 
@@ -677,10 +679,9 @@ class DrumData(Dataset):
 
 
     def cqt_from_id(self, id, eps):
-        with h5py.File(self.audio_dir, "r") as f:
+        with h5py.File(self.audio_dir, "r") as f: # these are synth sounds
             x = np.array(f['x'][str(id)])
             theta = np.array(f['theta'][str(id)])
-            sr = np.array(f["sr"][str(id)])
         # insert code to mix in noise
         if self.isnoise:
             if self.noise_mode != "statgauss":
@@ -714,6 +715,8 @@ class DrumData(Dataset):
                 closest_id = noise_ids[idx]
                 with h5py.File(find_noise_dir, "r") as f:
                     noise = np.array(f["noise"][str(closest_id)])
+                    sr_og = np.array(f["sr"][str(closest_id)])
+                    noise = librosa.resample(noise, orig_sr=sr_og, target_sr=self.sr)
                     if self.noise_mode == "gaussian":
                         noise_synth = np.abs(noise) * (np.random.normal(size=noise.shape[0])*2 - 1)
                         noise_synth = noise_synth / np.max(np.abs(noise_synth))
@@ -725,7 +728,7 @@ class DrumData(Dataset):
             else:
                 # temporary jams object to apply the transformation
                 jam = jams.JAMS()
-                j_orig = muda.jam_pack(jam, _audio=dict(y=x, sr=sr))
+                j_orig = muda.jam_pack(jam, _audio=dict(y=x, sr=self.sr))
                 for j_new in self.noise_gen.transform(j_orig):
                     x = j_new.sandbox.muda._audio["y"]
                    
