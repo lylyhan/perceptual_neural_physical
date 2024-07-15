@@ -21,15 +21,15 @@ from pnp_synth.neural import optimizer
 @dataclass
 class TrainingConfig:
     audio_len = 2**14  # the generated audio length
-    train_batch_size = 5
+    train_batch_size = 64
     eval_batch_size = 5  # how many images to sample during evaluation
-    num_epochs = 20
+    num_epochs = 1000
     sr = 22050
     gradient_accumulation_steps = 1
     learning_rate = 1e-4
     lr_warmup_steps = 500
     save_audio_epochs = 1
-    save_model_epochs = 5
+    save_model_epochs = 10
     mixed_precision = "fp16"  # `no` for float32, `fp16` for automatic mixed precision
     #output_dir = "/home/han/data/mersenne24_data/f_W/ddpm_noise-init0/"  # the model name locally and on the HF Hub
     output_dir = "/gpfswork/rech/aej/ufg99no/data/mersenne24_data/f_W/ddpm_noise-init0/"
