@@ -93,7 +93,7 @@ def eval_smooth(prev_model, model, nbatch, num_pts=1):
 # load data
 _, scaler = icassp25.scale_theta(logscale=1)
 dataset = cnn.DrumDataModule(
-        batch_size=64,
+        batch_size=batch_size,
         data_dir=os.path.join(data_dir, "x"),  # path to hdf5 files
         cqt_dir=os.path.join(data_dir, "x"),
         df=full_df,
