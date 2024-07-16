@@ -70,7 +70,11 @@ def norm_diff(list1, list2=None):
     if not list2:
         list2 = [0] * len(list1)
     assert len(list1) == len(list2)
-    return math.sqrt(sum((list1[i]-list2[i]).norm()**2 for i in range(len(list1))))
+    if loss_type == "weighted_p":
+        diff = math.sqrt(sum((scale_factor * (list1[i]-list2[i])).norm()**2 for i in range(len(list1))))
+        return diff / scale_factor
+    elif loss_type == "ploss":
+        return math.sqrt(sum((list1[i]-list2[i]).norm()**2 for i in range(len(list1))))
 
 def eval_smooth(prev_model, model, nbatch, num_pts=1):
     alphas = np.arange(1, num_pts+1)/(num_pts+1)
