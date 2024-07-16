@@ -11,7 +11,8 @@ import sys
 
 opt = sys.argv[1] # sophia / adam
 loss_type = sys.argv[2] # ploss / weighted_p
-data_dir = "/gpfswork/rech/aej/ufg99no/data/ftm_jtfs/" #"/home/han/localdata/data/ftm_jtfs/"
+data_dir = "/gpfswork/rech/aej/ufg99no/data/ftm_jtfs/" 
+#data_dir = "/home/han/localdata/data/ftm_jtfs/"
 full_df = icassp25.load_fold(fold="full")
 batch_size = 256
 
@@ -32,12 +33,13 @@ def evaluate_gradnorm(model, nbatch):
         # Compute loss
         if loss_type == "ploss":
             loss = F.mse_loss(output, batch_target)
-        elif loss_type == "pnp":
+        elif loss_type == "weighted_p":
             batch_M = batch_data["M"].cuda()
             D = torch.eye(batch_M.shape[1]).double()[None, :, :]
             D = LMA_lambda * D.to("cuda")
             batch_M = batch_M + D
             loss = losses.loss_bilinear(output.double(), batch_target.double(), mu*batch_M)
+            print("loss mag", loss, torch.log(loss), LMA_lambda)
         # Perform backward pass
         loss.backward()
         if batch_idx + 1 == nbatch: # in the original paper this accounts for 10% of training set
@@ -123,7 +125,7 @@ mu = 1e-10
 model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, eff_type=eff_type, 
                        scaler=scaler, LMA=LMA, steps_per_epoch=steps_per_epoch,
                          var=0.5, save_path="./ftm", lr=lr, minmax=1, 
-                         logtheta=1, opt="sophia", mu=mu)
+                         logtheta=1, opt=opt, mu=mu)
 
 #model = model.load_from_checkpoint(
 #            os.path.join(data_dir, "f_W", "f_W_10epoch", model_path, ckpt_path), 
@@ -163,13 +165,14 @@ for batch_idx, batch_data in enumerate(train_dataset): # see once all the traini
     output = model(batch_input).cuda()
     # Compute loss
     if loss_type == "ploss":
-            loss = F.mse_loss(output, batch_target)
-    elif loss_type == "pnp":
+        loss = F.mse_loss(output, batch_target)
+    elif loss_type == "weighted_p":
         batch_M = batch_data["M"].cuda()
         D = torch.eye(batch_M.shape[1]).double()[None, :, :]
         D = LMA_lambda * D.to("cuda")
         batch_M = batch_M + D
         loss = losses.loss_bilinear(output.double(), batch_target.double(), mu * batch_M)
+        print("current loss", loss, torch.log(loss), LMA_lambda)
     # Perform backward pass
     loss.backward()
     optimizer_curr.step() # one step of weight update
