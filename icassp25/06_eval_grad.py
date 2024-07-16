@@ -66,14 +66,14 @@ def get_model_params(model):
             hasattr(p, 'grad') and (p.grad is not None)]
 
 
-def norm_diff(list1, list2=None):
+def norm_diff(list1, list2=None, scale=False):
     if not list2:
         list2 = [0] * len(list1)
     assert len(list1) == len(list2)
-    if loss_type == "weighted_p":
+    if scale:
         diff = math.sqrt(sum((scale_factor * (list1[i]-list2[i])).norm()**2 for i in range(len(list1))))
         return diff / scale_factor
-    elif loss_type == "ploss":
+    else:
         return math.sqrt(sum((list1[i]-list2[i]).norm()**2 for i in range(len(list1))))
 
 def eval_smooth(prev_model, model, nbatch, num_pts=1):
@@ -88,7 +88,8 @@ def eval_smooth(prev_model, model, nbatch, num_pts=1):
             p.data = alpha * p.data + (1-alpha) * {n:p for n, p in model.named_parameters()}[n].data 
             
         evaluate_gradnorm(new_model, nbatch)
-        smooth = norm_diff(get_model_grads(new_model), get_model_grads(prev_model))/ (update_size * (1- alpha)) # norm of gradient difference divided by norm of weight difference
+        scale = True if loss_type == "weighted_p" else False
+        smooth = norm_diff(get_model_grads(new_model), get_model_grads(prev_model), scale=scale)/ (update_size * (1- alpha)) # norm of gradient difference divided by norm of weight difference
         max_smooth = max(smooth, max_smooth)
     
     return max_smooth, gnorm
