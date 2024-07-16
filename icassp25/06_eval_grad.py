@@ -15,6 +15,7 @@ data_dir = "/gpfswork/rech/aej/ufg99no/data/ftm_jtfs/"
 #data_dir = "/home/han/localdata/data/ftm_jtfs/"
 full_df = icassp25.load_fold(fold="full")
 batch_size = 256
+scale_factor = 1e-20
 
 nbatch = icassp25.SAMPLES_PER_EPOCH // (10 * batch_size) # however much that covers 10% training set
 
@@ -39,7 +40,6 @@ def evaluate_gradnorm(model, nbatch):
             D = LMA_lambda * D.to("cuda")
             batch_M = batch_M + D
             loss = losses.loss_bilinear(output.double(), batch_target.double(), mu*batch_M)
-            print("loss mag", loss, torch.log(loss), LMA_lambda)
         # Perform backward pass
         loss.backward()
         if batch_idx + 1 == nbatch: # in the original paper this accounts for 10% of training set
@@ -47,9 +47,14 @@ def evaluate_gradnorm(model, nbatch):
     gradnorm = 0
     for param in model.parameters():
         if param.grad is not None:
-            param_norm = param.grad.data.norm(2)
+            if loss_type == "weighted_p":
+                param_norm = (scale_factor * param.grad.data).norm(2)
+            elif loss_type == "ploss":
+                param_norm = param.grad.data.norm(2)
             gradnorm += param_norm.item() ** 2
     gradnorm = gradnorm ** (1. / 2) / (nbatch)
+    if loss_type == "weighted_p":
+        gradnorm = gradnorm / scale_factor
     return gradnorm
 
 def get_model_grads(model):
@@ -172,7 +177,6 @@ for batch_idx, batch_data in enumerate(train_dataset): # see once all the traini
         D = LMA_lambda * D.to("cuda")
         batch_M = batch_M + D
         loss = losses.loss_bilinear(output.double(), batch_target.double(), mu * batch_M)
-        print("current loss", loss, torch.log(loss), LMA_lambda)
     # Perform backward pass
     loss.backward()
     optimizer_curr.step() # one step of weight update
