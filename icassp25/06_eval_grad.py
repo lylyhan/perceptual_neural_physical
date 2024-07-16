@@ -32,7 +32,7 @@ def evaluate_gradnorm(model, nbatch):
         # Compute loss
         if loss_type == "ploss":
             loss = F.mse_loss(output, batch_target)
-        elif loss_type == "pnp":
+        elif loss_type == "weighted_p":
             batch_M = batch_data["M"].cuda()
             D = torch.eye(batch_M.shape[1]).double()[None, :, :]
             D = LMA_lambda * D.to("cuda")
@@ -164,7 +164,7 @@ for batch_idx, batch_data in enumerate(train_dataset): # see once all the traini
     # Compute loss
     if loss_type == "ploss":
             loss = F.mse_loss(output, batch_target)
-    elif loss_type == "pnp":
+    elif loss_type == "weighted_p":
         batch_M = batch_data["M"].cuda()
         D = torch.eye(batch_M.shape[1]).double()[None, :, :]
         D = LMA_lambda * D.to("cuda")
