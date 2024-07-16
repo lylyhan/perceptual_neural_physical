@@ -1,6 +1,7 @@
 import torch
 import os
 from pnp_synth.neural import cnn, optimizer
+from pnp_synth.neural import loss as losses
 import icassp25
 import torch.nn.functional as F
 import numpy as np
@@ -8,12 +9,12 @@ import math
 import copy
 import sys
 
-opt = sys.argv[1]
-
+opt = sys.argv[1] # sophia / adam
+loss_type = sys.argv[2] # ploss / weighted_p
 data_dir = "/gpfswork/rech/aej/ufg99no/data/ftm_jtfs/" #"/home/han/localdata/data/ftm_jtfs/"
 full_df = icassp25.load_fold(fold="full")
 batch_size = 256
-#opt = "adam"
+
 nbatch = icassp25.SAMPLES_PER_EPOCH // (10 * batch_size) # however much that covers 10% training set
 
 #model_path = "b0_ploss_finetuneFalse_log-1_minmax-1_opt-adam_batch_size256_lr-0.001_init-0/"
@@ -29,9 +30,16 @@ def evaluate_gradnorm(model, nbatch):
         # Perform forward pass
         output = model(batch_input).cuda()
         # Compute loss
-        ploss = F.mse_loss(output, batch_target)
+        if loss_type == "ploss":
+            loss = F.mse_loss(output, batch_target)
+        elif loss_type == "pnp":
+            batch_M = batch_data["M"].cuda()
+            D = torch.eye(batch_M.shape[1]).double()[None, :, :]
+            D = LMA_lambda * D.to("cuda")
+            batch_M = batch_M + D
+            loss = losses.loss_bilinear(output.double(), batch_target.double(), mu*batch_M)
         # Perform backward pass
-        ploss.backward()
+        loss.backward()
         if batch_idx + 1 == nbatch: # in the original paper this accounts for 10% of training set
             break
     gradnorm = 0
@@ -99,18 +107,23 @@ train_dataset = dataset.train_dataloader()
 
 # load models
 outdim = 5
-loss_type = "ploss"
 eff_type = "b0"
-LMA = None
+LMA = {
+        'mode': "adaptive", #scheduled / constant
+        'accelerator': 0.05,
+        'brake': 1,
+        'damping': "id"
+    }
 
 steps_per_epoch = icassp25.SAMPLES_PER_EPOCH / batch_size
 lr = 1e-3
 log_interval = 1 # frequency every number of batches to log gradient norm/smoothness 
+mu = 1e-10
 
 model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, eff_type=eff_type, 
                        scaler=scaler, LMA=LMA, steps_per_epoch=steps_per_epoch,
                          var=0.5, save_path="./ftm", lr=lr, minmax=1, 
-                         logtheta=1, opt="sophia", mu=1e-10)
+                         logtheta=1, opt="sophia", mu=mu)
 
 #model = model.load_from_checkpoint(
 #            os.path.join(data_dir, "f_W", "f_W_10epoch", model_path, ckpt_path), 
@@ -139,14 +152,26 @@ for batch_idx, batch_data in enumerate(train_dataset): # see once all the traini
     print("step {}:".format(batch_idx))
     model.train()
     batch_input = batch_data["feature"]
-    batch_target = batch_data["y"].cuda()
+    batch_target = batch_data["y"].to("cuda")
+    batch_M = batch_data["M"].cuda()
+    if batch_idx == 0:
+        LMA_lambda = batch_data['lambda0'].to("cuda")
+    elif batch_idx == steps_per_epoch // 2: # nonstaionary objective
+        LMA_lambda = batch_data['lambda0'].to("cuda") * LMA["accelerator"] #(decay the damping coefficients)
     optimizer_curr.zero_grad()  # Clear existing gradients
     # Perform forward pass
     output = model(batch_input).cuda()
     # Compute loss
-    ploss = F.mse_loss(output, batch_target)
+    if loss_type == "ploss":
+            loss = F.mse_loss(output, batch_target)
+    elif loss_type == "pnp":
+        batch_M = batch_data["M"].cuda()
+        D = torch.eye(batch_M.shape[1]).double()[None, :, :]
+        D = LMA_lambda * D.to("cuda")
+        batch_M = batch_M + D
+        loss = losses.loss_bilinear(output.double(), batch_target.double(), mu * batch_M)
     # Perform backward pass
-    ploss.backward()
+    loss.backward()
     optimizer_curr.step() # one step of weight update
     
     if batch_idx % log_interval == 0: 
@@ -158,5 +183,5 @@ for batch_idx, batch_data in enumerate(train_dataset): # see once all the traini
     if batch_idx > steps_per_epoch:
         break # break after seeing the entire training set
     
-np.save("./{}_gradnorms.npy".format(opt), gradnorms)
-np.save("./{}_smoothness.npy".format(opt), smooths)
+np.save("./{}_{}_gradnorms.npy".format(opt, loss_type), gradnorms)
+np.save("./{}_{}_smoothness.npy".format(opt, loss_type), smooths)
