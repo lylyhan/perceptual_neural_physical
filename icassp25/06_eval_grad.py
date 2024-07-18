@@ -98,7 +98,7 @@ def eval_smooth(prev_model, model, nbatch, num_pts=1):
 # load data
 _, scaler = icassp25.scale_theta(logscale=1)
 dataset = cnn.DrumDataModule(
-        batch_size=batch_size,
+        batch_size=64,
         data_dir=os.path.join(data_dir, "x"),  # path to hdf5 files
         cqt_dir=os.path.join(data_dir, "x"),
         df=full_df,
@@ -127,7 +127,7 @@ LMA = {
         'damping': "id"
     }
 
-steps_per_epoch = icassp25.SAMPLES_PER_EPOCH / batch_size
+steps_per_epoch = 100 #icassp25.SAMPLES_PER_EPOCH / batch_size
 lr = 1e-3
 log_interval = 1 # frequency every number of batches to log gradient norm/smoothness 
 mu = 1e-10
