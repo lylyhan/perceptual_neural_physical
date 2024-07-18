@@ -90,6 +90,8 @@ def eval_smooth(prev_model, model, nbatch, num_pts=1):
         evaluate_gradnorm(new_model, nbatch)
         scale = True if loss_type == "weighted_p" else False
         smooth = norm_diff(get_model_grads(new_model), get_model_grads(prev_model), scale=scale)/ (update_size * (1- alpha)) # norm of gradient difference divided by norm of weight difference
+        if smooth == "np.inf":
+            print("smoothness exeeds bounds, why?", update_size)
         max_smooth = max(smooth, max_smooth)
     
     return max_smooth, gnorm
@@ -168,7 +170,7 @@ for batch_idx, batch_data in enumerate(train_dataset): # see once all the traini
     batch_M = batch_data["M"].cuda()
     if batch_idx == 0:
         LMA_lambda = batch_data['lambda0'].to("cuda")
-    elif batch_idx == steps_per_epoch // 2: # nonstaionary objective
+    elif batch_idx == steps_per_epoch // 2: # nonstationary objective
         LMA_lambda = batch_data['lambda0'].to("cuda") * LMA["accelerator"] #(decay the damping coefficients)
     optimizer_curr.zero_grad()  # Clear existing gradients
     # Perform forward pass
