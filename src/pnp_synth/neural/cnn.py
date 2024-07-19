@@ -563,7 +563,7 @@ class DrumData(Dataset):
                     noise2 = librosa.resample(noise2, orig_sr=sr_og2, target_sr=self.sr)
 
                     if self.noise_mode == "gaussian":
-                        noise_synth = np.abs(noise) * (np.random.normal(size=noise1.shape[0])*2 - 1) # extract noise temporal envelope
+                        noise_synth = np.abs(noise1) * (np.random.normal(size=noise1.shape[0])*2 - 1) # extract noise temporal envelope
                         noise_synth = noise_synth / np.max(np.abs(noise_synth))
                         noise = noise_synth
                     elif self.noise_mode == "random":
