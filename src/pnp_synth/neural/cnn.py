@@ -26,127 +26,6 @@ eps = 1e-3
 eps_relu = torch.tensor(1e-5)
 
 
-class ConvNormActivation2d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=(3,3), stride=1,
-                 padding=0, groups=1, act=True):
-        super().__init__()
-
-        self.block = nn.Sequential(
-            nn.Conv2d(in_channels,
-                   out_channels,
-                   kernel_size=kernel_size,
-                   stride=stride,
-                   padding=padding,
-                   groups=groups,
-                   bias=False),
-            nn.BatchNorm2d(out_channels, eps=1e-05, momentum=0.1, affine=True,
-                           track_running_stats=True),
-            nn.ReLU() if act else nn.Identity()
-        )
-
-    def forward(self, input_tensor):
-        return self.block(input_tensor)
-
-
-class wav2shape(pl.LightningModule):
-    def __init__(self, in_channels, bin_per_oct,outdim, loss,scaler):
-        super().__init__()
-        self.block = nn.Sequential(
-            #nn.BatchNorm1d(in_channels, eps=1e-05, momentum=0.1),
-            ConvNormActivation2d(in_channels, 128, kernel_size=(bin_per_oct,8), padding="same"),
-            nn.AvgPool2d(kernel_size=(1,8),padding=0),
-            ConvNormActivation2d(128, 64, kernel_size=(bin_per_oct,4), padding="same"),
-            ConvNormActivation2d(64, 64, kernel_size=(bin_per_oct,4), padding="same"),
-            nn.AvgPool2d(kernel_size=(1,8),padding=0),
-            ConvNormActivation2d(64, 8, kernel_size=(bin_per_oct,1), padding="same"),
-            nn.Flatten(),
-            nn.Linear(3840,64),#not sure in channel
-            nn.BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True,
-                           track_running_stats=True),
-            nn.ReLU(),
-            nn.Linear(64,outdim),#add nonneg kernel regulation
-            nn.Tanh()
-        )
-        self.loss_type = loss
-        if self.loss_type == "ploss":
-            self.loss = F.mse_loss
-        elif self.loss_type == "weighted_p":
-            self.loss = losses.loss_bilinear
-        elif self.loss_type == "spec":
-            self.loss = losses.loss_spec
-            self.specloss = auraloss.freq.MultiResolutionSTFTLoss()
-        self.scaler = scaler
-        self.outdim = outdim
-        self.metric_macro = metrics.JTFSloss(self.scaler, "macro") 
-        self.metric_micro = metrics.JTFSloss(self.scaler, "micro")
-
-    def forward(self, input_tensor):
-        #weights (n filters, n_current channel, kernel 1, kernel2)
-        #input (n_channel, bs, width, height)
-        input_tensor = input_tensor.unsqueeze(1).type(torch.float32)
-        return self.block(input_tensor)
-
-
-    def step(self, batch, fold):
-        Sy = batch['feature']
-        y = batch['y']
-        weight = batch['weight']
-        M = batch['M']
-        outputs = self(Sy)
-
-         # match outputs and y dimension
-        if outputs.shape[1] == 4 and y.shape[1] == 5:
-            outputs = torch.cat((y[:,0][:,None], outputs),dim=1)
-        assert outputs.shape[1] == self.outdim
-
-        #compute loss function
-        if self.loss_type == "spec":
-            loss = self.loss(outputs, y, self.specloss, self.scaler)
-        else:
-            if self.loss_type == "weighted_p":
-                loss = self.loss(weight[:,None] * outputs, y, M)
-            else: #ploss
-                loss = self.loss(weight[:,None] * outputs, y)
-        #compute metrics
-        if fold == "test":
-            self.metric_macro.update(outputs, y, weight)
-            self.metric_micro.update(outputs, y, weight)
-
-        return {'loss': loss}
-
-    def training_step(self, batch, batch_idx):
-        return self.step(batch, "train")
-
-    def validation_step(self, batch, batch_idx):
-        return self.step(batch, "val")
-
-    def test_step(self, batch, batch_idx):
-        return self.step(batch, "test")
-
-    def training_epoch_end(self, outputs):
-        loss = torch.stack([x['loss'] for x in outputs]).mean()
-        self.log('train_loss', loss, prog_bar=False, sync_dist=True)
-
-    def test_epoch_end(self, outputs):
-        avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
-        avg_macro_metric = self.metric_macro.compute() #torch.stack(x['metric'] for x in outputs).mean()
-        avg_micro_metric = self.metric_micro.compute()
-        self.log('test_loss', avg_loss)
-        self.log('macro_metrics', avg_macro_metric)
-        self.log('micro_metrics', avg_micro_metric)
-        return avg_loss, avg_macro_metric, avg_micro_metric
-
-    def validation_epoch_end(self, outputs):
-        # outputs = list of dictionaries
-        avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
-        self.log('val_loss', avg_loss, on_step=False,
-                 prog_bar=False, on_epoch=True)
-        return {'val_loss': avg_loss}
-
-    def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=1e-3)
-
-
 class EffNet(pl.LightningModule):
     def __init__(self, in_channels,outdim,loss,scaler,var,save_path, steps_per_epoch, eff_type = "b0", lr=1e-3, minmax=True, logtheta=True, LMA=None, opt="adam",mu=1):
         super().__init__()
@@ -526,7 +405,7 @@ class DrumData(Dataset):
                  Q,
                  sr,
                  noise_dir,
-                 noise_mode="matched"): #path to noise audio hdf files
+                 noise_mode="mix"): #path to noise audio hdf files
         super().__init__()
 
         self.fold = fold
@@ -632,51 +511,27 @@ class DrumData(Dataset):
     def noise_inventory(self):
         ids = []
         pitches = []
-        with h5py.File(self.noise_dir, "r") as f:
-            for id in f["theta"].keys():
-                T, l, lm = np.array(f["theta"][id])
+        with h5py.File(self.noise_dir, "r") as f: # this will be only the nonvalidated data
+            for id in f["pitch"].keys():
+                pitch = np.array(f["pitch"][id])
                 ids.append(int(id))
-                pitches.append(1/l * np.sqrt(T/lm))
+                pitches.append(pitch)
+        # only train / val division
         self.noise_ids = ids
         self.noise_pitches = pitches
         # separate train/val/test of noises
         np.random.seed(100)
         rand_idx = np.arange(len(ids))
         np.random.shuffle(rand_idx)
-        N_test = int(len(ids) // 10)
         N_val = int(len(ids) // 10)
-        N_train = int(len(ids) - N_test - N_val)
-        # train test val split
+        N_train = int(len(ids) - N_val)
+        # train test val split (NO TEST SET FROM THIS NOISE DIRECTORY)
         self.train_noise_ids = np.array(ids)[rand_idx[:N_train]]
         self.train_noise_pitches = np.array(pitches)[rand_idx[:N_train]]
-        self.test_noise_ids = np.array(ids)[rand_idx[N_train:(N_train+N_test)]]
-        self.test_noise_pitches = np.array(pitches)[rand_idx[N_train:(N_train+N_test)]]
         self.val_noise_ids = np.array(ids)[rand_idx[-N_val:]]
         self.val_noise_pitches = np.array(pitches)[rand_idx[-N_val:]]
-
-        ids_nonval = []
-        pitches_nonval = []
-        with h5py.File(self.noise_dir[:-3]+"_nonval.h5", "r") as f:
-            for id in f["pitch"].keys():
-                pitch = np.array(f["pitch"][id])
-                ids_nonval.append(int(id))
-                pitches_nonval.append(pitch)
-        self.noise_nonval_ids = ids_nonval
-        self.noise_nonval_pitches = pitches_nonval
-
-        rand_idx_nonval = np.arange(len(ids_nonval))
-        np.random.shuffle(rand_idx_nonval)
-        N_test_nonval = int(len(ids_nonval) // 10)
-        N_val_nonval = int(len(ids_nonval) // 10)
-        N_train_nonval = int(len(ids_nonval) - N_test_nonval - N_val_nonval)
-        # train test val split
-        self.train_noise_nonval_ids = np.array(ids_nonval)[rand_idx_nonval[:N_train_nonval]]
-        self.train_noise_nonval_pitches = np.array(pitches_nonval)[rand_idx_nonval[:N_train_nonval]]
-        self.test_noise_nonval_ids = np.array(ids_nonval)[rand_idx_nonval[N_train_nonval:(N_train_nonval+N_test_nonval)]]
-        self.test_noise_nonval_pitches = np.array(pitches_nonval)[rand_idx_nonval[N_train_nonval:(N_train_nonval+N_test_nonval)]]
-        self.val_noise_nonval_ids = np.array(ids_nonval)[rand_idx_nonval[-N_val_nonval:]]
-        self.val_noise_nonval_pitches = np.array(pitches_nonval)[rand_idx_nonval[-N_val_nonval:]]
-
+        self.test_noise_ids = self.val_noise_ids
+        self.test_noise_pitches = self.val_noise_pitches
 
     def cqt_from_id(self, id, eps):
         with h5py.File(self.audio_dir, "r") as f: # these are synth sounds
@@ -686,41 +541,35 @@ class DrumData(Dataset):
         if self.isnoise:
             if self.noise_mode != "statgauss":
                 #randomly select noise, or the noise with the closest pitch 
-                T, lm, l = theta[1], theta[4], theta[5]
-                pitch = 1/l * np.sqrt(T/lm)
-
                 if "test" in self.audio_dir:
-                    noise_pitches = np.concatenate((self.test_noise_pitches, self.test_noise_nonval_pitches))
-                    noise_ids = np.concatenate((self.test_noise_ids, self.test_noise_nonval_ids))
-                    division_len = len(self.test_noise_pitches)
+                    noise_pitches = self.test_noise_pitches
+                    noise_ids = self.test_noise_ids
                 elif "train" in self.audio_dir:
-                    noise_pitches = np.concatenate((self.train_noise_pitches, self.train_noise_nonval_pitches))
-                    noise_ids = np.concatenate((self.train_noise_ids, self.train_noise_nonval_ids))
-                    division_len = len(self.train_noise_pitches)
+                    noise_pitches = self.train_noise_pitches
+                    noise_ids = self.train_noise_ids
                 elif "val" in self.audio_dir:
-                    noise_pitches = np.concatenate((self.val_noise_pitches, self.val_noise_nonval_pitches))
-                    noise_ids = np.concatenate((self.val_noise_ids, self.val_noise_nonval_ids))
-                    division_len = len(self.val_noise_pitches)
+                    noise_pitches = self.val_noise_pitches
+                    noise_ids = self.val_noise_ids
 
-                if self.noise_mode == "matched":
-                    idx = np.argmin(np.abs(noise_pitches - pitch))
-                    if type(idx) == list:
-                        idx = idx[0]
-                elif self.noise_mode == "random" or self.noise_mode == "gaussian":
-                    idx = np.random.choice(np.arange(len(noise_pitches)))
-                if idx >= division_len:
-                    find_noise_dir = self.noise_dir[:-3]+"_nonval.h5"
-                else:
-                    find_noise_dir = self.noise_dir
-                closest_id = noise_ids[idx]
-                with h5py.File(find_noise_dir, "r") as f:
-                    noise = np.array(f["noise"][str(closest_id)])
-                    sr_og = np.array(f["sr"][str(closest_id)])
-                    noise = librosa.resample(noise, orig_sr=sr_og, target_sr=self.sr)
+                idx, idx2 = np.random.choice(np.arange(len(noise_pitches)), size=2)
+                id1, id2 = noise_ids[idx], noise_ids[idx2]
+
+                with h5py.File(self.noise_dir, "r") as f:
+                    noise1 = np.array(f["noise"][str(id1)])
+                    noise2 = np.array(f["noise"][str(id2)])
+                    sr_og = np.array(f["sr"][str(id1)])
+                    sr_og2 = np.array(f["sr"][str(id2)])
+                    noise1 = librosa.resample(noise1, orig_sr=sr_og, target_sr=self.sr)
+                    noise2 = librosa.resample(noise2, orig_sr=sr_og2, target_sr=self.sr)
+
                     if self.noise_mode == "gaussian":
-                        noise_synth = np.abs(noise) * (np.random.normal(size=noise.shape[0])*2 - 1)
+                        noise_synth = np.abs(noise) * (np.random.normal(size=noise1.shape[0])*2 - 1) # extract noise temporal envelope
                         noise_synth = noise_synth / np.max(np.abs(noise_synth))
                         noise = noise_synth
+                    elif self.noise_mode == "random":
+                        noise = noise1
+                    elif self.noise_mode == "mix":
+                        noise = utils.mix_noise(np.random.rand(), noise1, noise2, mode="weight")
                 #randomly select snr
                 snr = np.random.choice([1, 10, 40, 60])
                 #mix noise
