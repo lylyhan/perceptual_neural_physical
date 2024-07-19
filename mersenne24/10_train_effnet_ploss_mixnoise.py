@@ -84,7 +84,7 @@ if __name__ == "__main__":
         "_".join(
             [
                 loss_type,
-                "statgaussnoisemix"
+                "mixnoisemix"
                 "finetune" + str(finetune),
                 "log-" + str(logscale_theta),
                 "minmax-" + str(minmax),
