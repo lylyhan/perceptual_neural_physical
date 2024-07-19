@@ -200,7 +200,7 @@ def x_from_theta(theta, synth_type, logscale):
     return x
 
 
-def mix_noise(SNR, noise, signal):
+def mix_noise(SNR, noise, signal, mode="SNR"):
     sr = ftm.constants_string["sr"]
     # align start of noise 
     onsets_t = librosa.onset.onset_detect(y=np.array(noise), sr=sr, units='time', energy=noise**2)
@@ -210,15 +210,25 @@ def mix_noise(SNR, noise, signal):
     except:
         noise_aligned = noise[(int(onsets_t[0]*sr)):]
 
+    if mode == "weight":
+        onsets_s = librosa.onset.onset_detect(y=np.array(signal), sr=sr, units='time', energy=signal**2)
+        try: 
+            signal = signal[(int(onsets_s[1]*sr)):]
+        except:
+            signal = signal[(int(onsets_s[0]*sr)):]
+
     # align lengths of signals
     if len(noise_aligned) > len(signal):
         noise_aligned = torch.tensor(noise_aligned[:len(signal)])
     else:
         noise_aligned = torch.cat([torch.tensor(noise_aligned), torch.zeros((len(signal)-len(noise_aligned)))])
- 
-    RMS_s = torch.sqrt(torch.mean(torch.tensor(signal)**2))
-    RMS_n = torch.sqrt(torch.mean(noise_aligned**2))
-    scale_factor = RMS_s / (RMS_n * np.exp(SNR/20))
-
-    mix = torch.tensor(signal) + scale_factor * noise_aligned
-    return mix / torch.max(torch.abs(mix))
+    if mode == "SNR": 
+        RMS_s = torch.sqrt(torch.mean(torch.tensor(signal)**2))
+        RMS_n = torch.sqrt(torch.mean(noise_aligned**2))
+        scale_factor = RMS_s / (RMS_n * np.exp(SNR/20))
+        mix = torch.tensor(signal) + scale_factor * noise_aligned
+        return mix / torch.max(torch.abs(mix))
+    elif mode == "weight":
+        mix = SNR * torch.tensor(signal) + (1-SNR) * noise_aligned
+        return mix # return only mixed noise
+    

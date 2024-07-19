@@ -44,7 +44,7 @@ print("")
 sys.stdout.flush()
 
 data_dir = os.path.join(save_dir, "x")
-noise_dir = os.path.join(save_dir, "x", "mersenne24_realaudio.h5")
+noise_dir = os.path.join(save_dir, "x", "mersenne24_realaudio_nonval.h5")
 weight_dir = os.path.join(save_dir, "M_log")
 model_dir = os.path.join(save_dir, "f_W")
 cqt_dir = data_dir
@@ -72,14 +72,6 @@ bn_var = 0.5
 cnn_type = "efficientnet"  # efficientnet / cnn.wav2shape
 loss_type = "ploss"  # spec / weighted_p / ploss
 weight_type = "None"  # novol / pnp / None
-#LMA = {
-#    'mode': "constant", #scheduled / constant
-#    'lambda': 1,
-#    'threshold': 1e+8,
-#    'accelerator': 0.5,
-#    'brake': 1,
-#    'damping': "mean"
-#}
 LMA = None
 lr = 1e-3
 finetune = False
@@ -191,9 +183,51 @@ if __name__ == "__main__":
             trainer.fit(model, dataset, ckpt_path=ckpt_path) # resume training taking into account of all the learning rate/epoch numbers
         else:
             trainer.fit(model, dataset)
-    test_loss = trainer.test(model, dataset, verbose=False)
+
+        dataset_synth = cnn.DrumDataModule(
+        batch_size=batch_size,
+        data_dir=data_dir,  # path to hdf5 files
+        cqt_dir=cqt_dir,
+        df=full_df,
+        weight_dir=weight_dir,  # path to gradient folders
+        weight_type=weight_type,  # novol, pnp
+        feature="cqt",
+        logscale=logscale_theta,
+        J=J,
+        Q=Q,
+        sr=sr,
+        scaler=scaler,
+        num_workers=0,
+    )
+
+    dataset_noise = cnn.DrumDataModule(
+        batch_size=batch_size,
+        data_dir=data_dir,  # path to hdf5 files
+        cqt_dir=cqt_dir,
+        df=full_df,
+        weight_dir=weight_dir,  # path to gradient folders
+        weight_type=weight_type,  # novol, pnp
+        feature="cqt",
+        logscale=logscale_theta,
+        J=J,
+        Q=Q,
+        sr=sr,
+        scaler=scaler,
+        num_workers=0,
+        noise_dir = noise_dir,
+        noise_mode = "random"
+    )
+
+    model.save_path = os.path.join(model_save_path, "test_predictions_synth.npy")
+    test_loss = trainer.test(model, dataset_synth, verbose=False)
     print("Model saved at: {}".format(model_save_path))
-    print("Average test loss: {}".format(test_loss))
+    print("Average synthetic test loss: {}".format(test_loss))
+    print("\n")
+
+    model.save_path = os.path.join(model_save_path, "test_predictions_noise.npy")
+    test_loss = trainer.test(model, dataset_noise, verbose=False)
+    print("Model saved at: {}".format(model_save_path))
+    print("Average synth+noise test loss: {}".format(test_loss))
     print("\n")
 
     # Print elapsed time.
