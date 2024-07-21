@@ -167,18 +167,20 @@ for batch_idx, batch_data in enumerate(train_dataset): # see once all the traini
     # Compute loss
     if batch_idx < steps_per_epoch // 2:
         loss = F.mse_loss(output, batch_target)
+        loss_type = "ploss"
     elif batch_idx >= steps_per_epoch // 2:
         batch_M = batch_data["M"].cuda()
         D = torch.eye(batch_M.shape[1]).double()[None, :, :]
         D = LMA_lambda * D.to("cuda")
         batch_M = batch_M + D
         loss = losses.loss_bilinear(output.double(), batch_target.double(), mu * batch_M)
+        loss_type = "weighted_p"
     # Perform backward pass
     loss.backward()
     optimizer_curr.step() # one step of weight update
     
     if batch_idx % log_interval == 0: 
-        smoothness, gradnorm = eval_smooth(prev_model, model, nbatch)
+        smoothness, gradnorm = eval_smooth(prev_model, model, nbatch, loss_type)
         smooths.append(smoothness)
         gradnorms.append(gradnorm)
         print("iter {}, gradient norm {}, smoothness {} ".format(batch_idx, gradnorm, smoothness))
