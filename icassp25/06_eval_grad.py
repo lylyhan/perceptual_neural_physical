@@ -90,7 +90,7 @@ def eval_smooth(prev_model, model, nbatch, num_pts=1):
         evaluate_gradnorm(new_model, nbatch)
         scale = True if loss_type == "weighted_p" else False
         smooth = norm_diff(get_model_grads(new_model), get_model_grads(prev_model), scale=scale)/ (update_size * (1- alpha)) # norm of gradient difference divided by norm of weight difference
-        if smooth == "np.inf":
+        if smooth == np.inf:
             print("smoothness exeeds bounds, why?", update_size)
         max_smooth = max(smooth, max_smooth)
     
@@ -129,7 +129,7 @@ LMA = {
         'damping': "id"
     }
 
-steps_per_epoch = icassp25.SAMPLES_PER_EPOCH / batch_size
+steps_per_epoch = 100# icassp25.SAMPLES_PER_EPOCH / batch_size
 lr = 1e-3
 log_interval = 1 # frequency every number of batches to log gradient norm/smoothness 
 mu = 1e-20
