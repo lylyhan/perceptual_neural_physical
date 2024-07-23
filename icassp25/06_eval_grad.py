@@ -11,6 +11,8 @@ import sys
 
 opt = sys.argv[1] # sophia / adam
 loss_type = sys.argv[2] # ploss / weighted_p
+eff_type = sys.argv[3]
+
 data_dir = "/gpfswork/rech/aej/ufg99no/data/ftm_jtfs/" 
 #data_dir = "/home/han/localdata/data/ftm_jtfs/"
 full_df = icassp25.load_fold(fold="full")
@@ -18,9 +20,6 @@ batch_size = 256
 scale_factor = 1e-20
 
 nbatch = icassp25.SAMPLES_PER_EPOCH // (10 * batch_size) # however much that covers 10% training set
-
-#model_path = "b0_ploss_finetuneFalse_log-1_minmax-1_opt-adam_batch_size256_lr-0.001_init-0/"
-#ckpt_path = "step=learn+optimizer=adam+model=0+loss=p+log=1_trial_0ckpt-epoch=00-val_loss=0.06.ckpt"
 
 def evaluate_gradnorm(model, nbatch):
     model.zero_grad()
@@ -90,7 +89,7 @@ def eval_smooth(prev_model, model, nbatch, num_pts=1):
         evaluate_gradnorm(new_model, nbatch)
         scale = True if loss_type == "weighted_p" else False
         smooth = norm_diff(get_model_grads(new_model), get_model_grads(prev_model), scale=scale)/ (update_size * (1- alpha)) # norm of gradient difference divided by norm of weight difference
-        if smooth == "np.inf":
+        if smooth == np.inf:
             print("smoothness exeeds bounds, why?", update_size)
         max_smooth = max(smooth, max_smooth)
     
@@ -121,7 +120,7 @@ train_dataset = dataset.train_dataloader()
 
 # load models
 outdim = 5
-eff_type = "b0"
+#eff_type = "b0"
 LMA = {
         'mode': "adaptive", #scheduled / constant
         'accelerator': 0.05,
@@ -139,22 +138,17 @@ model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, eff_type=eff_ty
                          var=0.5, save_path="./ftm", lr=lr, minmax=1, 
                          logtheta=1, opt=opt, mu=mu)
 
-#model = model.load_from_checkpoint(
-#            os.path.join(data_dir, "f_W", "f_W_10epoch", model_path, ckpt_path), 
-#            in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler,
-#            var=0.5, save_path="./ftm", steps_per_epoch=steps_per_epoch, lr=lr, LMA=LMA, minmax=1,logtheta=1, opt="sophia")
 
 model = model.cuda()
 
 
 
 # initialize optimizer
-#checkpoint = torch.load(os.path.join(data_dir, "f_W", "f_W_10epoch", model_path, ckpt_path))
+
 if opt == "adam":
     optimizer_curr = torch.optim.Adam(model.parameters(), lr=model.lr)
 elif opt == "sophia":
     optimizer_curr = optimizer.SophiaG(params=model.parameters(), lr=model.lr, betas=(0.965, 0.99), rho = 0.01, weight_decay=1e-1)
-#optimizer_curr.load_state_dict(checkpoint["optimizer_states"][0]) # the optimizer does not store gradient in my understanding
 
 # forward pass
 
@@ -197,5 +191,5 @@ for batch_idx, batch_data in enumerate(train_dataset): # see once all the traini
     if batch_idx > steps_per_epoch:
         break # break after seeing the entire training set
     
-np.save("./{}_{}_gradnorms.npy".format(opt, loss_type), gradnorms)
-np.save("./{}_{}_smoothness.npy".format(opt, loss_type), smooths)
+np.save("./{}_{}_{}_gradnorms.npy".format(eff_type, opt, loss_type), gradnorms)
+np.save("./{}_{}_{}_smoothness.npy".format(eff_type, opt, loss_type), smooths)
