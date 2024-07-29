@@ -128,7 +128,11 @@ LMA = {
         'damping': "id"
     }
 
+<<<<<<< HEAD
 steps_per_epoch = 100# icassp25.SAMPLES_PER_EPOCH / batch_size
+=======
+steps_per_epoch = 100 #icassp25.SAMPLES_PER_EPOCH / batch_size
+>>>>>>> 4d9f7787f995cf34f4d0eabc1293bfcb854c9e99
 lr = 1e-3
 log_interval = 1 # frequency every number of batches to log gradient norm/smoothness 
 mu = 1e-20
@@ -149,6 +153,8 @@ if opt == "adam":
     optimizer_curr = torch.optim.Adam(model.parameters(), lr=model.lr)
 elif opt == "sophia":
     optimizer_curr = optimizer.SophiaG(params=model.parameters(), lr=model.lr, betas=(0.965, 0.99), rho = 0.01, weight_decay=1e-1)
+elif opt == "gradclip":
+    optimizer_curr = optimizer.SophiaG(params=model.parameters(), lr=model.lr, betas=(0.965, 0.99), rho = 0.01, weight_decay=0)
 
 # forward pass
 
