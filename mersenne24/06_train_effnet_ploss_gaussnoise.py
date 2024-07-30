@@ -33,7 +33,7 @@ synth_type = sys.argv[6]
 ckpt_path = sys.argv[7]
 
 batch_size = 64
-is_train = True
+is_train = False
 
 print("Command-line arguments:\n" + "\n".join(sys.argv[1:]))
 print(f"Batch size: {batch_size}\n")
@@ -122,7 +122,7 @@ if __name__ == "__main__":
         scaler=scaler,
         num_workers=0,
         noise_dir = noise_dir,
-        noise_mode = "gaussian"
+        noise_mode = "matched"
     )
 
     print(str(datetime.datetime.now()) + " Finished initializing dataset")
