@@ -215,7 +215,7 @@ if __name__ == "__main__":
         sr=sr,
         scaler=scaler,
         num_workers=0,
-        noise_dir = noise_dir,
+        noise_dir = os.path.join(save_dir, "x", "mersenne24_realaudio.h5"),
         noise_mode = "random"
     )
 

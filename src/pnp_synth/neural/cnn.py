@@ -519,19 +519,28 @@ class DrumData(Dataset):
         # only train / val division
         self.noise_ids = ids
         self.noise_pitches = pitches
-        # separate train/val/test of noises
-        np.random.seed(100)
-        rand_idx = np.arange(len(ids))
-        np.random.shuffle(rand_idx)
-        N_val = int(len(ids) // 10)
-        N_train = int(len(ids) - N_val)
-        # train test val split (NO TEST SET FROM THIS NOISE DIRECTORY)
-        self.train_noise_ids = np.array(ids)[rand_idx[:N_train]]
-        self.train_noise_pitches = np.array(pitches)[rand_idx[:N_train]]
-        self.val_noise_ids = np.array(ids)[rand_idx[-N_val:]]
-        self.val_noise_pitches = np.array(pitches)[rand_idx[-N_val:]]
-        self.test_noise_ids = self.val_noise_ids
-        self.test_noise_pitches = self.val_noise_pitches
+        if "nonval" in self.noise_dir:
+            # separate train/val/test of noises
+            np.random.seed(100)
+            rand_idx = np.arange(len(ids))
+            np.random.shuffle(rand_idx)
+            N_val = int(len(ids) // 10)
+            N_train = int(len(ids) - N_val)
+            # train test val split (NO TEST SET FROM THIS NOISE DIRECTORY)
+            self.train_noise_ids = np.array(ids)[rand_idx[:N_train]]
+            self.train_noise_pitches = np.array(pitches)[rand_idx[:N_train]]
+            self.val_noise_ids = np.array(ids)[rand_idx[-N_val:]]
+            self.val_noise_pitches = np.array(pitches)[rand_idx[-N_val:]]
+            self.test_noise_ids = self.val_noise_ids
+            self.test_noise_pitches = self.val_noise_pitches
+        else:
+            self.train_noise_ids = np.array(ids)
+            self.train_noise_pitches = np.array(pitches)
+            self.val_noise_ids = self.train_noise_ids
+            self.val_noise_pitches = self.train_noise_pitches
+            self.test_noise_ids = self.val_noise_ids
+            self.test_noise_pitches = self.val_noise_pitches
+
 
     def cqt_from_id(self, id, eps):
         with h5py.File(self.audio_dir, "r") as f: # these are synth sounds
@@ -569,7 +578,11 @@ class DrumData(Dataset):
                     elif self.noise_mode == "random":
                         noise = noise1
                     elif self.noise_mode == "mix":
-                        noise = utils.mix_noise(np.random.rand(), noise1, noise2, mode="weight")
+                        # whichever is longer should go as second input
+                        if len(noise2) > len(noise1):
+                            noise = utils.mix_noise(np.random.rand(), noise1, noise2, mode="weight")
+                        else:
+                            noise = utils.mix_noise(np.random.rand(), noise2, noise1, mode="weight")
                 #randomly select snr
                 snr = np.random.choice([1, 10, 40, 60])
                 #mix noise
