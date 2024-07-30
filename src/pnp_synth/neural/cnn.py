@@ -511,15 +511,15 @@ class DrumData(Dataset):
     def noise_inventory(self):
         ids = []
         pitches = []
-        with h5py.File(self.noise_dir, "r") as f: # this will be only the nonvalidated data
-            for id in f["pitch"].keys():
-                pitch = np.array(f["pitch"][id])
-                ids.append(int(id))
-                pitches.append(pitch)
         # only train / val division
         self.noise_ids = ids
         self.noise_pitches = pitches
         if "nonval" in self.noise_dir:
+            with h5py.File(self.noise_dir, "r") as f: # this will be only the nonvalidated data
+                for id in f["pitch"].keys():
+                    pitch = np.array(f["pitch"][id])
+                    ids.append(int(id))
+                    pitches.append(pitch)
             # separate train/val/test of noises
             np.random.seed(100)
             rand_idx = np.arange(len(ids))
@@ -534,8 +534,11 @@ class DrumData(Dataset):
             self.test_noise_ids = self.val_noise_ids
             self.test_noise_pitches = self.val_noise_pitches
         else:
+            with h5py.File(self.noise_dir, "r") as f: # this will be only the nonvalidated data
+                for id in f["x"].keys():
+                    ids.append(int(id))
             self.train_noise_ids = np.array(ids)
-            self.train_noise_pitches = np.array(pitches)
+            self.train_noise_pitches = pitches
             self.val_noise_ids = self.train_noise_ids
             self.val_noise_pitches = self.train_noise_pitches
             self.test_noise_ids = self.val_noise_ids
@@ -560,7 +563,7 @@ class DrumData(Dataset):
                     noise_pitches = self.val_noise_pitches
                     noise_ids = self.val_noise_ids
 
-                idx, idx2 = np.random.choice(np.arange(len(noise_pitches)), size=2)
+                idx, idx2 = np.random.choice(np.arange(len(noise_ids)), size=2)
                 id1, id2 = noise_ids[idx], noise_ids[idx2]
 
                 with h5py.File(self.noise_dir, "r") as f:
