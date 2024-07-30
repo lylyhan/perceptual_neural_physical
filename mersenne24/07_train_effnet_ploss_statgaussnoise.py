@@ -33,7 +33,7 @@ synth_type = sys.argv[6]
 ckpt_path = sys.argv[7]
 
 batch_size = 64
-is_train = False
+is_train = False #True
 
 print("Command-line arguments:\n" + "\n".join(sys.argv[1:]))
 print(f"Batch size: {batch_size}\n")
@@ -122,7 +122,7 @@ if __name__ == "__main__":
         scaler=scaler,
         num_workers=0,
         noise_dir = noise_dir,
-        noise_mode = "matched"
+        noise_mode = "statgauss"
     )
 
     print(str(datetime.datetime.now()) + " Finished initializing dataset")
@@ -219,11 +219,11 @@ if __name__ == "__main__":
         noise_mode = "random"
     )
 
-    model.save_path = os.path.join(model_save_path, "test_predictions_synth.npy")
-    test_loss = trainer.test(model, dataset_synth, verbose=False)
-    print("Model saved at: {}".format(model_save_path))
-    print("Average synthetic test loss: {}".format(test_loss))
-    print("\n")
+    #model.save_path = os.path.join(model_save_path, "test_predictions_synth.npy")
+    #test_loss = trainer.test(model, dataset_synth, verbose=False)
+    #print("Model saved at: {}".format(model_save_path))
+    #print("Average synthetic test loss: {}".format(test_loss))
+    #print("\n")
 
     model.save_path = os.path.join(model_save_path, "test_predictions_noise.npy")
     test_loss = trainer.test(model, dataset_noise, verbose=False)
