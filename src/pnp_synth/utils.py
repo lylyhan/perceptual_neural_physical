@@ -204,11 +204,13 @@ def mix_noise(SNR, noise, signal, mode="SNR"):
     sr = ftm.constants_string["sr"]
     # align start of noise 
     onsets_t = librosa.onset.onset_detect(y=np.array(noise), sr=sr, units='time', energy=noise**2)
-
-    try: 
-        noise_aligned = noise[(int(onsets_t[1]*sr)):]
-    except:
-        noise_aligned = noise[(int(onsets_t[0]*sr)):]
+    if len(onsets_t) > 0:
+        try: 
+            noise_aligned = noise[(int(onsets_t[1]*sr)):]
+        except:
+            noise_aligned = noise[(int(onsets_t[0]*sr)):]
+    else:
+        noise_aligned = noise
 
     if mode == "weight":
         onsets_s = librosa.onset.onset_detect(y=np.array(signal), sr=sr, units='time', energy=signal**2)
