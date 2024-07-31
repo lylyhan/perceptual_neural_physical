@@ -30,6 +30,7 @@ minmax = int(sys.argv[3]) #need to cast to int to make the boolean evaluation wo
 logscale_theta = int(sys.argv[4])
 opt = sys.argv[5]
 synth_type = sys.argv[6]
+ckpt_path = sys.argv[7]
 
 batch_size = 64
 is_train = True
@@ -44,6 +45,7 @@ sys.stdout.flush()
 
 data_dir = os.path.join(save_dir, "x")
 weight_dir = os.path.join(save_dir, "M_log")
+noise_dir = os.path.join(save_dir, "x", "mersenne24_realaudio_nonval.h5")
 model_dir = os.path.join(save_dir, "f_W")
 cqt_dir = data_dir
 
@@ -125,7 +127,7 @@ if __name__ == "__main__":
         Q=Q,
         sr=sr,
         scaler=scaler,
-        num_workers=0
+        num_workers=0,
     )
 
     print(str(datetime.datetime.now()) + " Finished initializing dataset")
@@ -169,16 +171,41 @@ if __name__ == "__main__":
         print("Training ...")
         trainer.fit(model, dataset)
     else:
-        ckpt_path = os.path.join(model_save_path, 'best.ckpt')
+        ckpt_path = os.path.join(model_save_path, ckpt_path)
         print("Load Pretrained model")
         model = model.load_from_checkpoint(
             ckpt_path, 
             in_channels=1, outdim=outdim, loss=loss_type, scaler=scaler,
             var=bn_var, save_path=pred_path, steps_per_epoch=steps_per_epoch, lr=lr, LMA=LMA, minmax=minmax,logtheta=logscale_theta, opt=opt)
+    
+    model.save_path = os.path.join(model_save_path, "test_predictions_synth.npy")
     test_loss = trainer.test(model, dataset, verbose=False)
     print("Model saved at: {}".format(model_save_path))
     print("Average test loss: {}".format(test_loss))
-    print("\n")
+    print("\n") 
+
+    dataset_noise = cnn.DrumDataModule(
+        batch_size=batch_size,
+        data_dir=data_dir,  # path to hdf5 files
+        cqt_dir=cqt_dir,
+        df=full_df,
+        weight_dir=weight_dir,  # path to gradient folders
+        weight_type=weight_type,  # novol, pnp
+        feature="cqt",
+        logscale=logscale_theta,
+        J=J,
+        Q=Q,
+        sr=sr,
+        scaler=scaler,
+        num_workers=0,
+        noise_dir = os.path.join(save_dir, "x", "mersenne24_realaudio.h5"),
+        noise_mode = "random"
+    )
+    model.save_path = os.path.join(model_save_path, "test_predictions_noise.npy")
+    test_loss = trainer.test(model, dataset_noise, verbose=False)
+    print("Model saved at: {}".format(model_save_path))
+    print("Average test loss: {}".format(test_loss))
+    print("\n") 
 
     # Print elapsed time.
     print(str(datetime.datetime.now()) + " Success.")
