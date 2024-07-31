@@ -18,6 +18,7 @@ import jams
 import librosa
 
 
+
 #from Sophia import SophiaG 
 
 #logscale param
@@ -528,21 +529,15 @@ class DrumData(Dataset):
             N_train = int(len(ids) - N_val)
             # train test val split (NO TEST SET FROM THIS NOISE DIRECTORY)
             self.train_noise_ids = np.array(ids)[rand_idx[:N_train]]
-            self.train_noise_pitches = np.array(pitches)[rand_idx[:N_train]]
             self.val_noise_ids = np.array(ids)[rand_idx[-N_val:]]
-            self.val_noise_pitches = np.array(pitches)[rand_idx[-N_val:]]
             self.test_noise_ids = self.val_noise_ids
-            self.test_noise_pitches = self.val_noise_pitches
         else:
             with h5py.File(self.noise_dir, "r") as f: # this will be only the nonvalidated data
                 for id in f["x"].keys():
                     ids.append(int(id))
             self.train_noise_ids = np.array(ids)
-            self.train_noise_pitches = pitches
             self.val_noise_ids = self.train_noise_ids
-            self.val_noise_pitches = self.train_noise_pitches
             self.test_noise_ids = self.val_noise_ids
-            self.test_noise_pitches = self.val_noise_pitches
 
 
     def cqt_from_id(self, id, eps):
@@ -554,13 +549,10 @@ class DrumData(Dataset):
             if self.noise_mode != "statgauss":
                 #randomly select noise, or the noise with the closest pitch 
                 if "test" in self.audio_dir:
-                    noise_pitches = self.test_noise_pitches
                     noise_ids = self.test_noise_ids
-                elif "train" in self.audio_dir:
-                    noise_pitches = self.train_noise_pitches
+                elif "train" in self.audio_dir:                 
                     noise_ids = self.train_noise_ids
-                elif "val" in self.audio_dir:
-                    noise_pitches = self.val_noise_pitches
+                elif "val" in self.audio_dir:       
                     noise_ids = self.val_noise_ids
 
                 idx, idx2 = np.random.choice(np.arange(len(noise_ids)), size=2)
@@ -578,18 +570,21 @@ class DrumData(Dataset):
                         noise_synth = np.abs(noise1) * (np.random.normal(size=noise1.shape[0])*2 - 1) # extract noise temporal envelope
                         noise_synth = noise_synth / np.max(np.abs(noise_synth))
                         noise = noise_synth
+                        start = None
                     elif self.noise_mode == "random":
                         noise = noise1
+                        start = None
                     elif self.noise_mode == "mix":
                         # whichever is longer should go as second input
                         if len(noise2) > len(noise1):
                             noise = utils.mix_noise(np.random.rand(), noise1, noise2, mode="weight")
                         else:
                             noise = utils.mix_noise(np.random.rand(), noise2, noise1, mode="weight")
+                        start = 0
                 #randomly select snr
                 snr = np.random.choice([1, 10, 40, 60])
                 #mix noise
-                x = utils.mix_noise(snr, noise, x)
+                x = utils.mix_noise(snr, noise, x, start=start)
             else:
                 # temporary jams object to apply the transformation
                 jam = jams.JAMS()
