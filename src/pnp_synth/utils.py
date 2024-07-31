@@ -7,6 +7,7 @@ import sklearn.preprocessing
 import torch
 import numpy as np
 import librosa
+import pdb
 
 #kymatio 0.4.0
 #from kymatio.scattering1d.frontend.torch_frontend import TimeFrequencyScatteringTorch as TimeFrequencyScattering1D
@@ -200,11 +201,14 @@ def x_from_theta(theta, synth_type, logscale):
     return x
 
 
-def mix_noise(SNR, noise, signal, mode="SNR"):
+def mix_noise(SNR, noise, signal, mode="SNR", start=None):
     sr = ftm.constants_string["sr"]
     # align start of noise 
-    onsets_t = librosa.onset.onset_detect(y=np.array(noise), sr=sr, units='time', energy=noise**2)
-
+    if start==0:
+        onsets_t = [0]
+    else:
+        onsets_t = librosa.onset.onset_detect(y=np.array(noise), sr=sr, units='time', energy=noise**2)
+    
     try: 
         noise_aligned = noise[(int(onsets_t[1]*sr)):]
     except:
@@ -230,5 +234,5 @@ def mix_noise(SNR, noise, signal, mode="SNR"):
         return mix / torch.max(torch.abs(mix))
     elif mode == "weight":
         mix = SNR * torch.tensor(signal) + (1-SNR) * noise_aligned
-        return mix # return only mixed noise
+        return mix / torch.max(torch.abs(mix)) # return only mixed noise
     
