@@ -305,7 +305,7 @@ class EffNet(pl.LightningModule):
                 #if self.epoch == 1:
                 #    self.best_params = self.parameters
                 #    self.monitor_valloss = avg_loss
-                #self.epoch += 1
+                self.epoch += 1
 
             elif self.LMA_mode == "scheduled":
                 self.epoch += 1
