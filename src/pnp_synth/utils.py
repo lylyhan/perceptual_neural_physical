@@ -208,11 +208,13 @@ def mix_noise(SNR, noise, signal, mode="SNR", start=None):
         onsets_t = [0]
     else:
         onsets_t = librosa.onset.onset_detect(y=np.array(noise), sr=sr, units='time', energy=noise**2)
-    
-    try: 
-        noise_aligned = noise[(int(onsets_t[1]*sr)):]
-    except:
-        noise_aligned = noise[(int(onsets_t[0]*sr)):]
+    if len(onsets_t) > 0:
+        try: 
+            noise_aligned = noise[(int(onsets_t[1]*sr)):]
+        except:
+            noise_aligned = noise[(int(onsets_t[0]*sr)):]
+    else:
+        noise_aligned = noise
 
     if mode == "weight":
         onsets_s = librosa.onset.onset_detect(y=np.array(signal), sr=sr, units='time', energy=signal**2)
@@ -235,4 +237,3 @@ def mix_noise(SNR, noise, signal, mode="SNR", start=None):
     elif mode == "weight":
         mix = SNR * torch.tensor(signal) + (1-SNR) * noise_aligned
         return mix / torch.max(torch.abs(mix)) # return only mixed noise
-    

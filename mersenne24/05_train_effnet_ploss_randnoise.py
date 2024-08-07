@@ -32,9 +32,9 @@ opt = sys.argv[5]
 synth_type = sys.argv[6]
 ckpt_path = sys.argv[7]
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-batch_size = 2
-is_train = True
+batch_size = 64
+is_train = False #True
+
 
 print("Command-line arguments:\n" + "\n".join(sys.argv[1:]))
 print(f"Batch size: {batch_size}\n")
