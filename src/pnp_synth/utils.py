@@ -204,7 +204,7 @@ def x_from_theta(theta, synth_type, logscale):
 def mix_noise(SNR, noise, signal, mode="SNR", start=None):
     sr = ftm.constants_string["sr"]
     # align start of noise 
-    if start==0:
+    if start == 0:
         onsets_t = [0]
     else:
         onsets_t = librosa.onset.onset_detect(y=np.array(noise), sr=sr, units='time', energy=noise**2)

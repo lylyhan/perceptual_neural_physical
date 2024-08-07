@@ -184,7 +184,7 @@ if __name__ == "__main__":
         else:
             trainer.fit(model, dataset)
 
-        dataset_synth = cnn.DrumDataModule(
+    dataset_synth = cnn.DrumDataModule(
         batch_size=batch_size,
         data_dir=data_dir,  # path to hdf5 files
         cqt_dir=cqt_dir,
