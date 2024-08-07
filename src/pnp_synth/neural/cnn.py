@@ -316,7 +316,7 @@ class EffNet(pl.LightningModule):
         self.log('val_loss', avg_loss, on_step=False,
                  prog_bar=True, on_epoch=True)
         #avg_mss_validation = self.mss_validation.compute()
-        #self.epoch += 1
+        self.epoch += 1
         #if self.epoch % 10 == 0:
         #    avg_jtfs_validation = self.jtfs_validation.compute()
         #    self.log("epoch jtfs metrics", avg_jtfs_validation)
@@ -360,6 +360,17 @@ class EffNet(pl.LightningModule):
 
         elif self.opt == "adam":
             self.optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
+            lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                self.optimizer, patience=3)
+            return{
+                'optimizer': self.optimizer,
+                'lr_scheduler':{
+                    'scheduler': lr_scheduler,
+                    'monitor': 'val_loss',
+                },
+            }
+        elif self.opt == "adamW":
+            self.optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr)
             lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
                 self.optimizer, patience=3)
             return{
