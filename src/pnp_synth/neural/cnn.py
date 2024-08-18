@@ -326,11 +326,8 @@ class EffNet(pl.LightningModule):
         return {'val_loss': avg_loss, 'ploss_metrics': avg_ploss_validation}
 
     def configure_optimizers(self):
-        if self.opt == "adamW":
-            #self.model.automatic_optimization = False
-            optim = torch.optim.AdamW(self.parameters(), lr=self.lr,
-                                weight_decay=1e-1) #decoupled weight decay regularization 
-            self.optimizer = optim
+        if self.opt == "adamW": 
+            self.optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=1e-1) #decoupled weight decay regularization 
             #lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
             #    optim, T_0=1, T_mult=1, eta_min=1e-8,
             #    last_epoch=-1, verbose=0)
@@ -341,6 +338,7 @@ class EffNet(pl.LightningModule):
                 'optimizer': self.optimizer,
                 'lr_scheduler': {
                     'scheduler': lr_scheduler,
+                    'monitor': 'val_loss',
                     },
                 }
 
@@ -369,17 +367,7 @@ class EffNet(pl.LightningModule):
                     'monitor': 'val_loss',
                 },
             }
-        elif self.opt == "adamW":
-            self.optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr)
-            lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-                self.optimizer, patience=3)
-            return{
-                'optimizer': self.optimizer,
-                'lr_scheduler':{
-                    'scheduler': lr_scheduler,
-                    'monitor': 'val_loss',
-                },
-            }
+
 
     def update_lr(self, batch_idx):
         sch = self.lr_schedulers()
