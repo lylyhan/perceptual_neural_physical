@@ -294,6 +294,9 @@ class EffNet(pl.LightningModule):
                         self.monitor_valloss = avg_loss
                     self.LMA_lambda = self.LMA_lambda * self.LMA_accelerator
                     self.best_params = self.parameters # register best model
+                    if self.opt == "adam":
+                        print("reset adam optimizer")
+                        self.optimizer.state.clear()
                 else:
                     if self.LMA_lambda * self.LMA_brake < self.LMA_threshold:
                         self.LMA_lambda = self.LMA_lambda * self.LMA_brake
