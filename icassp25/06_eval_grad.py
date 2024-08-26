@@ -47,13 +47,13 @@ def evaluate_gradnorm(model, nbatch):
     for param in model.parameters():
         if param.grad is not None:
             if loss_type == "weighted_p":
-                param_norm = param.grad.data.norm(2) #(scale_factor * param.grad.data).norm(2)
+                param_norm = (scale_factor * param.grad.data).norm(2)
             elif loss_type == "ploss":
                 param_norm = param.grad.data.norm(2)
             gradnorm += param_norm.item() ** 2
     gradnorm = gradnorm ** (1. / 2) / (nbatch)
-    #if loss_type == "weighted_p":
-    #    gradnorm = gradnorm / scale_factor
+    if loss_type == "weighted_p":
+        gradnorm = gradnorm / scale_factor
     return gradnorm
 
 def get_model_grads(model):
@@ -87,7 +87,7 @@ def eval_smooth(prev_model, model, nbatch, num_pts=1):
             p.data = alpha * p.data + (1-alpha) * {n:p for n, p in model.named_parameters()}[n].data 
             
         evaluate_gradnorm(new_model, nbatch)
-        scale = False #if loss_type == "weighted_p" else False
+        scale = True if loss_type == "weighted_p" else False
         smooth = norm_diff(get_model_grads(new_model), get_model_grads(prev_model), scale=scale)/ (update_size * (1 - alpha)) # norm of gradient difference divided by norm of weight difference
         if smooth == np.inf:
             print("smoothness exeeds bounds, why?", update_size)
