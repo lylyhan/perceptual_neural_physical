@@ -17,7 +17,7 @@ data_dir = "/gpfswork/rech/aej/ufg99no/data/ftm_jtfs/"
 #data_dir = "/home/han/localdata/data/ftm_jtfs/"
 full_df = icassp25.load_fold(fold="full")
 batch_size = 256
-scale_factor = 1
+scale_factor = 1e-10
 
 nbatch = icassp25.SAMPLES_PER_EPOCH // (10 * batch_size) # however much that covers 10% training set
 
