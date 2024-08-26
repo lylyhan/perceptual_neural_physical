@@ -17,7 +17,7 @@ data_dir = "/gpfswork/rech/aej/ufg99no/data/ftm_jtfs/"
 #data_dir = "/home/han/localdata/data/ftm_jtfs/"
 full_df = icassp25.load_fold(fold="full")
 batch_size = 256
-scale_factor = 1e-20
+scale_factor = 1
 
 nbatch = icassp25.SAMPLES_PER_EPOCH // (10 * batch_size) # however much that covers 10% training set
 
@@ -47,13 +47,13 @@ def evaluate_gradnorm(model, nbatch):
     for param in model.parameters():
         if param.grad is not None:
             if loss_type == "weighted_p":
-                param_norm = (scale_factor * param.grad.data).norm(2)
+                param_norm = param.grad.data.norm(2) #(scale_factor * param.grad.data).norm(2)
             elif loss_type == "ploss":
                 param_norm = param.grad.data.norm(2)
             gradnorm += param_norm.item() ** 2
     gradnorm = gradnorm ** (1. / 2) / (nbatch)
-    if loss_type == "weighted_p":
-        gradnorm = gradnorm / scale_factor
+    #if loss_type == "weighted_p":
+    #    gradnorm = gradnorm / scale_factor
     return gradnorm
 
 def get_model_grads(model):
@@ -87,8 +87,8 @@ def eval_smooth(prev_model, model, nbatch, num_pts=1):
             p.data = alpha * p.data + (1-alpha) * {n:p for n, p in model.named_parameters()}[n].data 
             
         evaluate_gradnorm(new_model, nbatch)
-        scale = True if loss_type == "weighted_p" else False
-        smooth = norm_diff(get_model_grads(new_model), get_model_grads(prev_model), scale=scale)/ (update_size * (1- alpha)) # norm of gradient difference divided by norm of weight difference
+        scale = False #if loss_type == "weighted_p" else False
+        smooth = norm_diff(get_model_grads(new_model), get_model_grads(prev_model), scale=scale)/ (update_size * (1 - alpha)) # norm of gradient difference divided by norm of weight difference
         if smooth == np.inf:
             print("smoothness exeeds bounds, why?", update_size)
         max_smooth = max(smooth, max_smooth)
@@ -182,10 +182,19 @@ for batch_idx, batch_data in enumerate(train_dataset): # see once all the traini
         loss = losses.loss_bilinear(output.double(), batch_target.double(), mu * batch_M)
     # Perform backward pass
     loss.backward()
+    params_before = [param.clone() for param in model.parameters()]
     optimizer_curr.step() # one step of weight update
+    params_after = [param for param in model.parameters()]
+    
+    acc_stepsize = []
+    for i, (before, after) in enumerate(zip(params_before, params_after)):
+        step_size = torch.norm(after - before).item()
+        acc_stepsize.append(step_size)
+    print(f"Average Step size for parameter: {np.nanmean(np.array(acc_stepsize))}")
     
     if batch_idx % log_interval == 0: 
         smoothness, gradnorm = eval_smooth(prev_model, model, nbatch)
+        print("gradnorm", gradnorm)
         smooths.append(smoothness)
         gradnorms.append(gradnorm)
         print("iter {}, gradient norm {}, smoothness {} ".format(batch_idx, gradnorm, smoothness))
