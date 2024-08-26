@@ -131,7 +131,7 @@ LMA = {
 steps_per_epoch = 100# icassp25.SAMPLES_PER_EPOCH / batch_size
 lr = 1e-3
 log_interval = 1 # frequency every number of batches to log gradient norm/smoothness 
-mu = 1e-20
+mu = scale_factor
 
 model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, eff_type=eff_type, 
                        scaler=scaler, LMA=LMA, steps_per_epoch=steps_per_epoch,
