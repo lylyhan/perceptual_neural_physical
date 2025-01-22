@@ -408,6 +408,7 @@ class DrumData(Dataset):
                  Q,
                  sr,
                  noise_dir,
+                 noisemodel, # noise, pratm, transient
                  noise_mode="mix"): #path to noise audio hdf files
         super().__init__()
 
@@ -424,6 +425,7 @@ class DrumData(Dataset):
             self.noise_inventory()
             self.isnoise = True
             self.noise_mode = noise_mode
+            self.noisemodel = noisemodel
             if self.noise_mode == "statgauss":
                 self.noise_gen = muda.deformers.ColoredNoise(n_samples=1, color=['pink'], weight_max=0.08, weight_min=0.01)
         else:
@@ -561,8 +563,8 @@ class DrumData(Dataset):
                 id1, id2 = noise_ids[idx], noise_ids[idx2]
 
                 with h5py.File(self.noise_dir, "r") as f:
-                    noise1 = np.array(f["noise"][str(id1)])
-                    noise2 = np.array(f["noise"][str(id2)])
+                    noise1 = np.array(f[self.noisemodel][str(id1)])
+                    noise2 = np.array(f[self.noisemodel][str(id2)])
                     sr_og = np.array(f["sr"][str(id1)])
                     sr_og2 = np.array(f["sr"][str(id2)])
                     noise1 = librosa.resample(noise1, orig_sr=sr_og, target_sr=self.sr)
@@ -598,7 +600,7 @@ class DrumData(Dataset):
         Sy = self.cqt_from_x(x)[0]
         Sy = torch.log1p(Sy/eps)
         return Sy
-
+ 
 
 class DrumDataModule(pl.LightningDataModule):
     def __init__(self,
@@ -616,6 +618,7 @@ class DrumDataModule(pl.LightningDataModule):
                  feature,
                  num_workers,
                  noise_dir=None,
+                 noisemodel="pratm",
                  noise_mode="matched"):
         super().__init__()
         self.data_dir = data_dir
@@ -631,6 +634,7 @@ class DrumDataModule(pl.LightningDataModule):
         self.full_df = df #sorted df
         self.cqt_dir = cqt_dir
         self.scaler = scaler
+        self.noisemodel = noisemodel
         if "am" in weight_dir:
             self.synth_type = "amchirp"
             self.h5name = "amchirp"
@@ -666,6 +670,7 @@ class DrumDataModule(pl.LightningDataModule):
                                 Q = self.Q,
                                 sr = self.sr,
                                 noise_dir=self.noise_dir,
+                                noisemodel=self.noisemodel,
                                 noise_mode=self.noise_mode)
 
         self.val_ds = DrumData(y_norms_val, #partial dataframe
@@ -680,6 +685,7 @@ class DrumDataModule(pl.LightningDataModule):
                                 Q = self.Q,
                                 sr = self.sr,
                                 noise_dir=self.noise_dir,
+                                noisemodel=self.noisemodel,
                                 noise_mode=self.noise_mode)
 
         self.test_ds = DrumData(y_norms_test, #partial dataframe
@@ -694,6 +700,7 @@ class DrumDataModule(pl.LightningDataModule):
                                 Q = self.Q,
                                 sr = self.sr,
                                 noise_dir=self.noise_dir,
+                                noisemodel=self.noisemodel,
                                 noise_mode=self.noise_mode)
 
 
