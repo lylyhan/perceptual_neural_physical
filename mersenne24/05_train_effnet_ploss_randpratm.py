@@ -34,7 +34,7 @@ ckpt_path = sys.argv[7]
 
 batch_size = 64
 is_train = True
-noisemodel = "transient"
+
 
 print("Command-line arguments:\n" + "\n".join(sys.argv[1:]))
 print(f"Batch size: {batch_size}\n")
@@ -76,7 +76,7 @@ weight_type = "None"  # novol / pnp / None
 LMA = None
 lr = 1e-3
 finetune = False
-noisemodel = "transient"
+noisemodel = "pratm"
 
 if __name__ == "__main__":
     print("Current device: ", torch.cuda.get_device_name(0))
