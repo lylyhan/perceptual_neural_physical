@@ -221,11 +221,11 @@ if __name__ == "__main__":
         noise_mode = "random"
     )
 
-    #model.save_path = os.path.join(model_save_path, "test_predictions_synth.npy")
-    #test_loss = trainer.test(model, dataset_synth, verbose=False)
-    #print("Model saved at: {}".format(model_save_path))
-    #print("Average synthetic test loss: {}".format(test_loss))
-    #print("\n")
+    model.save_path = os.path.join(model_save_path, "test_predictions_synth.npy")
+    test_loss = trainer.test(model, dataset_synth, verbose=False)
+    print("Model saved at: {}".format(model_save_path))
+    print("Average synthetic test loss: {}".format(test_loss))
+    print("\n")
 
     model.save_path = os.path.join(model_save_path, "test_predictions_noise.npy")
     test_loss = trainer.test(model, dataset_noise, verbose=False)

@@ -205,23 +205,21 @@ def mix_noise(SNR, noise, signal, mode="SNR", start=None):
     sr = ftm.constants_string["sr"]
     # align start of noise 
     if start == 0:
-        onsets_t = [0]
+        final_onset_t = 0
     else:
         onsets_t = librosa.onset.onset_detect(y=np.array(noise), sr=sr, units='time', energy=noise**2)
-    if len(onsets_t) > 0:
-        try: 
-            noise_aligned = noise[(int(onsets_t[1]*sr)):]
-        except:
-            noise_aligned = noise[(int(onsets_t[0]*sr)):]
-    else:
-        noise_aligned = noise
+        energy_t = noise**2
+        max_onset_t = np.where(energy_t == np.max(energy_t))[0] / sr
+        final_onset_t = onsets_t[np.argmin((np.abs(np.array(onsets_t) - max_onset_t)))]
+    
+    noise_aligned = noise[int(final_onset_t*sr):]
 
     if mode == "weight":
         onsets_s = librosa.onset.onset_detect(y=np.array(signal), sr=sr, units='time', energy=signal**2)
-        try: 
-            signal = signal[(int(onsets_s[1]*sr)):]
-        except:
-            signal = signal[(int(onsets_s[0]*sr)):]
+        energy_s = signal**2
+        max_onset_s = np.where(energy_s == np.max(energy_s))[0] / sr
+        final_onset_s = onsets_t[np.argmin((np.abs(np.array(onsets_s) - max_onset_s)))]
+        signal = signal[int(final_onset_s*sr):]
 
     # align lengths of signals
     if len(noise_aligned) > len(signal):
@@ -233,7 +231,7 @@ def mix_noise(SNR, noise, signal, mode="SNR", start=None):
         RMS_n = torch.sqrt(torch.mean(noise_aligned**2))
         scale_factor = RMS_s / (RMS_n * np.exp(SNR/20))
         mix = torch.tensor(signal) + scale_factor * noise_aligned
-        return mix / torch.max(torch.abs(mix))
+        return mix / torch.max(torch.abs(mix)) #,scale_factor * noise_aligned/ torch.max(torch.abs(mix)), torch.tensor(signal)/torch.max(torch.abs(mix))
     elif mode == "weight":
         mix = SNR * torch.tensor(signal) + (1-SNR) * noise_aligned
         return mix / torch.max(torch.abs(mix)) # return only mixed noise
