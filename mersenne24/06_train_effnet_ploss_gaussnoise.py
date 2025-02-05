@@ -75,6 +75,7 @@ weight_type = "None"  # novol / pnp / None
 LMA = None
 lr = 1e-3
 finetune = False
+noisemodel = "pratm"
 
 if __name__ == "__main__":
     print("Current device: ", torch.cuda.get_device_name(0))
@@ -122,6 +123,7 @@ if __name__ == "__main__":
         scaler=scaler,
         num_workers=0,
         noise_dir = noise_dir,
+        noisemodel = noisemodel,
         noise_mode = "gaussian"
     )
 
@@ -218,17 +220,17 @@ if __name__ == "__main__":
         noise_mode = "random"
     )
 
-    #model.save_path = os.path.join(model_save_path, "test_predictions_synth.npy")
-    #test_loss = trainer.test(model, dataset_synth, verbose=False)
-    #print("Model saved at: {}".format(model_save_path))
-    #print("Average synthetic test loss: {}".format(test_loss))
-    #print("\n")
-
-    model.save_path = os.path.join(model_save_path, "test_predictions_noise.npy")
-    test_loss = trainer.test(model, dataset_noise, verbose=False)
+    model.save_path = os.path.join(model_save_path, "test_predictions_synth.npy")
+    test_loss = trainer.test(model, dataset_synth, verbose=False)
     print("Model saved at: {}".format(model_save_path))
-    print("Average synth+noise test loss: {}".format(test_loss))
+    print("Average synthetic test loss: {}".format(test_loss))
     print("\n")
+
+    #model.save_path = os.path.join(model_save_path, "test_predictions_noise.npy")
+    #test_loss = trainer.test(model, dataset_noise, verbose=False)
+    #print("Model saved at: {}".format(model_save_path))
+    #print("Average synth+noise test loss: {}".format(test_loss))
+    #print("\n")
 
     # Print elapsed time.
     print(str(datetime.datetime.now()) + " Success.")
