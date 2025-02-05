@@ -51,7 +51,7 @@ cqt_dir = data_dir
 
 
 epoch_max = 50
-steps_per_epoch = mersenne24.SAMPLES_PER_EPOCH / batch_size
+steps_per_epoch = mersenne24.SAMPLES_PER_EPOCH // batch_size
 max_steps = steps_per_epoch * epoch_max
 # feature parameters
 Q = 12
@@ -75,6 +75,7 @@ weight_type = "None"  # novol / pnp / None
 LMA = None
 lr = 1e-3
 finetune = False
+noisemodel = "pratm"
 
 if __name__ == "__main__":
     print("Current device: ", torch.cuda.get_device_name(0))
@@ -84,7 +85,7 @@ if __name__ == "__main__":
         "_".join(
             [
                 loss_type,
-                "mixnoisemix"
+                "randtwo{}mix".format(noisemodel),
                 "finetune" + str(finetune),
                 "log-" + str(logscale_theta),
                 "minmax-" + str(minmax),
@@ -122,6 +123,7 @@ if __name__ == "__main__":
         scaler=scaler,
         num_workers=0,
         noise_dir = noise_dir,
+        noisemodel = noisemodel,
         noise_mode = "mix"
     )
 
@@ -225,11 +227,11 @@ if __name__ == "__main__":
     print("Average synthetic test loss: {}".format(test_loss))
     print("\n")
 
-    model.save_path = os.path.join(model_save_path, "test_predictions_noise.npy")
-    test_loss = trainer.test(model, dataset_noise, verbose=False)
-    print("Model saved at: {}".format(model_save_path))
-    print("Average synth+noise test loss: {}".format(test_loss))
-    print("\n")
+    #model.save_path = os.path.join(model_save_path, "test_predictions_noise.npy")
+    #test_loss = trainer.test(model, dataset_noise, verbose=False)
+    #print("Model saved at: {}".format(model_save_path))
+    #print("Average synth+noise test loss: {}".format(test_loss))
+    #print("\n")
 
     # Print elapsed time.
     print(str(datetime.datetime.now()) + " Success.")
