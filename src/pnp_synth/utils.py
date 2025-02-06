@@ -218,7 +218,7 @@ def mix_noise(SNR, noise, signal, mode="SNR", start=None):
         onsets_s = librosa.onset.onset_detect(y=np.array(signal), sr=sr, units='time', energy=signal**2)
         energy_s = signal**2
         max_onset_s = np.where(energy_s == np.max(energy_s))[0] / sr
-        final_onset_s = onsets_t[np.argmin((np.abs(np.array(onsets_s) - max_onset_s)))]
+        final_onset_s = onsets_s[np.argmin((np.abs(np.array(onsets_s) - max_onset_s)))]
         signal = signal[int(final_onset_s*sr):]
 
     # align lengths of signals
