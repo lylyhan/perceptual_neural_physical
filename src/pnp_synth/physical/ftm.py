@@ -180,7 +180,7 @@ def linearstring_physics(theta, **constants_string):
     ell = 10 ** theta[5]
     pi = torch.tensor(np.pi, dtype=torch.float64).to(device)
     dur = constants_string['dur']
-    pos_ratio = torch.rand(1) / 2 #randomly sample between 0 and 0.5
+    pos_ratio = torch.rand(1).to(device) / 2 #randomly sample between 0 and 0.5
 
 
     mu = torch.arange(1, constants_string["m"] + 1).to(device)
