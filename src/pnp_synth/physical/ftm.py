@@ -17,7 +17,7 @@ constants = {
 }
 
 constants_string = {
-    "x": 0.4,
+    "x": 0.1, # adapt to absolute position in meters
     "h": 0.03,
     "l0": np.pi,
     "m": 20,
@@ -173,18 +173,20 @@ def linearstring_physics(theta, **constants_string):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     # convert omega, tau, p, D into S, c, d1, d3
     EI = theta[0]
-    Ts0 = theta[1]
+    Ts0 = 10 ** theta[1]
     d1 = theta[2]
     d3 = theta[3]
-    lm = theta[4]
-    ell = theta[5]
+    lm = 10 ** theta[4]
+    ell = 10 ** theta[5]
     pi = torch.tensor(np.pi, dtype=torch.float64).to(device)
     dur = constants_string['dur']
+    pos_ratio = torch.rand(1) / 2 #randomly sample between 0 and 0.5
+
 
     mu = torch.arange(1, constants_string["m"] + 1).to(device)
     n = (mu * pi / ell) ** 2 
     n2 = n ** 2 
-    K = torch.sin(mu * pi * constants_string["x"])
+    K = torch.sin(mu * pi * pos_ratio)
   
     beta = EI * n2 + Ts0 * n #(m)
     alpha = (d1 + d3 * n)/(2*lm) # nonlinear
@@ -200,7 +202,7 @@ def linearstring_physics(theta, **constants_string):
         N = ell / 2
         yi = (
             constants_string['h']
-            * torch.sin(mu * pi * constants_string["x"]) #this should be the listening position
+            * torch.sin(mu * pi * pos_ratio) #this should be the listening position
             / omega #(mode)
         )
     
