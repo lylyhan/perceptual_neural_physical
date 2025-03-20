@@ -32,7 +32,7 @@ opt = sys.argv[5]
 synth_type = sys.argv[6]
 ckpt_path = sys.argv[7]
 
-batch_size = 64
+batch_size = 256
 is_train = True
 
 print("Command-line arguments:\n" + "\n".join(sys.argv[1:]))
@@ -106,7 +106,7 @@ if __name__ == "__main__":
     pred_path = os.path.join(model_save_path, "test_predictions.npy")
 
     if minmax: 
-        nus, scaler = mersenne24.scale_theta(logscale_theta)
+        nus, scaler = mersenne24.scale_theta(logscale_theta, mode="phys")
     else:
         scaler = None
     #no min max scaling
@@ -127,7 +127,7 @@ if __name__ == "__main__":
         Q=Q,
         sr=sr,
         scaler=scaler,
-        num_workers=0,
+        num_workers=0, 
     )
 
     print(str(datetime.datetime.now()) + " Finished initializing dataset")
@@ -198,7 +198,7 @@ if __name__ == "__main__":
         sr=sr,
         scaler=scaler,
         num_workers=0,
-        noise_dir = os.path.join(save_dir, "x", "mersenne24_realaudio.h5"),
+        noise_dir = noise_dir,
         noise_mode = "random"
     )
     model.save_path = os.path.join(model_save_path, "test_predictions_noise.npy")

@@ -407,8 +407,8 @@ class DrumData(Dataset):
                  J,
                  Q,
                  sr,
-                 noise_dir,
-                 noisemodel, # noise, pratm, transient
+                 noise_dir=None,
+                 noisemodel=None, # noise, pratm, transient
                  noise_mode="mix"): #path to noise audio hdf files
         super().__init__()
 
@@ -430,6 +430,8 @@ class DrumData(Dataset):
                 self.noise_gen = muda.deformers.ColoredNoise(n_samples=1, color=['pink'], weight_max=0.08, weight_min=0.01)
         else:
             self.isnoise = False
+            self.noisemodel = None
+            self.noise_mode = None
 
         self.feature = feature
         self.J = J
