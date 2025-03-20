@@ -165,7 +165,7 @@ def linearstring_percep(theta, logscale, **constants_string):
 
 
 #theta:{EI, T, d1, d3, lm, ell}
-def linearstring_physics(theta, **constants_string):
+def linearstring_physics(theta, pos_ratio, **constants_string):
     """
     unlike the convention in rabenstein's paper. d3 is always positive, so alpha=(d1+d3*n)/(2*lm)
     beta = EI n2 + Ts0 n (positive sign here)
@@ -180,7 +180,6 @@ def linearstring_physics(theta, **constants_string):
     ell = 10 ** theta[5]
     pi = torch.tensor(np.pi, dtype=torch.float64).to(device)
     dur = constants_string['dur']
-    pos_ratio = torch.rand(1) / 2 #randomly sample between 0 and 0.5
 
 
     mu = torch.arange(1, constants_string["m"] + 1).to(device)
