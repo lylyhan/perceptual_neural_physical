@@ -76,7 +76,7 @@ def pnp_forward_factory(scaler):
         forward.pnp_forward, Phi=Phi, g=x_from_theta, scaler=scaler
     )
 
-def scale_theta(logscale, mode):
+def scale_theta(logscale, mode): 
     """
     Scale training set to [0, 1], return values (NumPy array)
     and min-max scaler (sklearn object)
@@ -88,7 +88,7 @@ def scale_theta(logscale, mode):
     scaler = sklearn.preprocessing.MinMaxScaler(feature_range=(-1, 1))
     train_theta = []
     for column in THETA_COLUMNS:
-        if not logscale and column in ["w1", "p", "D"]:
+        if not logscale and column in ["w1", "p", "D", "Ts0", "ell", "lm"]:
             train_theta.append(10 ** train_df[column].values)
         else:
             train_theta.append(train_df[column].values)
@@ -104,7 +104,7 @@ def scale_theta(logscale, mode):
     # Transform whole dataset with scaler
     theta = []
     for column in THETA_COLUMNS:
-        if not logscale and column in ["w1", "p", "D"]:
+        if not logscale and column in ["w1", "p", "D", "Ts0", "ell", "lm"]:
             theta.append(10 ** full_df[column].values)
         else:
             theta.append(full_df[column].values)
