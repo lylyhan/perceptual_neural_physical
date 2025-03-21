@@ -123,7 +123,7 @@ if __name__ == "__main__":
         scaler=scaler,
         num_workers=0,
         noise_dir = noise_dir,
-        noisemodel = noisemodel,
+        noisemodel = noisemodel, 
         noise_mode = "mix"
     )
 

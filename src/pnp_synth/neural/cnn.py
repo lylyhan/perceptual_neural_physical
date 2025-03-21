@@ -16,6 +16,7 @@ import h5py
 import muda
 import jams
 import librosa
+import pickle
 
 
 
@@ -422,11 +423,13 @@ class DrumData(Dataset):
         
         #make list of noise pitches
         if self.noise_dir:
+            self.snr_dir = os.path.join(os.path.dirname(audio_dir), "snr_dict.pkl")
             self.noise_inventory()
             self.isnoise = True
             self.noise_mode = noise_mode
             self.noisemodel = noisemodel
-            if self.noise_mode == "statgauss":
+            
+            if self.noise_mode == "statgauss": # no straightforward way to align weight measure to snr measures
                 self.noise_gen = muda.deformers.ColoredNoise(n_samples=1, color=['pink'], weight_max=0.08, weight_min=0.01)
         else:
             self.isnoise = False
@@ -588,7 +591,9 @@ class DrumData(Dataset):
                             noise = utils.mix_noise(np.random.rand(), noise2, noise1, mode="weight")
                         start = 0
                 #randomly select snr
-                snr = np.random.choice([1, 10, 40, 60])
+                with open(self.snr_dir, "rb") as f:
+                    snr_dict = pickle.load(f)
+                snr = snr_dict[int(id)]
                 #mix noise
                 x = utils.mix_noise(snr, noise, x, start=start)
             else:
