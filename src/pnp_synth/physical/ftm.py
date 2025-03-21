@@ -195,7 +195,7 @@ def linearstring_physics(theta, pos_ratio, **constants_string):
     #adaptively change mode number according to nyquist frequency
     mode_rejected = (omega / 2 / pi) > constants_string['sr'] / 2
     mode_corr = constants_string['m'] - torch.sum(mode_rejected)
-    if torch.sum(torch.isnan(omega)) > 0 or torch.min(omega) > 1200 * 2 * np.pi:
+    if torch.sum(torch.isnan(omega)) > 0 or torch.min(omega) > 1500 * 2 * np.pi:
         return "exceeded pitch range"
     else:
         N = ell / 2
