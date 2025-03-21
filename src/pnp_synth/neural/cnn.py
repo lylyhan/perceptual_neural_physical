@@ -309,7 +309,7 @@ class EffNet(pl.LightningModule):
                 #if self.epoch == 1:
                 #    self.best_params = self.parameters
                 #    self.monitor_valloss = avg_loss
-                #self.epoch += 1
+                self.epoch += 1
 
             elif self.LMA_mode == "scheduled":
                 self.epoch += 1
@@ -477,9 +477,12 @@ class DrumData(Dataset):
         if self.weight_type != "None" and self.weight_type == "pnp":
             weight = metric_weight
         if self.feature == "cqt":
-            Sy = self.cqt_from_id(id, eps)
-            return {'feature': torch.abs(Sy), 'y': y_norm, 'weight': weight, 'M': M,
+            try:
+                Sy = self.cqt_from_id(id, eps)
+                return {'feature': torch.abs(Sy), 'y': y_norm, 'weight': weight, 'M': M,
                     'metric_weight': metric_weight, 'M_mean': self.M_mean, 'JdagJ': JdagJ, 'lambda0':self.lambda0}
+            except:
+                print("skipped id, ", id)
 
     def __len__(self):
         return len(self.ids)

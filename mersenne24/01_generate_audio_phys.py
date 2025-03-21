@@ -44,6 +44,7 @@ for fold in mersenne24.FOLDS:
     with h5py.File(h5_path, "w") as h5_file:
         audio_group = h5_file.create_group("x")
         shape_group = h5_file.create_group("theta")
+        pos_group = h5_file.create_group("x_pos")
 
     # Define row iterator
     row_iter = fold_df.iterrows()
@@ -57,7 +58,7 @@ for fold in mersenne24.FOLDS:
         # Physical audio synthesis (g). theta -> x
         theta = np.array([row[column] for column in mersenne24.THETA_COLUMNS])
         pos_ratio = torch.rand(1).to("cuda") / 2
-        x = ftm.linearstring_physics(theta,pos_ratio, **ftm.constants_string)
+        x = ftm.linearstring_physics(theta, pos_ratio, **ftm.constants_string)
         if type(x) != str:
             key = str(row["ID"])
 

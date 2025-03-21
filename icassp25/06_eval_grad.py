@@ -17,9 +17,8 @@ eff_type = sys.argv[3]
 #data_dir = "/gpfswork/rech/aej/ufg99no/data/ftm_jtfs/" 
 data_dir = "/home/han/localdata/data/ftm_jtfs/"
 full_df = icassp25.load_fold(fold="full")
-batch_size = 2
-scale_factor = 1e-10 # meant to work around calculating norm reaches infinity issue, separate from mu
-mu = 1e-10
+batch_size = 256
+scale_factor = 1e-10
 
 nbatch = 2#icassp25.SAMPLES_PER_EPOCH // (10 * batch_size) # however much that covers 10% training set
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"

@@ -46,7 +46,7 @@ def load_fold(fold="full", mode="phys"):
     fold_dfs = {}
     csv_folder = os.path.join(os.path.dirname(__file__), "data")
     if mode == "phys":
-        csv_name = "full_param_log_phys.csv"
+        csv_name = "full_param_log_phys_filtered.csv"
     elif mode == "perc":
         csv_name = "full_param_log.csv"
     csv_path = os.path.join(csv_folder, csv_name)
