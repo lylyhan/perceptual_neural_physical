@@ -8,18 +8,21 @@ import numpy as np
 import math
 import copy
 import sys
+import pdb
 
 opt = sys.argv[1] # sophia / adam
 loss_type = sys.argv[2] # ploss / weighted_p
 eff_type = sys.argv[3]
 
-data_dir = "/gpfswork/rech/aej/ufg99no/data/ftm_jtfs/" 
-#data_dir = "/home/han/localdata/data/ftm_jtfs/"
+#data_dir = "/gpfswork/rech/aej/ufg99no/data/ftm_jtfs/" 
+data_dir = "/home/han/localdata/data/ftm_jtfs/"
 full_df = icassp25.load_fold(fold="full")
-batch_size = 256
-scale_factor = 1
+batch_size = 2
+scale_factor = 1e-10 # meant to work around calculating norm reaches infinity issue, separate from mu
+mu = 1e-10
 
-nbatch = icassp25.SAMPLES_PER_EPOCH // (10 * batch_size) # however much that covers 10% training set
+nbatch = 2#icassp25.SAMPLES_PER_EPOCH // (10 * batch_size) # however much that covers 10% training set
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 def evaluate_gradnorm(model, nbatch):
     model.zero_grad()
@@ -44,8 +47,12 @@ def evaluate_gradnorm(model, nbatch):
         if batch_idx + 1 == nbatch: # in the original paper this accounts for 10% of training set
             break
     gradnorm = 0
+    pdb.set_trace()
     for param in model.parameters():
+        #print("individual unscaled param", param, param.grad)
         if param.grad is not None:
+            #print("individual unscaled grad norm", param.grad.data.norm(2))
+            pdb.set_trace()
             if loss_type == "weighted_p":
                 param_norm = (scale_factor * param.grad.data).norm(2)
             elif loss_type == "ploss":
@@ -53,7 +60,7 @@ def evaluate_gradnorm(model, nbatch):
             gradnorm += param_norm.item() ** 2
     gradnorm = gradnorm ** (1. / 2) / (nbatch)
     if loss_type == "weighted_p":
-        gradnorm = gradnorm / scale_factor
+        gradnorm = gradnorm / scale_factor # this was meant to avoid overflow problem
     return gradnorm
 
 def get_model_grads(model):
@@ -131,7 +138,6 @@ LMA = {
 steps_per_epoch = 100# icassp25.SAMPLES_PER_EPOCH / batch_size
 lr = 1e-3
 log_interval = 1 # frequency every number of batches to log gradient norm/smoothness 
-mu = scale_factor
 
 model = cnn.EffNet(in_channels=1, outdim=outdim, loss=loss_type, eff_type=eff_type, 
                        scaler=scaler, LMA=LMA, steps_per_epoch=steps_per_epoch,
@@ -166,6 +172,7 @@ for batch_idx, batch_data in enumerate(train_dataset): # see once all the traini
     batch_M = batch_data["M"].cuda()
     if batch_idx == 0:
         LMA_lambda = batch_data['lambda0'].to("cuda")
+        print("wgat is lambda", LMA_lambda)
     elif batch_idx == steps_per_epoch // 2: # nonstationary objective
         LMA_lambda = batch_data['lambda0'].to("cuda") * LMA["accelerator"] #(decay the damping coefficients)
     optimizer_curr.zero_grad()  # Clear existing gradients
@@ -185,7 +192,11 @@ for batch_idx, batch_data in enumerate(train_dataset): # see once all the traini
     params_before = [param.clone() for param in model.parameters()]
     optimizer_curr.step() # one step of weight update
     params_after = [param for param in model.parameters()]
-    
+    for i, param in enumerate(model.parameters()):
+        param_state = optimizer_curr.state[param]
+        v_t = param_state['exp_avg_sq']  # This is the second moment moving average
+        print(f"Second moment moving average for parameter {i}: {v_t}")
+    pdb.set_trace()
     acc_stepsize = []
     for i, (before, after) in enumerate(zip(params_before, params_after)):
         step_size = torch.norm(after - before).item()
